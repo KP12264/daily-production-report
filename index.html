@@ -6,7 +6,7 @@
 <title>บอร์ดยอดผลิต</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <style>
   :root{
     --bg:#12151a;
@@ -329,6 +329,7 @@
   function keyFor(date, line, shift){ return 'prod:'+date+':'+line+':'+shift; }
  
   const memoryStore = {};
+  const hasClaudeStorage = (typeof window !== 'undefined') && window.storage && typeof window.storage.get === 'function' && typeof window.storage.set === 'function';
   const hasLocalStorage = (function(){
     try{
       const t='__test__';
@@ -339,6 +340,13 @@
   })();
  
   async function storageGet(key){
+    if(hasClaudeStorage){
+      try{
+        return await window.storage.get(key, false);
+      }catch(e){
+        console.error('window.storage.get failed, trying localStorage:', e);
+      }
+    }
     if(hasLocalStorage){
       try{
         const v = window.localStorage.getItem(key);
@@ -351,6 +359,14 @@
   }
  
   async function storageSet(key, value){
+    if(hasClaudeStorage){
+      try{
+        await window.storage.set(key, value, false);
+        return true;
+      }catch(e){
+        console.error('window.storage.set failed, trying localStorage:', e);
+      }
+    }
     if(hasLocalStorage){
       try{
         window.localStorage.setItem(key, value);
@@ -512,6 +528,10 @@
   }
  
   function updateCharts(){
+    if(typeof Chart === 'undefined'){
+      console.error('Chart.js failed to load — charts are skipped, but editing and saving still work.');
+      return;
+    }
     const labels = state.rows.map(r=>r.slot);
     const plans = state.rows.map(r=>num(r.plan));
     const actuals = state.rows.map(r=>num(r.actual));
