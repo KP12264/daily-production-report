@@ -328,6 +328,41 @@
  
   function keyFor(date, line, shift){ return 'prod:'+date+':'+line+':'+shift; }
  
+  const memoryStore = {};
+  const hasLocalStorage = (function(){
+    try{
+      const t='__test__';
+      window.localStorage.setItem(t,'1');
+      window.localStorage.removeItem(t);
+      return true;
+    }catch(e){ return false; }
+  })();
+ 
+  async function storageGet(key){
+    if(hasLocalStorage){
+      try{
+        const v = window.localStorage.getItem(key);
+        return v ? { value: v } : null;
+      }catch(e){
+        console.error('localStorage.getItem failed, falling back to memory:', e);
+      }
+    }
+    return memoryStore[key] ? { value: memoryStore[key] } : null;
+  }
+ 
+  async function storageSet(key, value){
+    if(hasLocalStorage){
+      try{
+        window.localStorage.setItem(key, value);
+        return true;
+      }catch(e){
+        console.error('localStorage.setItem failed, falling back to memory:', e);
+      }
+    }
+    memoryStore[key] = value;
+    return false;
+  }
+ 
   function setActiveLineBtn(line){
     lineBar.querySelectorAll('.line-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.line===line);
@@ -344,7 +379,7 @@
     shift = shift || state.shift;
     setSaving('loading');
     try{
-      const res = await window.storage.get(keyFor(date, line, shift), false);
+      const res = await storageGet(keyFor(date, line, shift));
       if(res && res.value){
         const parsed = JSON.parse(res.value);
         state = { title: parsed.title||'Daily Production Report', date, line, shift, rows: (parsed.rows && parsed.rows.length) ? parsed.rows : defaultRows(shift) };
@@ -367,17 +402,18 @@
     const dot = $('saveDot'), txt = $('saveText');
     if(mode==='saving'){ dot.style.background='var(--amber)'; txt.textContent='กำลังบันทึก...'; }
     else if(mode==='loading'){ dot.style.background='var(--muted)'; txt.textContent='กำลังโหลด...'; }
+    else if(mode==='memory'){ dot.style.background='var(--amber)'; txt.textContent='บันทึกในเซสชันนี้เท่านั้น'; }
     else { dot.style.background='var(--green)'; txt.textContent='บันทึกแล้ว'; }
   }
  
   async function doSave(){
     setSaving('saving');
     try{
-      await window.storage.set(keyFor(state.date, state.line, state.shift), JSON.stringify({title: state.title, rows: state.rows}), false);
-      setSaving('saved');
+      const ok = await storageSet(keyFor(state.date, state.line, state.shift), JSON.stringify({title: state.title, rows: state.rows}));
+      setSaving(ok ? 'saved' : 'memory');
     }catch(e){
-      setSaving('loading');
-      $('saveText').textContent = 'บันทึกไม่สำเร็จ';
+      console.error('doSave failed unexpectedly:', e);
+      setSaving('memory');
     }
   }
  
