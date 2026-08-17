@@ -186,6 +186,7 @@
     padding:7px 9px;font-family:var(--font-m);font-size:13px;width:100%;outline:none;
   }
   tbody input:focus{border-color:var(--amber);}
+  tbody input:disabled{opacity:.5;cursor:not-allowed;border-style:dashed;}
   tbody input.slot{font-family:var(--font-b);}
   td.numcol{width:110px;}
   td.diffcol{width:90px;text-align:right;padding-right:14px;}
@@ -212,10 +213,27 @@
   }
   .totals b{color:var(--text);}
  
+  .chart-tabs{display:none;}
+ 
   @media (max-width:900px){
     .kpis{grid-template-columns:repeat(2,1fr);}
-    .charts{grid-template-columns:1fr;}
     header{flex-direction:column;align-items:flex-start;}
+ 
+    .chart-tabs{
+      display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--border);
+      border-radius:9px;padding:3px;margin-top:14px;
+    }
+    .chart-tab{
+      flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--font-m);
+      font-size:11px;font-weight:600;padding:9px 6px;border-radius:7px;cursor:pointer;letter-spacing:.02em;
+    }
+    .chart-tab.active{background:var(--amber);color:#1a1406;}
+    .charts{
+      grid-template-columns:1fr;
+      margin-top:10px;
+    }
+    .charts .panel{display:none;}
+    .charts .panel.active{display:block;}
   }
 </style>
 </head>
@@ -259,16 +277,21 @@
     <div class="kpi" id="kpiDown"><div class="lbl"><span>Downtime</span><span class="led"></span></div><div class="val" id="valDown">0<span class="unit">นาที</span></div></div>
   </div>
  
+  <div class="chart-tabs" id="chartTabs">
+    <button class="chart-tab active" data-chart="trend">กราฟแนวโน้ม</button>
+    <button class="chart-tab" data-chart="pa">Plan vs Actual</button>
+    <button class="chart-tab" data-chart="down">Downtime</button>
+  </div>
   <div class="charts">
-    <div class="panel">
+    <div class="panel active" data-chart-panel="trend">
       <h3>กราฟแนวโน้ม</h3>
       <div class="chart-holder"><canvas id="trendChart"></canvas></div>
     </div>
-    <div class="panel">
+    <div class="panel" data-chart-panel="pa">
       <h3>Plan vs Actual</h3>
       <div class="chart-holder"><canvas id="planActualChart"></canvas></div>
     </div>
-    <div class="panel">
+    <div class="panel" data-chart-panel="down">
       <h3>Downtime</h3>
       <div class="chart-holder"><canvas id="downtimeChart"></canvas></div>
     </div>
@@ -292,7 +315,10 @@
       <tbody id="tbody"></tbody>
     </table>
     <div class="rowfoot">
-      <button class="add-btn" id="addRow">+ เพิ่มช่วงเวลา</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="add-btn" id="addRow">+ เพิ่มช่วงเวลา</button>
+        <button class="mini-btn" id="planLockBtn">🔒 ปลดล็อก Plan</button>
+      </div>
       <div class="totals">
         <span>แถวทั้งหมด: <b id="rowCount">0</b></span>
         <span>รวมแผน: <b id="sumPlan">0</b></span>
@@ -306,6 +332,7 @@
 (function(){
   const fmt = n => Number.isFinite(n) ? (Math.round(n*10)/10).toLocaleString('th-TH') : '0';
   const todayStr = () => new Date().toISOString().slice(0,10);
+  const prevDateStr = (dateStr) => { const d = new Date(dateStr); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); };
  
   function defaultRows(shift){
     const hours = shift==='ดึก'
@@ -383,6 +410,8 @@
   let state = { title:'Daily Production Report', date: todayStr(), line:'A', shift:'เช้า', rows: defaultRows('เช้า') };
   let trendChart, planActualChart, downtimeChart;
   let saveTimer = null;
+  let planLocked = true;
+  const PLAN_PASSWORD = 'Doorline';
  
   const $ = id => document.getElementById(id);
   const titleInput = $('titleInput');
@@ -522,6 +551,95 @@
     });
   }
  
+  // Standing daily plan template per Line/shift — used every day instead of carrying
+  // forward yesterday's Actual, for the lines that have a fixed standard plan.
+  const STANDARD_PLAN = {
+    'A_เช้า': [
+      mkRow('08:00 - 09:00',198,'','',''),
+      mkRow('09:00 - 10:00',198,'','',''),
+      mkRow('10:00 - 11:00',198,'','',''),
+      mkRow('11:00 - 12:00',79,'','',''),
+      mkRow('12:00 - 13:00',79,'','',''),
+      mkRow('13:00 - 14:00',198,'','',''),
+      mkRow('14:00 - 15:00',79,'','',''),
+      mkRow('15:00 - 16:00',198,'','',''),
+      mkRow('16:00 - 17:00',198,'','',''),
+      mkRow('17:00 - 18:00',79,'','',''),
+      mkRow('18:00 - 19:00',198,'','',''),
+      mkRow('19:00 - 20:00',198,'','','')
+    ],
+    'B_เช้า': [
+      mkRow('08:00 - 09:00',204,'','',''),
+      mkRow('09:00 - 10:00',204,'','',''),
+      mkRow('10:00 - 11:00',204,'','',''),
+      mkRow('11:00 - 12:00',136,'','',''),
+      mkRow('12:00 - 13:00',136,'','',''),
+      mkRow('13:00 - 14:00',204,'','',''),
+      mkRow('14:00 - 15:00',128,'','',''),
+      mkRow('15:00 - 16:00',204,'','',''),
+      mkRow('16:00 - 17:00',204,'','',''),
+      mkRow('17:00 - 18:00',128,'','',''),
+      mkRow('18:00 - 19:00',204,'','',''),
+      mkRow('19:00 - 20:00',170,'','','')
+    ],
+    'C_ดึก': [
+      mkRow('20:00 - 21:00',350,'','',''),
+      mkRow('21:00 - 22:00',300,'','',''),
+      mkRow('22:00 - 23:00',350,'','',''),
+      mkRow('23:00 - 00:00',0,'','','พักเบรค'),
+      mkRow('00:00 - 01:00',300,'','',''),
+      mkRow('01:00 - 02:00',300,'','',''),
+      mkRow('02:00 - 03:00',150,'','',''),
+      mkRow('03:00 - 04:00',300,'','',''),
+      mkRow('04:00 - 05:00',350,'','',''),
+      mkRow('05:00 - 06:00',150,'','',''),
+      mkRow('06:00 - 07:00',300,'','',''),
+      mkRow('07:00 - 08:00',250,'','','')
+    ],
+    'A_ดึก': [
+      mkRow('20:00 - 21:00',224,'','',''),
+      mkRow('21:00 - 22:00',204,'','',''),
+      mkRow('22:00 - 23:00',224,'','',''),
+      mkRow('23:00 - 00:00',0,'','','พักเบรค'),
+      mkRow('00:00 - 01:00',204,'','',''),
+      mkRow('01:00 - 02:00',204,'','',''),
+      mkRow('02:00 - 03:00',61,'','',''),
+      mkRow('03:00 - 04:00',204,'','',''),
+      mkRow('04:00 - 05:00',224,'','',''),
+      mkRow('05:00 - 06:00',61,'','',''),
+      mkRow('06:00 - 07:00',204,'','',''),
+      mkRow('07:00 - 08:00',102,'','','')
+    ],
+    'B_ดึก': [
+      mkRow('20:00 - 21:00',185,'','',''),
+      mkRow('21:00 - 22:00',168,'','',''),
+      mkRow('22:00 - 23:00',169,'','',''),
+      mkRow('23:00 - 00:00',0,'','','พักเบรค'),
+      mkRow('00:00 - 01:00',168,'','',''),
+      mkRow('01:00 - 02:00',168,'','',''),
+      mkRow('02:00 - 03:00',50,'','',''),
+      mkRow('03:00 - 04:00',168,'','',''),
+      mkRow('04:00 - 05:00',185,'','',''),
+      mkRow('05:00 - 06:00',50,'','',''),
+      mkRow('06:00 - 07:00',168,'','',''),
+      mkRow('07:00 - 08:00',84,'','','')
+    ],
+    'C_เช้า': [
+      mkRow('08:00 - 09:00',282,'','',''),
+      mkRow('09:00 - 10:00',282,'','',''),
+      mkRow('10:00 - 11:00',282,'','',''),
+      mkRow('11:00 - 12:00',113,'','',''),
+      mkRow('12:00 - 13:00',113,'','',''),
+      mkRow('13:00 - 14:00',282,'','',''),
+      mkRow('14:00 - 15:00',113,'','',''),
+      mkRow('15:00 - 16:00',282,'','',''),
+      mkRow('16:00 - 17:00',282,'','',''),
+      mkRow('17:00 - 18:00',113,'','',''),
+      mkRow('18:00 - 19:00',282,'','',''),
+      mkRow('19:00 - 20:00',141,'','','')
+    ]
+  };
+ 
   async function loadDate(date, line, shift){
     line = line || state.line;
     shift = shift || state.shift;
@@ -534,11 +652,34 @@
       } else {
         const seedKey = keyFor(date, line, shift);
         const seed = SEED_DATA[seedKey];
+        const standard = STANDARD_PLAN[line+'_'+shift];
         if(seed){
           state = { title: seed.title, date, line, shift, rows: seed.rows.map(r=>({...r})) };
           storageSet(seedKey, JSON.stringify({title: state.title, rows: state.rows}));
+        } else if(standard){
+          state = { title: 'Daily Production Report', date, line, shift, rows: standard.map(r=>({...r, id:'r'+Math.random().toString(36).slice(2,9)})) };
+          storageSet(seedKey, JSON.stringify({title: state.title, rows: state.rows}));
         } else {
-          state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+          const prevKey = keyFor(prevDateStr(date), line, shift);
+          const prevRes = await storageGet(prevKey);
+          let rows = null;
+          if(prevRes && prevRes.value){
+            try{
+              const prevParsed = JSON.parse(prevRes.value);
+              const prevRows = prevParsed.rows || [];
+              if(prevRows.length){
+                rows = prevRows.map(r => mkRow(r.slot, (r.actual!==''&&r.actual!=null) ? r.actual : r.plan, '', '', ''));
+              }
+            }catch(e){
+              console.error('Failed to carry forward previous day data:', e);
+            }
+          }
+          if(rows && rows.length){
+            state = { title: 'Daily Production Report', date, line, shift, rows };
+            storageSet(seedKey, JSON.stringify({title: state.title, rows: state.rows}));
+          } else {
+            state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+          }
         }
       }
     } catch(e){
@@ -593,7 +734,7 @@
       const d = diffLabel(row.plan, row.actual);
       tr.innerHTML = `
         <td class="slotcol"><input class="slot" data-field="slot" value="${escapeHtml(row.slot)}"></td>
-        <td class="numcol"><input type="number" data-field="plan" value="${row.plan}" placeholder="0"></td>
+        <td class="numcol"><input type="number" data-field="plan" value="${row.plan}" placeholder="0" ${planLocked?'disabled':''}></td>
         <td class="numcol"><input type="number" data-field="actual" value="${row.actual}" placeholder="0"></td>
         <td class="diffcol"><span class="diffval ${d.cls}">${d.text}</span></td>
         <td class="numcol"><input type="number" data-field="downtime" value="${row.downtime}" placeholder="0"></td>
@@ -795,6 +936,39 @@
     renderRows();
     recompute();
     scheduleSave();
+  });
+ 
+  function updatePlanLockBtn(){
+    const btn = $('planLockBtn');
+    btn.textContent = planLocked ? '🔒 ปลดล็อก Plan' : '🔓 ล็อก Plan';
+  }
+  $('planLockBtn').addEventListener('click', ()=>{
+    if(planLocked){
+      const pw = prompt('ใส่รหัสผ่านเพื่อแก้ไขค่า Plan:');
+      if(pw === null) return;
+      if(pw === PLAN_PASSWORD){
+        planLocked = false;
+      } else {
+        alert('รหัสผ่านไม่ถูกต้อง');
+        return;
+      }
+    } else {
+      planLocked = true;
+    }
+    updatePlanLockBtn();
+    renderRows();
+  });
+  updatePlanLockBtn();
+ 
+  const chartTabs = $('chartTabs');
+  chartTabs.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.chart-tab');
+    if(!btn) return;
+    const target = btn.dataset.chart;
+    chartTabs.querySelectorAll('.chart-tab').forEach(b=>b.classList.toggle('active', b===btn));
+    document.querySelectorAll('.charts .panel').forEach(p=>{
+      p.classList.toggle('active', p.dataset.chartPanel===target);
+    });
   });
  
   loadDate(state.date, state.line, state.shift);
