@@ -39,7 +39,7 @@
     padding:28px 20px 60px;
   }
   .wrap{max-width:1180px;margin:0 auto;}
- 
+
   /* Andon strip */
   .andon{
     display:flex;
@@ -56,7 +56,7 @@
     0%,100%{opacity:.35;}
     50%{opacity:1;}
   }
- 
+
   /* Header */
   header{
     border:1px solid var(--border);
@@ -111,7 +111,7 @@
   }
   .mini-btn:hover{border-color:var(--amber);color:var(--amber);}
   .mini-btn:active{transform:translateY(1px);}
- 
+
   /* KPI row */
   .kpis{
     display:grid;
@@ -140,7 +140,7 @@
     font-family:var(--font-d);font-weight:700;font-size:28px;margin-top:8px;
   }
   .kpi .unit{font-size:14px;color:var(--muted);font-weight:500;margin-left:3px;}
- 
+
   /* Charts */
   .charts{
     display:grid;
@@ -160,7 +160,7 @@
   }
   .panel h3::before{content:"";width:8px;height:8px;background:var(--amber);border-radius:2px;transform:rotate(45deg);}
   .chart-holder{height:200px;position:relative;}
- 
+
   /* Data entry table */
   .logpanel{
     margin-top:14px;
@@ -218,13 +218,13 @@
     font-family:var(--font-m);font-size:12px;color:var(--muted);display:flex;gap:18px;
   }
   .totals b{color:var(--text);}
- 
+
   .chart-tabs{display:none;}
- 
+
   @media (max-width:900px){
     .kpis{grid-template-columns:repeat(2,1fr);}
     header{flex-direction:column;align-items:flex-start;}
- 
+
     .chart-tabs{
       display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--border);
       border-radius:9px;padding:3px;margin-top:14px;
@@ -250,7 +250,7 @@
 <body>
 <div class="wrap">
   <div class="andon" id="andon"></div>
- 
+
   <header>
     <div class="title-block">
       <span class="eyebrow">Line status board</span>
@@ -278,7 +278,7 @@
       </div>
     </div>
   </header>
- 
+
   <div class="kpis">
     <div class="kpi" id="kpiPlan"><div class="lbl"><span>Plan</span><span class="led"></span></div><div class="val" id="valPlan">0</div></div>
     <div class="kpi" id="kpiActual"><div class="lbl"><span>Actual</span><span class="led"></span></div><div class="val" id="valActual">0</div></div>
@@ -286,7 +286,7 @@
     <div class="kpi" id="kpiEff"><div class="lbl"><span>Efficiency</span><span class="led"></span></div><div class="val" id="valEff">0<span class="unit">%</span></div></div>
     <div class="kpi" id="kpiDown"><div class="lbl"><span>Downtime</span><span class="led"></span></div><div class="val" id="valDown">0<span class="unit">นาที</span></div></div>
   </div>
- 
+
   <div class="chart-tabs" id="chartTabs">
     <button class="chart-tab active" data-chart="trend">กราฟแนวโน้ม</button>
     <button class="chart-tab" data-chart="pa">Plan vs Actual</button>
@@ -306,7 +306,7 @@
       <div class="chart-holder"><canvas id="downtimeChart"></canvas></div>
     </div>
   </div>
- 
+
   <div class="logpanel">
     <h3>ข้อมูล</h3>
     <div class="sub">บันทึกยอดผลิตรายช่วงเวลา — แก้ไขค่าแล้วระบบจะบันทึกและอัปเดตกราฟให้อัตโนมัติ</div>
@@ -340,13 +340,13 @@
     </div>
   </div>
 </div>
- 
+
 <script>
 (function(){
   const fmt = n => Number.isFinite(n) ? (Math.round(n*10)/10).toLocaleString('th-TH') : '0';
   const todayStr = () => new Date().toISOString().slice(0,10);
   const prevDateStr = (dateStr) => { const d = new Date(dateStr); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); };
- 
+
   function defaultRows(shift){
     const hours = shift==='ดึก'
       ? [20,21,22,23,0,1,2,3,4]
@@ -360,11 +360,11 @@
       };
     });
   }
- 
+
   function mkRow(slot, plan, actual, downtime, note){
     return { id:'r'+Math.random().toString(36).slice(2,9), slot, plan: plan===''?'':String(plan), actual: actual===''?'':String(actual), downtime: downtime===''?'':String(downtime), note: note||'' };
   }
- 
+
   // One-time carry-over of data already entered before Firestore was wired up.
   const SEED_DATA = {
     'prod_2026-08-15_A_เช้า': {
@@ -419,26 +419,26 @@
       ]
     }
   };
- 
+
   let state = { title:'Daily Production Report', date: todayStr(), line:'A', shift:'เช้า', rows: defaultRows('เช้า') };
   let trendChart, planActualChart, downtimeChart;
   let saveTimer = null;
   let planLocked = true;
   const PLAN_PASSWORD = 'Doorline';
- 
+
   const $ = id => document.getElementById(id);
   const titleInput = $('titleInput');
   const dateInput = $('dateInput');
   const tbody = $('tbody');
   const lineBar = $('lineBar');
   const shiftBar = $('shiftBar');
- 
+
   dateInput.value = state.date;
- 
+
   function keyFor(date, line, shift){ return 'prod_'+date+'_'+line+'_'+shift; }
- 
+
   const memoryStore = {};
- 
+
   // --- Firestore (shared, real-time) ---
   const firebaseConfig = {
     apiKey: "AIzaSyCJQtvQE6DCk64hPZz4WATTC2c01GiJ53c",
@@ -458,7 +458,7 @@
     console.error('Firebase init failed, falling back to local storage only:', e);
   }
   const COLLECTION = 'productionLogs';
- 
+
   const hasClaudeStorage = (typeof window !== 'undefined') && window.storage && typeof window.storage.get === 'function' && typeof window.storage.set === 'function';
   const hasLocalStorage = (function(){
     try{
@@ -468,7 +468,7 @@
       return true;
     }catch(e){ return false; }
   })();
- 
+
   async function storageGet(key){
     if(db){
       try{
@@ -496,7 +496,7 @@
     }
     return memoryStore[key] ? { value: memoryStore[key] } : null;
   }
- 
+
   async function storageSet(key, value){
     if(db){
       try{
@@ -525,7 +525,7 @@
     memoryStore[key] = value;
     return false;
   }
- 
+
   // Real-time: watch the currently open document so other people's edits show up live.
   let unsubscribeLive = null;
   function watchLive(key){
@@ -552,7 +552,7 @@
       console.error('Firestore live listener error:', err);
     });
   }
- 
+
   function setActiveLineBtn(line){
     lineBar.querySelectorAll('.line-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.line===line);
@@ -563,7 +563,7 @@
       b.classList.toggle('active', b.dataset.shift===shift);
     });
   }
- 
+
   // Standing daily plan template per Line/shift — used every day instead of carrying
   // forward yesterday's Actual, for the lines that have a fixed standard plan.
   const STANDARD_PLAN = {
@@ -652,7 +652,7 @@
       mkRow('19:00 - 20:00',141,'','','')
     ]
   };
- 
+
   async function loadDate(date, line, shift){
     line = line || state.line;
     shift = shift || state.shift;
@@ -707,7 +707,7 @@
     setSaving('saved');
     watchLive(keyFor(state.date, state.line, state.shift));
   }
- 
+
   function setSaving(mode){
     const dot = $('saveDot'), txt = $('saveText');
     if(mode==='saving'){ dot.style.background='var(--amber)'; txt.textContent='กำลังบันทึก...'; }
@@ -715,7 +715,7 @@
     else if(mode==='memory'){ dot.style.background='var(--amber)'; txt.textContent='บันทึกในเซสชันนี้เท่านั้น'; }
     else { dot.style.background='var(--green)'; txt.textContent='บันทึกแล้ว'; }
   }
- 
+
   async function doSave(){
     setSaving('saving');
     try{
@@ -726,20 +726,20 @@
       setSaving('memory');
     }
   }
- 
+
   function scheduleSave(){
     setSaving('saving');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(doSave, 450);
   }
- 
+
   function diffLabel(plan, actual){
     const d = num(actual) - num(plan);
     const cls = d>0 ? 'pos' : d<0 ? 'neg' : 'zero';
     const text = (d>0?'+':'') + fmt(d);
     return { cls, text };
   }
- 
+
   function renderRows(){
     tbody.innerHTML = '';
     state.rows.forEach(row=>{
@@ -778,26 +778,26 @@
     });
     $('rowCount').textContent = state.rows.length;
   }
- 
+
   function escapeHtml(s){
     return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
- 
+
   function num(v){ const n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
- 
+
   function setKpiStatus(id, level){
     const el = $(id);
     const color = level==='good' ? 'var(--green)' : level==='warn' ? 'var(--amber)' : level==='bad' ? 'var(--red)' : 'var(--muted)';
     el.style.setProperty('--status', color);
   }
- 
+
   function recompute(){
     const totalPlan = state.rows.reduce((s,r)=>s+num(r.plan),0);
     const totalActual = state.rows.reduce((s,r)=>s+num(r.actual),0);
     const totalDown = state.rows.reduce((s,r)=>s+num(r.downtime),0);
     const variance = totalActual - totalPlan;
     const eff = totalPlan>0 ? (totalActual/totalPlan*100) : 0;
- 
+
     $('valPlan').textContent = fmt(totalPlan);
     $('valActual').textContent = fmt(totalActual);
     $('valVariance').textContent = (variance>=0?'+':'')+fmt(variance);
@@ -805,17 +805,17 @@
     $('valDown').innerHTML = fmt(totalDown)+'<span class="unit">นาที</span>';
     $('sumPlan').textContent = fmt(totalPlan);
     $('sumActual').textContent = fmt(totalActual);
- 
+
     setKpiStatus('kpiPlan','neutral');
     setKpiStatus('kpiActual', totalActual>=totalPlan ? 'good' : totalActual>=totalPlan*0.85 ? 'warn' : 'bad');
     setKpiStatus('kpiVariance', variance>=0 ? 'good' : variance > -totalPlan*0.15 ? 'warn' : 'bad');
     setKpiStatus('kpiEff', eff>=95 ? 'good' : eff>=80 ? 'warn' : 'bad');
     setKpiStatus('kpiDown', totalDown<=15 ? 'good' : totalDown<=45 ? 'warn' : 'bad');
- 
+
     updateAndon(eff);
     updateCharts();
   }
- 
+
   function updateAndon(eff){
     const strip = $('andon');
     const segments = 24;
@@ -828,7 +828,7 @@
       strip.appendChild(s);
     }
   }
- 
+
   function chartTheme(){
     return {
       grid:'rgba(255,255,255,0.06)',
@@ -836,7 +836,7 @@
       font: { family:"'JetBrains Mono', monospace", size:10 }
     };
   }
- 
+
   function updateCharts(){
     if(typeof Chart === 'undefined'){
       console.error('Chart.js failed to load — charts are skipped, but editing and saving still work.');
@@ -847,7 +847,7 @@
     const actuals = state.rows.map(r=>num(r.actual));
     const downs = state.rows.map(r=>num(r.downtime));
     const th = chartTheme();
- 
+
     // Trend chart
     const trendData = {
       labels,
@@ -864,7 +864,7 @@
         options: baseOptions(th)
       });
     }
- 
+
     // Plan vs Actual
     const paData = {
       labels,
@@ -881,7 +881,7 @@
         options: baseOptions(th)
       });
     }
- 
+
     // Downtime
     const downColors = downs.map(v => v<=5 ? '#4cc38a' : v<=15 ? '#f2a93b' : '#e4584c');
     const dtData = {
@@ -897,7 +897,7 @@
       });
     }
   }
- 
+
   function baseOptions(th, single){
     return {
       responsive:true, maintainAspectRatio:false,
@@ -912,7 +912,7 @@
       }
     };
   }
- 
+
   // Events
   titleInput.addEventListener('input', ()=>{ state.title = titleInput.value; scheduleSave(); });
   dateInput.addEventListener('change', ()=>{ loadDate(dateInput.value, state.line, state.shift); });
@@ -951,7 +951,7 @@
     recompute();
     scheduleSave();
   });
- 
+
   function updatePlanLockBtn(){
     const btn = $('planLockBtn');
     btn.textContent = planLocked ? '🔒 ปลดล็อก Plan' : '🔓 ล็อก Plan';
@@ -973,7 +973,7 @@
     renderRows();
   });
   updatePlanLockBtn();
- 
+
   const chartTabs = $('chartTabs');
   chartTabs.addEventListener('click', (e)=>{
     const btn = e.target.closest('.chart-tab');
@@ -984,10 +984,9 @@
       p.classList.toggle('active', p.dataset.chartPanel===target);
     });
   });
- 
+
   loadDate(state.date, state.line, state.shift);
 })();
 </script>
 </body>
 </html>
- 
