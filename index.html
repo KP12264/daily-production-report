@@ -174,7 +174,11 @@
   }
   .logpanel h3::before{content:"";width:8px;height:8px;background:var(--amber);border-radius:2px;transform:rotate(45deg);}
   .logpanel .sub{color:var(--muted);font-size:12px;margin-bottom:14px;}
-  table{width:100%;border-collapse:collapse;}
+  .swipe-hint{display:none;}
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;}
+  .table-scroll::-webkit-scrollbar{height:8px;}
+  .table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  table{width:100%;min-width:780px;border-collapse:collapse;}
   thead th{
     text-align:left;font-family:var(--font-m);font-size:11px;letter-spacing:.06em;
     color:var(--muted);text-transform:uppercase;padding:0 8px 8px;border-bottom:1px solid var(--border);
@@ -202,6 +206,8 @@
     border-radius:7px;cursor:pointer;font-size:14px;line-height:1;
   }
   .del-btn:hover{border-color:var(--red);color:var(--red);}
+  .del-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .del-btn:disabled:hover{border-color:var(--border);color:var(--muted);}
   .rowfoot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
   .add-btn{
     background:var(--panel-2);border:1px dashed var(--border);color:var(--amber);
@@ -234,6 +240,10 @@
     }
     .charts .panel{display:none;}
     .charts .panel.active{display:block;}
+    .swipe-hint{
+      display:block;color:var(--amber);font-family:var(--font-m);font-size:11px;
+      margin-bottom:10px;
+    }
   }
 </style>
 </head>
@@ -300,6 +310,8 @@
   <div class="logpanel">
     <h3>ข้อมูล</h3>
     <div class="sub">บันทึกยอดผลิตรายช่วงเวลา — แก้ไขค่าแล้วระบบจะบันทึกและอัปเดตกราฟให้อัตโนมัติ</div>
+    <div class="swipe-hint">← เลื่อนซ้าย-ขวาเพื่อดูข้อมูลทั้งหมด →</div>
+    <div class="table-scroll">
     <table>
       <thead>
         <tr>
@@ -314,6 +326,7 @@
       </thead>
       <tbody id="tbody"></tbody>
     </table>
+    </div>
     <div class="rowfoot">
       <div style="display:flex;gap:8px;align-items:center;">
         <button class="add-btn" id="addRow">+ เพิ่มช่วงเวลา</button>
@@ -739,7 +752,7 @@
         <td class="diffcol"><span class="diffval ${d.cls}">${d.text}</span></td>
         <td class="numcol"><input type="number" data-field="downtime" value="${row.downtime}" placeholder="0"></td>
         <td class="notecol"><input data-field="note" value="${escapeHtml(row.note)}" placeholder="-"></td>
-        <td class="delcol"><button class="del-btn" title="ลบแถว">×</button></td>
+        <td class="delcol"><button class="del-btn" title="ลบแถว" ${planLocked?'disabled':''}>×</button></td>
       `;
       const diffSpan = tr.querySelector('.diffval');
       tr.querySelectorAll('input').forEach(inp=>{
@@ -755,6 +768,7 @@
         });
       });
       tr.querySelector('.del-btn').addEventListener('click', ()=>{
+        if(planLocked) return;
         state.rows = state.rows.filter(r=>r.id!==row.id);
         renderRows();
         recompute();
@@ -976,3 +990,4 @@
 </script>
 </body>
 </html>
+ 
