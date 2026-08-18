@@ -221,7 +221,7 @@
   }
   .totals b{color:var(--text);}
 
-  .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .summary-grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:520px;}
   .summary-col{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:14px;}
   .summary-col h4{
     font-family:var(--font-d);font-size:15px;margin:0 0 10px;color:var(--amber);
@@ -966,11 +966,11 @@
   let modelState = { models: [], qty: {} };
   let modelSaveTimer = null;
 
-  function modelKeyFor(date, line, shift){ return keyFor(date, line, shift)+'_models'; }
+  function modelKeyFor(date, line){ return 'prod_'+date+'_'+line+'_models'; }
 
   function md(name, door){ return { name, door }; }
   const MODEL_SEED = {
-    'A_ดึก': [
+    'A': [
       md('620 550 หน้าเหรียญ','R'), md('620 550ก้อนน้ำ','R'), md('636','F'),
       md('520 หน้าเหรียญ','RR'), md('520 ก้อนน้ำ','RL'), md('520','RL'),
       md('G 3 320','F'), md('G 3 350','F'),
@@ -979,13 +979,13 @@
       md('T-DOOR HORIZONTAL ก้อน','RR'), md('T-DOOR HORIZONTAL ก้อน','FR'), md('T-DOOR HORIZONTAL ก้อน','FL'),
       md('Door - 6.6 Cu.(199) C','R')
     ],
-    'B_ดึก': [
+    'B': [
       md('EHRT 2070 NL','F'), md('EHRT 2070 NL','R'),
       md('EHRT 2570 NL','F'), md('EHRT 2570 NL','R'),
       md('Door 5.3 Cu.(159) C','R'), md('Door 5.3 Cu.(159) F','R'),
       md('Door - 6.6 Cu.(199) C','R'), md('Door - 6.6 Cu.(199) F','R')
     ],
-    'C_ดึก': [
+    'C': [
       md('BM 23 29','RR'), md('BM 23 29','RL'), md('BM 23 29','FT'), md('BM 23 29','FB'),
       md('TM 19/21','F'), md('TM 19/21','R'),
       md('TM 1012','R'), md('FUF 14','R'), md('FUF 22','R'),
@@ -995,7 +995,7 @@
   };
 
   async function loadModelData(date, line, shift){
-    const key = modelKeyFor(date, line, shift);
+    const key = modelKeyFor(date, line);
     const check = await firestoreCheck(key);
 
     if(check.status === 'found'){
@@ -1010,7 +1010,7 @@
       let seeded = null;
 
       // First choice: carry forward yesterday's model + ฝา list for this Line/กะ so edits persist day to day.
-      const prevCheck = await firestoreCheck(modelKeyFor(prevDateStr(date), line, shift));
+      const prevCheck = await firestoreCheck(modelKeyFor(prevDateStr(date), line));
       if(prevCheck.status === 'found'){
         try{
           const prevParsed = JSON.parse(prevCheck.value);
@@ -1025,7 +1025,7 @@
 
       // Fallback: the hardcoded starter list, only if there's no previous day to carry from.
       if(!seeded){
-        const seedNames = MODEL_SEED[line+'_'+shift];
+        const seedNames = MODEL_SEED[line];
         if(seedNames){
           seeded = { models: seedNames.map(s=>({ id:'m'+Math.random().toString(36).slice(2,9), name:s.name, door:s.door })), qty: {} };
         }
@@ -1064,7 +1064,7 @@
   function scheduleModelSave(){
     clearTimeout(modelSaveTimer);
     modelSaveTimer = setTimeout(()=>{
-      storageSet(modelKeyFor(state.date, state.line, state.shift), JSON.stringify(modelState)).catch(e=>{
+      storageSet(modelKeyFor(state.date, state.line), JSON.stringify(modelState)).catch(e=>{
         console.error('Failed to save model data:', e);
       });
     }, 450);
@@ -1403,12 +1403,12 @@
 
   $('resetModelsBtn').addEventListener('click', async ()=>{
     if(planLocked) return;
-    const seedNames = MODEL_SEED[state.line+'_'+state.shift];
+    const seedNames = MODEL_SEED[state.line];
     if(!seedNames){
       await showModal({title:'ไม่มีข้อมูล', message:'Line/กะนี้ยังไม่มีรายชื่อรุ่นมาตรฐานตั้งไว้', okOnly:true});
       return;
     }
-    const ok = await showModal({title:'ยืนยันการรีเซ็ต', message:'รีเซ็ตรายชื่อรุ่นทั้งหมดของ Line '+state.line+' กะ'+state.shift+' ให้เป็นรายชื่อมาตรฐาน? (ยอด Actual ที่กรอกไว้ต่อรุ่นจะหายไป เพราะรุ่นจะถูกสร้างใหม่)'});
+    const ok = await showModal({title:'ยืนยันการรีเซ็ต', message:'รีเซ็ตรายชื่อรุ่นทั้งหมดของ Line '+state.line+' (ใช้ร่วมกันทั้งกะเช้าและกะดึก) ให้เป็นรายชื่อมาตรฐาน? (ยอด Actual ที่กรอกไว้ต่อรุ่นจะหายไป เพราะรุ่นจะถูกสร้างใหม่)'});
     if(!ok) return;
     modelState = { models: seedNames.map(s=>({ id:'m'+Math.random().toString(36).slice(2,9), name:s.name, door:s.door })), qty: {} };
     syncHourTotalsFromModels();
@@ -1436,7 +1436,7 @@
     const lines = ['A','B','C'];
     const results = await Promise.all(lines.map(async line=>{
       try{
-        const res = await storageGet(modelKeyFor(date, line, shift));
+        const res = await storageGet(modelKeyFor(date, line));
         if(res && res.value){
           const parsed = JSON.parse(res.value);
           return { line, models: parsed.models||[], qty: parsed.qty||{} };
