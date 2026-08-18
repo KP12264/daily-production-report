@@ -221,6 +221,30 @@
   }
   .totals b{color:var(--text);}
 
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .summary-col{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .summary-col h4{
+    font-family:var(--font-d);font-size:15px;margin:0 0 10px;color:var(--amber);
+    display:flex;align-items:center;gap:8px;
+  }
+  .summary-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .summary-table th{
+    text-align:left;font-family:var(--font-m);font-size:10px;letter-spacing:.05em;
+    color:var(--muted);text-transform:uppercase;padding:0 4px 6px;border-bottom:1px solid var(--border);
+  }
+  .summary-table td{padding:6px 4px;border-bottom:1px solid var(--border-soft);font-family:var(--font-b);}
+  .summary-table td.summary-num{font-family:var(--font-m);text-align:right;color:var(--text);font-weight:600;}
+  .summary-table td.summary-door{font-family:var(--font-m);color:var(--muted);text-align:center;}
+  .summary-table td.summary-empty{color:var(--muted);text-align:center;padding:14px 4px;}
+  .summary-table tfoot td{
+    font-family:var(--font-m);font-weight:700;color:var(--amber);
+    border-top:2px solid var(--border);border-bottom:none;padding-top:10px;
+  }
+  .summary-loading{color:var(--muted);font-family:var(--font-m);font-size:12px;padding:20px 0;text-align:center;}
+  @media (max-width:900px){
+    .summary-grid{grid-template-columns:1fr;}
+  }
+
   .modal-overlay{
     display:none;position:fixed;inset:0;background:rgba(8,10,14,0.72);
     align-items:center;justify-content:center;z-index:1000;padding:20px;
@@ -242,7 +266,7 @@
 
   .page-tabs{
     display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--border);
-    border-radius:9px;padding:3px;margin-top:14px;max-width:360px;
+    border-radius:9px;padding:3px;margin-top:14px;max-width:520px;
   }
   .page-tab{
     flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--font-m);
@@ -253,6 +277,11 @@
   #modelTable{min-width:100%;}
   #modelTable thead th{white-space:nowrap;font-size:10px;padding:0 6px 8px;}
   #modelTable .modelnamecol{width:190px;}
+  #modelTable .doorcol{width:64px;}
+  #modelTable tbody input.doorname{
+    background:var(--panel-2);border:1px solid var(--border);border-radius:7px;color:var(--text);
+    padding:7px 6px;font-family:var(--font-m);font-size:13px;width:100%;text-align:center;outline:none;
+  }
   #modelTable .hourcol{width:78px;text-align:center;}
   #modelTable tbody input.modelname{
     background:var(--panel-2);border:1px solid var(--border);border-radius:7px;color:var(--text);
@@ -398,6 +427,12 @@
       </div>
     </div>
   </div>
+
+  <div class="logpanel">
+    <h3>สรุปยอดตาม Model</h3>
+    <div class="sub">สรุปยอดผลิตจริงรวมทั้งวันของแต่ละรุ่น แยกตาม Line (ของวันที่ + กะที่เลือกไว้ด้านบน)</div>
+    <div id="summaryGrid" class="summary-grid"></div>
+  </div>
   </div>
 
   <div id="modelPage" style="display:none;">
@@ -423,6 +458,7 @@
       </div>
     </div>
   </div>
+
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -564,6 +600,21 @@
       return true;
     }catch(e){ return false; }
   })();
+
+  // Tri-state check used ONLY to decide whether it's safe to auto-seed a brand new day.
+  // Critical: a connection error must NEVER be treated the same as "confirmed no data",
+  // or a network blip would silently overwrite real data with a blank template.
+  async function firestoreCheck(key){
+    if(!db) return { status:'nodb' };
+    try{
+      const doc = await db.collection(COLLECTION).doc(key).get();
+      if(doc.exists) return { status:'found', value: doc.data().json };
+      return { status:'not-found' };
+    }catch(e){
+      console.error('Firestore check failed (treated as connection error, will NOT auto-seed):', e);
+      return { status:'error' };
+    }
+  }
 
   async function storageGet(key){
     if(db){
@@ -753,46 +804,79 @@
     line = line || state.line;
     shift = shift || state.shift;
     setSaving('loading');
-    try{
-      const res = await storageGet(keyFor(date, line, shift));
-      if(res && res.value){
-        const parsed = JSON.parse(res.value);
+    const mainKey = keyFor(date, line, shift);
+    const check = await firestoreCheck(mainKey);
+
+    if(check.status === 'found'){
+      try{
+        const parsed = JSON.parse(check.value);
         state = { title: parsed.title||'Daily Production Report', date, line, shift, rows: (parsed.rows && parsed.rows.length) ? parsed.rows : defaultRows(shift) };
+      }catch(e){
+        console.error('Failed to parse stored data:', e);
+        state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+      }
+    } else if(check.status === 'not-found'){
+      // Firestore confirmed this day truly has no data yet — safe to seed and save.
+      const seed = SEED_DATA[mainKey];
+      const standard = STANDARD_PLAN[line+'_'+shift];
+      if(seed){
+        state = { title: seed.title, date, line, shift, rows: seed.rows.map(r=>({...r})) };
+        storageSet(mainKey, JSON.stringify({title: state.title, rows: state.rows}));
+      } else if(standard){
+        state = { title: 'Daily Production Report', date, line, shift, rows: standard.map(r=>({...r, id:'r'+Math.random().toString(36).slice(2,9)})) };
+        storageSet(mainKey, JSON.stringify({title: state.title, rows: state.rows}));
       } else {
-        const seedKey = keyFor(date, line, shift);
-        const seed = SEED_DATA[seedKey];
-        const standard = STANDARD_PLAN[line+'_'+shift];
-        if(seed){
-          state = { title: seed.title, date, line, shift, rows: seed.rows.map(r=>({...r})) };
-          storageSet(seedKey, JSON.stringify({title: state.title, rows: state.rows}));
-        } else if(standard){
-          state = { title: 'Daily Production Report', date, line, shift, rows: standard.map(r=>({...r, id:'r'+Math.random().toString(36).slice(2,9)})) };
-          storageSet(seedKey, JSON.stringify({title: state.title, rows: state.rows}));
-        } else {
-          const prevKey = keyFor(prevDateStr(date), line, shift);
-          const prevRes = await storageGet(prevKey);
-          let rows = null;
-          if(prevRes && prevRes.value){
-            try{
-              const prevParsed = JSON.parse(prevRes.value);
-              const prevRows = prevParsed.rows || [];
-              if(prevRows.length){
-                rows = prevRows.map(r => mkRow(r.slot, (r.actual!==''&&r.actual!=null) ? r.actual : r.plan, '', '', ''));
-              }
-            }catch(e){
-              console.error('Failed to carry forward previous day data:', e);
+        const prevCheck = await firestoreCheck(keyFor(prevDateStr(date), line, shift));
+        let rows = null;
+        if(prevCheck.status === 'found'){
+          try{
+            const prevParsed = JSON.parse(prevCheck.value);
+            const prevRows = prevParsed.rows || [];
+            if(prevRows.length){
+              rows = prevRows.map(r => mkRow(r.slot, (r.actual!==''&&r.actual!=null) ? r.actual : r.plan, '', '', ''));
             }
-          }
-          if(rows && rows.length){
-            state = { title: 'Daily Production Report', date, line, shift, rows };
-            storageSet(seedKey, JSON.stringify({title: state.title, rows: state.rows}));
-          } else {
-            state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+          }catch(e){
+            console.error('Failed to carry forward previous day data:', e);
           }
         }
+        if(rows && rows.length){
+          state = { title: 'Daily Production Report', date, line, shift, rows };
+          storageSet(mainKey, JSON.stringify({title: state.title, rows: state.rows}));
+        } else {
+          state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+        }
       }
-    } catch(e){
-      state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+    } else {
+      // 'error' or 'nodb': we can't tell whether real data exists. NEVER auto-seed or
+      // auto-save here — that would risk silently overwriting real data. Show a
+      // local-only fallback (if any) and clearly flag the connection problem instead.
+      let localVal = null;
+      try{
+        if(hasClaudeStorage){ const r = await window.storage.get(mainKey, false); if(r) localVal = r.value; }
+      }catch(e){}
+      if(!localVal && hasLocalStorage){
+        try{ const v = window.localStorage.getItem(mainKey); if(v) localVal = v; }catch(e){}
+      }
+      if(!localVal && memoryStore[mainKey]) localVal = memoryStore[mainKey];
+
+      if(localVal){
+        try{
+          const parsed = JSON.parse(localVal);
+          state = { title: parsed.title||'Daily Production Report', date, line, shift, rows: (parsed.rows && parsed.rows.length) ? parsed.rows : defaultRows(shift) };
+        }catch(e){
+          state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+        }
+      } else {
+        state = { title: 'Daily Production Report', date, line, shift, rows: defaultRows(shift) };
+      }
+      titleInput.value = state.title;
+      dateInput.value = state.date;
+      setActiveLineBtn(state.line);
+      setActiveShiftBtn(state.shift);
+      renderRows();
+      recompute();
+      setSaving('offline');
+      return;
     }
     titleInput.value = state.title;
     dateInput.value = state.date;
@@ -803,6 +887,7 @@
     setSaving('saved');
     watchLive(keyFor(state.date, state.line, state.shift));
     loadModelData(date, line, shift);
+    loadSummaryPage();
   }
 
   function setSaving(mode){
@@ -810,6 +895,7 @@
     if(mode==='saving'){ dot.style.background='var(--amber)'; txt.textContent='กำลังบันทึก...'; }
     else if(mode==='loading'){ dot.style.background='var(--muted)'; txt.textContent='กำลังโหลด...'; }
     else if(mode==='memory'){ dot.style.background='var(--amber)'; txt.textContent='บันทึกในเซสชันนี้เท่านั้น'; }
+    else if(mode==='offline'){ dot.style.background='var(--red)'; txt.textContent='⚠️ เชื่อมต่อไม่ได้ - ข้อมูลอาจไม่ใช่ล่าสุด กดรีเฟรช'; }
     else { dot.style.background='var(--green)'; txt.textContent='บันทึกแล้ว'; }
   }
 
@@ -882,49 +968,95 @@
 
   function modelKeyFor(date, line, shift){ return keyFor(date, line, shift)+'_models'; }
 
+  function md(name, door){ return { name, door }; }
   const MODEL_SEED = {
     'A_ดึก': [
-      '620 550 หน้าเหรียญ (R)','620 550ก้อนน้ำ (R)','636 (F)',
-      '520 หน้าเหรียญ (RR)','520 ก้อนน้ำ (RL)','520 (RL)',
-      'G 3 320 (F)','G 3 350 (F)',
-      'T-DOOR US (RR)','T-DOOR US (RL)','T-DOOR US (FR)','T-DOOR US (FL)',
-      'T-DOOR HORIZONTAL เหรียญ (RR)','T-DOOR HORIZONTAL เหรียญ (RL)',
-      'T-DOOR HORIZONTAL ก้อน (RR)','T-DOOR HORIZONTAL ก้อน (FR)','T-DOOR HORIZONTAL ก้อน (FL)',
-      'Door - 6.6 Cu.(199) C (R)'
+      md('620 550 หน้าเหรียญ','R'), md('620 550ก้อนน้ำ','R'), md('636','F'),
+      md('520 หน้าเหรียญ','RR'), md('520 ก้อนน้ำ','RL'), md('520','RL'),
+      md('G 3 320','F'), md('G 3 350','F'),
+      md('T-DOOR US','RR'), md('T-DOOR US','RL'), md('T-DOOR US','FR'), md('T-DOOR US','FL'),
+      md('T-DOOR HORIZONTAL เหรียญ','RR'), md('T-DOOR HORIZONTAL เหรียญ','RL'),
+      md('T-DOOR HORIZONTAL ก้อน','RR'), md('T-DOOR HORIZONTAL ก้อน','FR'), md('T-DOOR HORIZONTAL ก้อน','FL'),
+      md('Door - 6.6 Cu.(199) C','R')
     ],
     'B_ดึก': [
-      'EHRT 2070 NL (F)','EHRT 2070 NL (R)',
-      'EHRT 2570 NL (F)','EHRT 2570 NL (R)',
-      'Door 5.3 Cu.(159) C (R)','Door 5.3 Cu.(159) F (R)',
-      'Door - 6.6 Cu.(199) C (R)','Door - 6.6 Cu.(199) F (R)'
+      md('EHRT 2070 NL','F'), md('EHRT 2070 NL','R'),
+      md('EHRT 2570 NL','F'), md('EHRT 2570 NL','R'),
+      md('Door 5.3 Cu.(159) C','R'), md('Door 5.3 Cu.(159) F','R'),
+      md('Door - 6.6 Cu.(199) C','R'), md('Door - 6.6 Cu.(199) F','R')
     ],
     'C_ดึก': [
-      'BM 23 29 (RR)','BM 23 29 (RL)','BM 23 29 (FT)','BM 23 29 (FB)',
-      'TM 19/21 (F)','TM 19/21 (R)',
-      'TM 1012 (R)','FUF 14 (R)','FUF 22 (R)',
-      'BM 28 FL FR (FR)','BM 28 FL FR (FL)',
-      'TM 14 (F)','TM 14 (R)'
+      md('BM 23 29','RR'), md('BM 23 29','RL'), md('BM 23 29','FT'), md('BM 23 29','FB'),
+      md('TM 19/21','F'), md('TM 19/21','R'),
+      md('TM 1012','R'), md('FUF 14','R'), md('FUF 22','R'),
+      md('BM 28 FL FR','FR'), md('BM 28 FL FR','FL'),
+      md('TM 14','F'), md('TM 14','R')
     ]
   };
 
   async function loadModelData(date, line, shift){
-    try{
-      const res = await storageGet(modelKeyFor(date, line, shift));
-      if(res && res.value){
-        const parsed = JSON.parse(res.value);
+    const key = modelKeyFor(date, line, shift);
+    const check = await firestoreCheck(key);
+
+    if(check.status === 'found'){
+      try{
+        const parsed = JSON.parse(check.value);
         modelState = { models: parsed.models || [], qty: parsed.qty || {} };
-      } else {
-        const seedNames = MODEL_SEED[line+'_'+shift];
-        if(seedNames){
-          modelState = { models: seedNames.map(name=>({ id:'m'+Math.random().toString(36).slice(2,9), name })), qty: {} };
-          storageSet(modelKeyFor(date, line, shift), JSON.stringify(modelState));
-        } else {
-          modelState = { models: [], qty: {} };
+      }catch(e){
+        console.error('Failed to parse model data:', e);
+        modelState = { models: [], qty: {} };
+      }
+    } else if(check.status === 'not-found'){
+      let seeded = null;
+
+      // First choice: carry forward yesterday's model + ฝา list for this Line/กะ so edits persist day to day.
+      const prevCheck = await firestoreCheck(modelKeyFor(prevDateStr(date), line, shift));
+      if(prevCheck.status === 'found'){
+        try{
+          const prevParsed = JSON.parse(prevCheck.value);
+          const prevModels = prevParsed.models || [];
+          if(prevModels.length){
+            seeded = { models: prevModels.map(m=>({ id:'m'+Math.random().toString(36).slice(2,9), name:m.name, door:m.door||'' })), qty: {} };
+          }
+        }catch(e){
+          console.error('Failed to carry forward model list:', e);
         }
       }
-    }catch(e){
-      console.error('Failed to load model data:', e);
-      modelState = { models: [], qty: {} };
+
+      // Fallback: the hardcoded starter list, only if there's no previous day to carry from.
+      if(!seeded){
+        const seedNames = MODEL_SEED[line+'_'+shift];
+        if(seedNames){
+          seeded = { models: seedNames.map(s=>({ id:'m'+Math.random().toString(36).slice(2,9), name:s.name, door:s.door })), qty: {} };
+        }
+      }
+
+      if(seeded){
+        modelState = seeded;
+        storageSet(key, JSON.stringify(modelState));
+      } else {
+        modelState = { models: [], qty: {} };
+      }
+    } else {
+      // Connection error: don't overwrite. Fall back to a local-only copy if one exists, read-only.
+      let localVal = null;
+      try{
+        if(hasClaudeStorage){ const r = await window.storage.get(key, false); if(r) localVal = r.value; }
+      }catch(e){}
+      if(!localVal && hasLocalStorage){
+        try{ const v = window.localStorage.getItem(key); if(v) localVal = v; }catch(e){}
+      }
+      if(!localVal && memoryStore[key]) localVal = memoryStore[key];
+      if(localVal){
+        try{
+          const parsed = JSON.parse(localVal);
+          modelState = { models: parsed.models || [], qty: parsed.qty || {} };
+        }catch(e){
+          modelState = { models: [], qty: {} };
+        }
+      } else {
+        modelState = { models: [], qty: {} };
+      }
     }
     renderModelTable();
   }
@@ -954,7 +1086,7 @@
     const head = $('modelTableHead');
     const tbodyM = $('modelTbody');
 
-    head.innerHTML = '<th class="modelnamecol">รุ่น</th>' +
+    head.innerHTML = '<th class="modelnamecol">รุ่น</th><th class="doorcol">ฝา</th>' +
       state.rows.map(r=>`<th class="hourcol">${escapeHtml(r.slot)}</th>`).join('') +
       '<th class="modeldel"></th>';
 
@@ -966,11 +1098,16 @@
         const v = modelState.qty[m.id][r.id] ?? '';
         return `<td class="hourcol"><input class="qty" type="number" data-row="${r.id}" value="${v}" placeholder="0"></td>`;
       }).join('');
-      tr.innerHTML = `<td class="modelnamecol"><input class="modelname" value="${escapeHtml(m.name)}" placeholder="ชื่อรุ่น" ${planLocked?'disabled':''}></td>${hourCells}<td class="modeldel"><button class="del-btn" title="ลบรุ่น" ${planLocked?'disabled':''}>×</button></td>`;
+      tr.innerHTML = `<td class="modelnamecol"><input class="modelname" value="${escapeHtml(m.name)}" placeholder="ชื่อรุ่น" ${planLocked?'disabled':''}></td><td class="doorcol"><input class="doorname" value="${escapeHtml(m.door||'')}" placeholder="ฝา" ${planLocked?'disabled':''}></td>${hourCells}<td class="modeldel"><button class="del-btn" title="ลบรุ่น" ${planLocked?'disabled':''}>×</button></td>`;
 
       tr.querySelector('.modelname').addEventListener('input', (e)=>{
         if(planLocked) return;
         m.name = e.target.value;
+        scheduleModelSave();
+      });
+      tr.querySelector('.doorname').addEventListener('input', (e)=>{
+        if(planLocked) return;
+        m.door = e.target.value;
         scheduleModelSave();
       });
       tr.querySelectorAll('.qty').forEach(inp=>{
@@ -1017,7 +1154,7 @@
 
   $('addModelRow').addEventListener('click', ()=>{
     if(planLocked) return;
-    modelState.models.push({ id:'m'+Math.random().toString(36).slice(2,9), name:'' });
+    modelState.models.push({ id:'m'+Math.random().toString(36).slice(2,9), name:'', door:'' });
     renderModelTable();
     scheduleModelSave();
   });
@@ -1222,6 +1359,7 @@
   $('refreshNow').addEventListener('click', ()=>{
     loadDate(state.date, state.line, state.shift);
   });
+
   $('addRow').addEventListener('click', ()=>{
     state.rows.push({ id:'r'+Math.random().toString(36).slice(2,8), slot:'ช่วงเวลาใหม่', model:'', plan:'', actual:'', downtime:'', note:'' });
     renderRows();
@@ -1272,7 +1410,7 @@
     }
     const ok = await showModal({title:'ยืนยันการรีเซ็ต', message:'รีเซ็ตรายชื่อรุ่นทั้งหมดของ Line '+state.line+' กะ'+state.shift+' ให้เป็นรายชื่อมาตรฐาน? (ยอด Actual ที่กรอกไว้ต่อรุ่นจะหายไป เพราะรุ่นจะถูกสร้างใหม่)'});
     if(!ok) return;
-    modelState = { models: seedNames.map(name=>({ id:'m'+Math.random().toString(36).slice(2,9), name })), qty: {} };
+    modelState = { models: seedNames.map(s=>({ id:'m'+Math.random().toString(36).slice(2,9), name:s.name, door:s.door })), qty: {} };
     syncHourTotalsFromModels();
     renderRows();
     recompute();
@@ -1290,6 +1428,48 @@
     $('mainPage').style.display = target==='main' ? '' : 'none';
     $('modelPage').style.display = target==='model' ? '' : 'none';
   });
+
+  async function loadSummaryPage(){
+    const date = state.date, shift = state.shift;
+    const grid = $('summaryGrid');
+    grid.innerHTML = '<div class="summary-loading">กำลังโหลด...</div>';
+    const lines = ['A','B','C'];
+    const results = await Promise.all(lines.map(async line=>{
+      try{
+        const res = await storageGet(modelKeyFor(date, line, shift));
+        if(res && res.value){
+          const parsed = JSON.parse(res.value);
+          return { line, models: parsed.models||[], qty: parsed.qty||{} };
+        }
+      }catch(e){ console.error('Failed to load summary for line '+line+':', e); }
+      return { line, models: [], qty: {} };
+    }));
+
+    // Bail out quietly if the user already switched away from the summary tab or changed date/shift.
+    if(date !== state.date || shift !== state.shift) return;
+
+    grid.innerHTML = results.map(r=>{
+      const rows = r.models.map(m=>{
+        let total = 0;
+        const q = r.qty[m.id] || {};
+        Object.values(q).forEach(v=>{ if(v!==undefined && v!=='') total += num(v); });
+        return { name: m.name, door: m.door||'', total };
+      });
+      const grand = rows.reduce((s,x)=>s+x.total,0);
+      const rowsHtml = rows.length
+        ? rows.map(x=>`<tr><td>${escapeHtml(x.name)}</td><td class="summary-door">${escapeHtml(x.door)}</td><td class="summary-num">${fmt(x.total)}</td></tr>`).join('')
+        : '<tr><td colspan="3" class="summary-empty">ไม่มีข้อมูล</td></tr>';
+      return `
+        <div class="summary-col">
+          <h4>Line ${r.line}</h4>
+          <table class="summary-table">
+            <thead><tr><th>รุ่น</th><th>ฝา</th><th>รวม</th></tr></thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot><tr><td colspan="2">รวมทั้งหมด</td><td class="summary-num">${fmt(grand)}</td></tr></tfoot>
+          </table>
+        </div>`;
+    }).join('');
+  }
 
   loadDate(state.date, state.line, state.shift);
 })();
