@@ -245,6 +245,22 @@
     border-top:2px solid var(--border);border-bottom:none;padding-top:10px;
   }
   .summary-loading{color:var(--muted);font-family:var(--font-m);font-size:12px;padding:20px 0;text-align:center;}
+ 
+  .monthly-table{width:100%;min-width:520px;border-collapse:collapse;}
+  .monthly-table thead th{
+    text-align:left;font-family:var(--font-m);font-size:11px;letter-spacing:.06em;
+    color:var(--muted);text-transform:uppercase;padding:0 8px 8px;border-bottom:1px solid var(--border);
+  }
+  .monthly-table thead th:not(:first-child){text-align:right;}
+  .monthly-table tbody td{padding:6px 8px;border-bottom:1px solid var(--border-soft);font-family:var(--font-m);font-size:13px;}
+  .monthly-table tbody td:not(:first-child){text-align:right;}
+  .monthly-table tbody td:last-child{color:var(--amber);font-weight:700;}
+  .monthly-table tbody tr:hover{background:rgba(255,255,255,0.02);}
+  .monthly-table tfoot td{
+    font-family:var(--font-m);font-weight:700;font-size:13px;color:var(--amber);
+    padding:10px 8px;border-top:2px solid var(--border);text-align:right;
+  }
+  .monthly-table tfoot td:first-child{text-align:left;color:var(--text);}
   @media (max-width:900px){
     .summary-grid{grid-template-columns:1fr;}
   }
@@ -270,7 +286,7 @@
  
   .page-tabs{
     display:flex;gap:4px;background:var(--panel-2);border:1px solid var(--border);
-    border-radius:9px;padding:3px;margin-top:14px;max-width:520px;
+    border-radius:9px;padding:3px;margin-top:14px;max-width:680px;flex-wrap:wrap;
   }
   .page-tab{
     flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--font-m);
@@ -369,6 +385,7 @@
     <button class="page-tab active" data-page="main">หน้าหลัก</button>
     <button class="page-tab" data-page="model">บันทึกตาม Model</button>
     <button class="page-tab" data-page="summary">สรุปยอด Model</button>
+    <button class="page-tab" data-page="monthly">ยอดรวมรายเดือน</button>
   </div>
  
   <div id="mainPage">
@@ -462,6 +479,26 @@
       <h3>สรุปยอดตาม Model</h3>
       <div class="sub">สรุปยอดผลิตจริงรวมทั้งวันของแต่ละรุ่น แยกตาม Line (ของวันที่ + กะที่เลือกไว้ด้านบน)</div>
       <div id="summaryGrid" class="summary-grid"></div>
+    </div>
+  </div>
+ 
+  <div id="monthlyPage" style="display:none;">
+    <div class="logpanel">
+      <h3>ยอดรวมรายเดือน</h3>
+      <div class="sub">ยอดผลิตจริงรวมทั้งวัน (กะเช้า + กะดึกรวมกัน) ของแต่ละ Line ตลอดทั้งเดือน</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+        <input type="month" id="monthlyPicker">
+        <button class="mini-btn" id="monthlyRefreshBtn">โหลดข้อมูล</button>
+      </div>
+      <div class="table-scroll">
+        <table class="monthly-table">
+          <thead>
+            <tr><th>วันที่</th><th>Line A</th><th>Line B</th><th>Line C</th><th>รวม</th></tr>
+          </thead>
+          <tbody id="monthlyTbody"></tbody>
+          <tfoot><tr id="monthlyTotalRow"></tr></tfoot>
+        </table>
+      </div>
     </div>
   </div>
  
@@ -1420,7 +1457,9 @@
     $('mainPage').style.display = target==='main' ? '' : 'none';
     $('modelPage').style.display = target==='model' ? '' : 'none';
     $('summaryPage').style.display = target==='summary' ? '' : 'none';
+    $('monthlyPage').style.display = target==='monthly' ? '' : 'none';
     if(target==='summary') loadSummaryPage();
+    if(target==='monthly') loadMonthlyPage();
   });
  
   async function loadSummaryPage(){
@@ -1464,6 +1503,58 @@
         </div>`;
     }).join('');
   }
+ 
+  async function loadMonthlyPage(){
+    const picker = $('monthlyPicker');
+    if(!picker.value) picker.value = state.date.slice(0,7);
+    const ym = picker.value;
+    const tbody = $('monthlyTbody');
+    const totalRow = $('monthlyTotalRow');
+    tbody.innerHTML = '<tr><td colspan="5" class="summary-loading">กำลังโหลด...</td></tr>';
+    totalRow.innerHTML = '';
+ 
+    const [y, m] = ym.split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const lines = ['A','B','C'];
+    const shifts = ['เช้า','ดึก'];
+    const dayTotals = [];
+ 
+    for(let d=1; d<=daysInMonth; d++){
+      const dateStr = ym+'-'+String(d).padStart(2,'0');
+      const lineTotals = { A:0, B:0, C:0 };
+      await Promise.all(lines.map(async line=>{
+        let total = 0;
+        await Promise.all(shifts.map(async shift=>{
+          try{
+            const res = await storageGet(keyFor(dateStr, line, shift));
+            if(res && res.value){
+              const parsed = JSON.parse(res.value);
+              (parsed.rows||[]).forEach(r=>{ total += num(r.actual); });
+            }
+          }catch(e){ console.error('Failed to load monthly total for', dateStr, line, shift, e); }
+        }));
+        lineTotals[line] = total;
+      }));
+      dayTotals.push({ day:d, A:lineTotals.A, B:lineTotals.B, C:lineTotals.C, total:lineTotals.A+lineTotals.B+lineTotals.C });
+    }
+ 
+    if($('monthlyPicker').value !== ym) return; // user changed month while loading
+ 
+    tbody.innerHTML = dayTotals.map(d=>`
+      <tr>
+        <td>${d.day}</td>
+        <td>${fmt(d.A)}</td>
+        <td>${fmt(d.B)}</td>
+        <td>${fmt(d.C)}</td>
+        <td>${fmt(d.total)}</td>
+      </tr>`).join('');
+ 
+    const grand = dayTotals.reduce((acc,d)=>({A:acc.A+d.A, B:acc.B+d.B, C:acc.C+d.C, total:acc.total+d.total}), {A:0,B:0,C:0,total:0});
+    totalRow.innerHTML = `<td>รวมทั้งเดือน</td><td>${fmt(grand.A)}</td><td>${fmt(grand.B)}</td><td>${fmt(grand.C)}</td><td>${fmt(grand.total)}</td>`;
+  }
+ 
+  $('monthlyRefreshBtn').addEventListener('click', loadMonthlyPage);
+  $('monthlyPicker').addEventListener('change', loadMonthlyPage);
  
   loadDate(state.date, state.line, state.shift);
 })();
