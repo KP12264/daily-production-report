@@ -227,7 +227,11 @@
     font-family:var(--font-d);font-size:15px;margin:0 0 10px;color:var(--amber);
     display:flex;align-items:center;gap:8px;
   }
-  .summary-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .summary-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;}
+  .summary-table th:nth-child(1), .summary-table td:nth-child(1){width:52%;}
+  .summary-table th:nth-child(2), .summary-table td:nth-child(2){width:20%;}
+  .summary-table th:nth-child(3), .summary-table td:nth-child(3){width:28%;}
+  .summary-table td{word-break:break-word;overflow-wrap:break-word;}
   .summary-table th{
     text-align:left;font-family:var(--font-m);font-size:10px;letter-spacing:.05em;
     color:var(--muted);text-transform:uppercase;padding:0 4px 6px;border-bottom:1px solid var(--border);
@@ -364,6 +368,7 @@
   <div class="page-tabs" id="pageTabs">
     <button class="page-tab active" data-page="main">หน้าหลัก</button>
     <button class="page-tab" data-page="model">บันทึกตาม Model</button>
+    <button class="page-tab" data-page="summary">สรุปยอด Model</button>
   </div>
  
   <div id="mainPage">
@@ -427,12 +432,6 @@
       </div>
     </div>
   </div>
- 
-  <div class="logpanel">
-    <h3>สรุปยอดตาม Model</h3>
-    <div class="sub">สรุปยอดผลิตจริงรวมทั้งวันของแต่ละรุ่น แยกตาม Line (ของวันที่ + กะที่เลือกไว้ด้านบน)</div>
-    <div id="summaryGrid" class="summary-grid"></div>
-  </div>
   </div>
  
   <div id="modelPage" style="display:none;">
@@ -455,6 +454,14 @@
           <span>รุ่นทั้งหมด: <b id="modelCount">0</b></span>
         </div>
       </div>
+    </div>
+  </div>
+ 
+  <div id="summaryPage" style="display:none;">
+    <div class="logpanel">
+      <h3>สรุปยอดตาม Model</h3>
+      <div class="sub">สรุปยอดผลิตจริงรวมทั้งวันของแต่ละรุ่น แยกตาม Line (ของวันที่ + กะที่เลือกไว้ด้านบน)</div>
+      <div id="summaryGrid" class="summary-grid"></div>
     </div>
   </div>
  
@@ -886,7 +893,7 @@
     setSaving('saved');
     watchLive(keyFor(state.date, state.line, state.shift));
     loadModelData(date, line, shift);
-    loadSummaryPage();
+    if(activePage === 'summary') loadSummaryPage();
   }
  
   function setSaving(mode){
@@ -1062,10 +1069,13 @@
  
   function scheduleModelSave(){
     clearTimeout(modelSaveTimer);
-    modelSaveTimer = setTimeout(()=>{
-      storageSet(modelKeyFor(state.date, state.line), JSON.stringify(modelState)).catch(e=>{
+    modelSaveTimer = setTimeout(async ()=>{
+      try{
+        await storageSet(modelKeyFor(state.date, state.line), JSON.stringify(modelState));
+      }catch(e){
         console.error('Failed to save model data:', e);
-      });
+      }
+      loadSummaryPage();
     }, 450);
   }
  
@@ -1399,14 +1409,18 @@
     });
   });
  
+  let activePage = 'main';
   const pageTabs = $('pageTabs');
   pageTabs.addEventListener('click', (e)=>{
     const btn = e.target.closest('.page-tab');
     if(!btn) return;
     const target = btn.dataset.page;
+    activePage = target;
     pageTabs.querySelectorAll('.page-tab').forEach(b=>b.classList.toggle('active', b===btn));
     $('mainPage').style.display = target==='main' ? '' : 'none';
     $('modelPage').style.display = target==='model' ? '' : 'none';
+    $('summaryPage').style.display = target==='summary' ? '' : 'none';
+    if(target==='summary') loadSummaryPage();
   });
  
   async function loadSummaryPage(){
@@ -1457,7 +1471,3 @@
 </body>
 </html>
  
-
-
-
-
