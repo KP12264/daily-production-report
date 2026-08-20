@@ -1489,14 +1489,25 @@
     grid.innerHTML = '<div class="summary-loading">กำลังโหลด...</div>';
     const lines = ['A','B','C'];
     const results = await Promise.all(lines.map(async line=>{
+      let models = [], qty = {}, validRowIds = null;
       try{
         const res = await storageGet(modelKeyFor(date, line));
         if(res && res.value){
           const parsed = JSON.parse(res.value);
-          return { line, models: parsed.models||[], qty: parsed.qty||{} };
+          models = parsed.models||[];
+          qty = parsed.qty||{};
         }
       }catch(e){ console.error('Failed to load summary for line '+line+':', e); }
-      return { line, models: [], qty: {} };
+      try{
+        // Model qty is shared across both shifts of the day, so restrict the sum to only
+        // the row IDs that belong to the currently selected shift's hours.
+        const mainRes = await storageGet(keyFor(date, line, shift));
+        if(mainRes && mainRes.value){
+          const mainParsed = JSON.parse(mainRes.value);
+          validRowIds = new Set((mainParsed.rows||[]).map(r=>r.id));
+        }
+      }catch(e){ console.error('Failed to load main rows for shift filter, line '+line+':', e); }
+      return { line, models, qty, validRowIds };
     }));
  
     // Bail out quietly if the user already switched away from the summary tab or changed date/shift.
@@ -1506,7 +1517,10 @@
       const rows = r.models.map(m=>{
         let total = 0;
         const q = r.qty[m.id] || {};
-        Object.values(q).forEach(v=>{ if(v!==undefined && v!=='') total += num(v); });
+        Object.entries(q).forEach(([rowId, v])=>{
+          if(r.validRowIds && !r.validRowIds.has(rowId)) return; // belongs to the other shift
+          if(v!==undefined && v!=='') total += num(v);
+        });
         return { name: m.name, door: m.door||'', total };
       });
       const grand = rows.reduce((s,x)=>s+x.total,0);
@@ -1515,7 +1529,7 @@
         : '<tr><td colspan="3" class="summary-empty">ไม่มีข้อมูล</td></tr>';
       return `
         <div class="summary-col">
-          <h4>Line ${r.line}</h4>
+          <h4>Line ${r.line} — กะ${state.shift}</h4>
           <table class="summary-table">
             <thead><tr><th>รุ่น</th><th>ฝา</th><th>รวม</th></tr></thead>
             <tbody>${rowsHtml}</tbody>
