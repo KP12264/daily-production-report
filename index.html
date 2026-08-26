@@ -112,12 +112,16 @@
   }
   .save-status .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
   .mini-btn{
-    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:#fff;
+    background:#fff;border:1px solid var(--border);color:var(--text);
     font-family:var(--font-b);font-size:12px;font-weight:600;
     padding:7px 12px;border-radius:8px;cursor:pointer;
   }
-  .mini-btn:hover{border-color:#fff;color:#fff;}
+  .mini-btn:hover{border-color:var(--amber);color:var(--amber);}
   .mini-btn:active{transform:translateY(1px);}
+  .save-status .mini-btn{
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:#fff;
+  }
+  .save-status .mini-btn:hover{border-color:#fff;color:#fff;}
 
   /* KPI row */
   .kpis{
