@@ -28,6 +28,13 @@ async function saveModelOrder(){
  if(!S.docId)return;
  try{await ProdV2DB.set("prodV2_actualLogs",S.docId,{modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},true);$("saveBadge").textContent="SAVED"}catch(e){console.error(e)}
 }
+function openModelOrder(){
+ let ps=planKeys(),host=$("modelOrderList");if(!host)return;
+ host.innerHTML=ps.map((p,i)=>{let k=`${p.model}|||${p.door}`;return `<div class="order-row"><span class="order-no">${i+1}</span><div class="order-name"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div><button data-order-move="${esc(k)}" data-dir="-1">↑</button><button data-order-move="${esc(k)}" data-dir="1">↓</button></div>`}).join("");
+ $("modelOrderModal").classList.add("open");
+ host.querySelectorAll("[data-order-move]").forEach(b=>b.onclick=()=>{moveModel(b.dataset.orderMove,Number(b.dataset.dir));openModelOrder()})
+}
+function closeModelOrder(){$("modelOrderModal")?.classList.remove("open");render()}
 function actualTotal(){return Object.values(S.actual).reduce((s,x)=>s+(Number(x)||0),0)}
 function adjustedPlan(){return Number(S.plan?.adjustedPlan??S.plan?.totalPlan??0)}
 function originalPlan(){return Number(S.plan?.originalPlan??S.plan?.totalPlan??0)}
@@ -41,7 +48,7 @@ function render(){
  blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>Plan ${Number(b.total||0)}</small></th>`);
  h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
  ps.forEach(p=>{
-   let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-main"><div><b>${esc(p.model)}</b><br><small>${esc(p.door||"-")}</small></div><div class="model-order-controls"><button type="button" data-move-model="${esc(mk)}" data-dir="-1">↑</button><button type="button" data-move-model="${esc(mk)}" data-dir="1">↓</button><input type="number" min="1" max="${ps.length}" value="${S.modelOrder.indexOf(mk)+1}" data-model-pos="${esc(mk)}"></div></div></td>`;
+   let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div></td>`;
    blocks.forEach((b,bi)=>{
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
@@ -56,8 +63,6 @@ function render(){
    el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;renderKpis();$("saveBadge").textContent="SAVING...";queueSave(el.dataset.key,n)});
    el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
- document.querySelectorAll("[data-move-model]").forEach(b=>b.onclick=()=>moveModel(b.dataset.moveModel,Number(b.dataset.dir)));
- document.querySelectorAll("[data-model-pos]").forEach(inp=>inp.onchange=()=>setModelPosition(inp.dataset.modelPos,inp.value));
  renderKpis()
 }
 async function queueSave(k,v){
@@ -78,7 +83,7 @@ async function load(){
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
 async function init(){
- $("entryDate").value=localDate();$("loadEntryBtn").onclick=load;
+ $("entryDate").value=localDate();$("loadEntryBtn").onclick=load;$("openModelOrderBtn").onclick=()=>{if(!S.plan){note("Load Saved Plan ก่อนจัดลำดับ Model","plan-warn");return}openModelOrder()};$("closeModelOrderBtn").onclick=closeModelOrder;$("doneModelOrderBtn").onclick=closeModelOrder;
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("entryLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");stat("Ready","ok")}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
 }
 addEventListener("DOMContentLoaded",init)})();

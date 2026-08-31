@@ -350,3 +350,12 @@ input,select,textarea,.grid input,.grid select{
 .model-order-controls{display:flex;align-items:center;gap:4px}
 .model-order-controls button{width:26px;height:26px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#0f2747;font-weight:800;cursor:pointer}
 .model-order-controls input{width:38px;height:26px;border:1px solid #cbd5e1;border-radius:7px;text-align:center;font-size:11px;color:#0f2747}
+
+/* STEP 6.4 — clean entry + separate model order */
+.model-cell-clean{display:flex;flex-direction:column;gap:3px;text-align:left;padding:3px 2px}.model-cell-clean b{font-size:14px}.model-cell-clean small{color:#64748b}
+.entry-actions{display:flex;align-items:center;gap:10px}.secondary-btn{border:1px solid #bfd0e4;background:#fff;color:#174a8b;border-radius:9px;padding:9px 13px;font-weight:700;cursor:pointer}
+.entry-modal{display:none;position:fixed;inset:0;background:rgba(15,39,71,.35);z-index:999;align-items:center;justify-content:center;padding:20px}.entry-modal.open{display:flex}
+.entry-modal-card{width:min(520px,96vw);max-height:82vh;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,39,71,.25);display:flex;flex-direction:column;overflow:hidden}
+.entry-modal-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #e5edf5}.entry-modal-head h3{margin:0;color:#0f2747}.entry-modal-head p{margin:5px 0 0;color:#64748b;font-size:12px}.modal-x{border:0;background:#f1f5f9;border-radius:9px;width:34px;height:34px;font-size:20px;cursor:pointer}
+.model-order-list{overflow:auto;padding:10px 16px}.order-row{display:grid;grid-template-columns:34px 1fr 36px 36px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid #edf2f7}.order-no{font-weight:800;color:#2563eb;text-align:center}.order-name{display:flex;flex-direction:column}.order-name small{color:#64748b}.order-row button{height:32px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-weight:800;cursor:pointer}
+.entry-modal-foot{padding:14px 20px;border-top:1px solid #e5edf5;display:flex;justify-content:flex-end}
