@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Master Setup · Production V2</title>
+  <link rel="stylesheet" href="css/app.css?v=20260901-quality-theme2">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header class="top"><div class="brand">PRODUCTION V2</div><div class="badge">ISOLATED V2 • prodV2_* ONLY</div></header>
+<div class="shell">
+<nav>
+  <a href="index.html">Dashboard</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a>
+  <a href="loss.html">Loss / Downtime</a><a class="active" href="master.html">Master Setup</a><a href="../index.html">← ระบบเดิม</a>
+</nav>
+<main>
+  <div class="pagehead"><div><h1>Master Setup</h1><div class="sub">Versioned production master data</div></div><div id="saveStatus" class="status">Ready</div></div>
+
+  <div class="card"><div class="tabs">
+    <button class="tab active" data-tab="lines">Lines</button>
+    <button class="tab" data-tab="models">Model & Door</button>
+    <button class="tab" data-tab="pallets">Pallet / Jig Layout</button>
+    <button class="tab" data-tab="shifts">Shift & Time</button>
+  </div></div>
+
+  <section class="tabpane active" data-pane="lines">
+    <div class="notice">Line Master ของ V2 บันทึกเฉพาะ <b>prodV2_lines</b> และไม่มีคำสั่ง write ไปยัง productionLogs เดิม</div>
+    <div class="card">
+      <div class="pagehead"><div><h2>Line Master</h2><div class="sub">เพิ่ม / ปิดใช้งาน / จัดลำดับ Line โดยไม่ hard-code A/B/C</div></div><button id="addLine" class="primary">+ Add Line</button></div>
+      <table class="grid"><thead><tr><th>Line ID</th><th>Line Name</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="lineRows"></tbody></table>
+    </div>
+  </section>
+
+  <section class="tabpane" data-pane="models">
+    <div class="notice">Model & Door Master เก็บชื่อ Model และ Door จริงสำหรับ Plan / Actual / Dashboard เท่านั้น จำนวน Pallet และ Composition จะกำหนดใน Pallet / Jig Layout</div>
+    <div class="card">
+      <div class="pagehead">
+        <div><h2>Model & Door Master</h2><div class="sub">แยกตาม Line และรองรับ Door เช่น RR / RL / FT / FB / F / R</div></div>
+        <div class="toolbar"><button id="initModelMaster">Initialize A/B/C Master</button><label>Line <select id="modelLineFilter"></select></label><button id="addModelDoor" class="primary">+ Add Model / Door</button></div>
+      </div>
+      <table class="grid"><thead><tr><th>Line</th><th>Model</th><th>Door</th><th>Display Name</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="modelRows"></tbody></table>
+    </div>
+  </section>
+
+  <section class="tabpane" data-pane="pallets">
+    <div class="notice">Physical Pallet Master แยกจาก Daily Plan — การ Add/Remove pallet ระหว่างกะในอนาคตจะไม่แก้ Master นี้</div>
+    <div class="card">
+      <div class="pagehead">
+        <div><h2>Pallet / Jig Layout</h2><div class="sub">Line C confirmed: 24 physical pallets / 50 pcs per full round</div></div>
+        <div class="toolbar"><button id="initABLayout">Initialize A/B Draft</button><button id="initLineCLayout" class="primary">Initialize Line C Layout</button><label>Line <select id="layoutLineFilter"></select></label></div>
+      </div>
+      <div id="layoutSummary" class="notice">เลือก Line เพื่อดู Physical Pallet Composition</div>
+      <table class="grid"><thead><tr><th>Pallet</th><th>Composition</th><th>pcs / round</th><th>Status</th></tr></thead><tbody id="layoutRows"></tbody></table>
+    </div>
+  </section>
+
+  <section class="tabpane" data-pane="shifts">
+    <div class="notice">Shift & Time Master แยกตาม Line + Shift และรองรับ Effective Date ในขั้นต่อไป • BREAK ไม่ถือเป็น Loss</div>
+    <div class="card">
+      <div class="pagehead">
+        <div><h2>Shift & Time Master</h2><div class="sub">WORK / BREAK / Cycle / Planned Rounds by time block</div></div>
+        <div class="toolbar">
+          <button id="initShiftDraft">Initialize A/B Draft</button>
+          <button id="initShiftC" class="primary">Initialize Line C</button>
+          <label>Line <select id="shiftLineFilter"></select></label>
+          <label>Shift <select id="shiftTypeFilter"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+        </div>
+      </div>
+      <div id="shiftSummary" class="notice">เลือก Line / Shift เพื่อดู Time Blocks</div>
+      <table class="grid">
+        <thead><tr><th>Time</th><th>Type</th><th>Minutes</th><th>Cycle</th><th>Planned Rounds</th><th>Status</th></tr></thead>
+        <tbody id="shiftRows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</div>
+<script src="js/firebase-v2.js?v=20260831-fix3"></script><script src="js/master.js?v=20260901-step4"></script>
+</body></html>
