@@ -187,3 +187,73 @@ modelBody.addEventListener('click',async e=>{
 });
 
 (async()=>{await loadLines();})();
+
+
+/* Step 3 — Physical Pallet/Jig Layout */
+const LAYOUT_COLLECTION='prodV2_jigLayouts';
+
+function lineCPallets(){
+  const rows=[];
+  const add=(palletNo, positions)=>rows.push({
+    lineId:'C', palletNo, palletName:`C-P${String(palletNo).padStart(2,'0')}`,
+    positions, pcsPerRound:positions.reduce((s,p)=>s+Number(p.qty||0),0),
+    active:true, source:'line-c-confirmed-v1', updatedAt:Date.now()
+  });
+  let n=1;
+  for(let i=0;i<5;i++) add(n++,[{modelName:'BM',doorCode:'RR',qty:1},{modelName:'BM',doorCode:'RL',qty:1},{modelName:'BM',doorCode:'FT',qty:1},{modelName:'BM',doorCode:'FB',qty:1}]);
+  for(let i=0;i<6;i++) add(n++,[{modelName:'FUF14',doorCode:'R',qty:1}]);
+  for(let i=0;i<6;i++) add(n++,[{modelName:'FUF18/22',doorCode:'R',qty:1}]);
+  for(let i=0;i<2;i++) add(n++,[{modelName:'TM19',doorCode:'F',qty:1},{modelName:'TM19',doorCode:'R',qty:1}]);
+  for(let i=0;i<3;i++) add(n++,[{modelName:'TM14',doorCode:'F',qty:1},{modelName:'TM14',doorCode:'R',qty:1}]);
+  add(n++,[{modelName:'BMT-G',doorCode:'RR',qty:1},{modelName:'BMT-G',doorCode:'RL',qty:1},{modelName:'BMT-G',doorCode:'FT',qty:1},{modelName:'BMT-G',doorCode:'FB',qty:1}]);
+  add(n++,[{modelName:'BM',doorCode:'RL',qty:2},{modelName:'BM28',doorCode:'FR',qty:1},{modelName:'BM28',doorCode:'FL',qty:1}]);
+  return rows;
+}
+const LINE_C_LAYOUT=lineCPallets();
+
+function layoutCompositionText(row){
+  return (row.positions||[]).map(p=>`${p.modelName} ${p.doorCode} ×${p.qty}`).join(' + ');
+}
+async function loadLayouts(){
+  const select=document.getElementById('layoutLineFilter');
+  if(!select) return;
+  if(!select.options.length){
+    const lines=await ProdV2DB.getAll(LINE_COLLECTION);
+    select.innerHTML=lines.sort((a,b)=>(a.order||999)-(b.order||999)).map(l=>`<option value="${esc(l.lineId)}">Line ${esc(l.lineId)}</option>`).join('');
+    if([...select.options].some(o=>o.value==='C')) select.value='C';
+    select.addEventListener('change',loadLayouts);
+  }
+  const lineId=select.value;
+  const all=await ProdV2DB.getAll(LAYOUT_COLLECTION);
+  const rows=all.filter(x=>x.lineId===lineId).sort((a,b)=>(a.palletNo||0)-(b.palletNo||0));
+  const body=document.getElementById('layoutRows');
+  const sum=document.getElementById('layoutSummary');
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="4">ยังไม่มี Physical Pallet Layout สำหรับ Line ${esc(lineId)}</td></tr>`;
+    sum.textContent=`Line ${lineId}: ยังไม่มี Layout`;
+    return;
+  }
+  const pcs=rows.filter(x=>x.active!==false).reduce((s,x)=>s+Number(x.pcsPerRound||0),0);
+  sum.textContent=`Line ${lineId}: ${rows.length} physical pallets • ${pcs} pcs / full round`;
+  body.innerHTML=rows.map(r=>`<tr><td>${esc(r.palletName)}</td><td>${esc(layoutCompositionText(r))}</td><td>${r.pcsPerRound}</td><td>${r.active===false?'Inactive':'Active'}</td></tr>`).join('');
+}
+
+document.getElementById('initLineCLayout')?.addEventListener('click',async()=>{
+  if(!confirm('Initialize confirmed Line C physical layout?\\n24 pallets / 50 pcs per full round\\n\\nExisting C-P01…C-P24 records will be merged, not duplicated.')) return;
+  const btn=document.getElementById('initLineCLayout');
+  try{
+    btn.disabled=true; setStatus('Initializing Line C Layout…');
+    for(const row of LINE_C_LAYOUT){
+      const id=`layout_C_P${String(row.palletNo).padStart(2,'0')}`;
+      await ProdV2DB.set(LAYOUT_COLLECTION,id,row,{merge:true});
+    }
+    setStatus('✓ Line C Layout initialized','ok');
+    const sel=document.getElementById('layoutLineFilter'); if(sel) sel.value='C';
+    await loadLayouts();
+    alert('Line C Layout สำเร็จ\\n24 physical pallets / 50 pcs per full round');
+  }catch(err){ setStatus(err.message,'err'); alert('Initialize ไม่สำเร็จ: '+err.message); }
+  finally{btn.disabled=false;}
+});
+
+/* Load Step 3 data when its tab is opened */
+document.querySelector('[data-tab="pallets"]')?.addEventListener('click',()=>loadLayouts().catch(e=>setStatus(e.message,'err')));
