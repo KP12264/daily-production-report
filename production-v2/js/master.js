@@ -192,6 +192,12 @@ modelBody.addEventListener('click',async e=>{
 /* Step 3 — Physical Pallet/Jig Layout */
 const LAYOUT_COLLECTION='prodV2_jigLayouts';
 
+async function v2ReadAll(collectionName){
+  if(!String(collectionName).startsWith('prodV2_')) throw new Error('V2 read blocked: invalid collection');
+  const snap=await db.collection(collectionName).get();
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+
 function lineCPallets(){
   const rows=[];
   const add=(palletNo, positions)=>rows.push({
@@ -218,13 +224,13 @@ async function loadLayouts(){
   const select=document.getElementById('layoutLineFilter');
   if(!select) return;
   if(!select.options.length){
-    const lines=await ProdV2DB.getAll(LINE_COLLECTION);
+    const lines=await v2ReadAll(LINE_COLLECTION);
     select.innerHTML=lines.sort((a,b)=>(a.order||999)-(b.order||999)).map(l=>`<option value="${esc(l.lineId)}">Line ${esc(l.lineId)}</option>`).join('');
     if([...select.options].some(o=>o.value==='C')) select.value='C';
     select.addEventListener('change',loadLayouts);
   }
   const lineId=select.value;
-  const all=await ProdV2DB.getAll(LAYOUT_COLLECTION);
+  const all=await v2ReadAll(LAYOUT_COLLECTION);
   const rows=all.filter(x=>x.lineId===lineId).sort((a,b)=>(a.palletNo||0)-(b.palletNo||0));
   const body=document.getElementById('layoutRows');
   const sum=document.getElementById('layoutSummary');
