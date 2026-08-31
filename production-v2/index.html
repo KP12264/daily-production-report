@@ -1,1 +1,48 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard · Production V2</title><link rel="stylesheet" href="css/app.css?v=20260831-light1"><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script></head><body><header class="top"><div class="brand">PRODUCTION V2</div><div class="badge">ISOLATED V2 • prodV2_* ONLY</div></header><div class="shell"><nav><a href="index.html" class="active">Dashboard</a><a href="entry.html" class="">Production Entry</a><a href="plan.html" class="">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a><a href="../index.html">← ระบบเดิม</a></nav><main><div class="pagehead"><div><h1>Production Dashboard</h1><div class="sub">Plan to Now vs Actual • V2 skeleton</div></div></div><div class="kpis"><div class="kpi"><span>Plan to Now</span><b>—</b></div><div class="kpi"><span>Actual</span><b>—</b></div><div class="kpi"><span>Gap</span><b>—</b></div><div class="kpi"><span>Achievement</span><b>—</b></div><div class="kpi"><span>Loss</span><b>—</b></div></div><div class="card"><div class="placeholder">Dashboard จะเชื่อมหลัง Master → Daily Plan → Actual พร้อม</div></div></main></div><script src="js/firebase-v2.js"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Daily Production · Production V2</title>
+  <link rel="stylesheet" href="css/app.css?v=20260901-ui3">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="site-wrap">
+  <header class="app-nav">
+    <div class="app-name">Production System <span>V2</span></div>
+    <nav class="app-links"><a href="index.html" class="active">Dashboard</a><a href="entry.html" class="">Production Entry</a><a href="plan.html" class="">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a></nav>
+    <a class="legacy-link" href="../index.html">ระบบเดิม</a>
+  </header>
+
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">PRODUCTION DASHBOARD · V2</div>
+      <h1>Daily Production</h1>
+      <p>ติดตาม Plan, Actual, Gap, Achievement และ Loss ในมุมมองเดียว</p>
+    </div>
+    <div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div></div>
+  </section>
+
+  <main class="content">
+
+  <section class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">PLAN TO NOW</div><div class="kpi-value">—</div><div class="kpi-unit">pcs</div></div>
+    <div class="kpi-card accent-green"><div class="kpi-label">ACTUAL</div><div class="kpi-value">—</div><div class="kpi-unit">pcs</div></div>
+    <div class="kpi-card accent-blue"><div class="kpi-label">GAP</div><div class="kpi-value">—</div><div class="kpi-unit">pcs</div></div>
+    <div class="kpi-card"><div class="kpi-label">ACHIEVEMENT</div><div class="kpi-value">—</div><div class="kpi-unit">%</div></div>
+    <div class="kpi-card accent-orange"><div class="kpi-label">LOSS</div><div class="kpi-value">—</div><div class="kpi-unit">min</div></div>
+  </section>
+  <section class="section-card">
+    <div class="section-title-row"><div><h2>Production Overview</h2><p>Dashboard จะเชื่อมข้อมูลหลัง Daily Plan และ Production Entry พร้อมใช้งาน</p></div><span class="soft-badge">COMING NEXT</span></div>
+    <div class="empty-state">Plan vs Actual · Hourly Trend · Model Performance · Loss Analysis</div>
+  </section>
+
+  </main>
+</div>
+<script src="js/firebase-v2.js?v=20260901-ui3"></script>
+</body>
+</html>

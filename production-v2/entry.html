@@ -1,1 +1,47 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Production Entry · Production V2</title><link rel="stylesheet" href="css/app.css?v=20260831-light1"><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script></head><body><header class="top"><div class="brand">PRODUCTION V2</div><div class="badge">ISOLATED V2 • prodV2_* ONLY</div></header><div class="shell"><nav><a href="index.html" class="">Dashboard</a><a href="entry.html" class="active">Production Entry</a><a href="plan.html" class="">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a><a href="../index.html">← ระบบเดิม</a></nav><main><div class="pagehead"><div><h1>Hourly Production Entry</h1><div class="sub">Actual Qty by Model / Door / Time Block</div></div></div><div class="card"><div class="placeholder">Production Entry skeleton — จะสร้างหลัง Daily Plan engine</div></div></main></div><script src="js/firebase-v2.js"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hourly Production Entry · Production V2</title>
+  <link rel="stylesheet" href="css/app.css?v=20260901-ui3">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="site-wrap">
+  <header class="app-nav">
+    <div class="app-name">Production System <span>V2</span></div>
+    <nav class="app-links"><a href="index.html" class="">Dashboard</a><a href="entry.html" class="active">Production Entry</a><a href="plan.html" class="">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a></nav>
+    <a class="legacy-link" href="../index.html">ระบบเดิม</a>
+  </header>
+
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">PRODUCTION ENTRY · V2</div>
+      <h1>Hourly Production Entry</h1>
+      <p>บันทึก Actual Qty ตาม Model / Door / Time Block โดยตรง</p>
+    </div>
+    <div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div></div>
+  </section>
+
+  <main class="content">
+
+  <section class="filter-card">
+    <div class="fake-filter"><span>DATE</span><b>เลือกวันที่</b></div>
+    <div class="fake-filter"><span>LINE</span><b>เลือก Line</b></div>
+    <div class="fake-filter"><span>SHIFT</span><b>Day / Night</b></div>
+    <div class="filter-note">Auto-save per cell · Enter moves to next cell</div>
+  </section>
+  <section class="section-card">
+    <div class="section-title-row"><div><h2>Actual Production Matrix</h2><p>หน้ากรอกจริงจะสร้างต่อจาก Daily Plan engine</p></div><span class="soft-badge">STEP 6</span></div>
+    <div class="empty-state">Model / Door × Time Block</div>
+  </section>
+
+  </main>
+</div>
+<script src="js/firebase-v2.js?v=20260901-ui3"></script>
+</body>
+</html>

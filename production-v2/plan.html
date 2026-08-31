@@ -1,1 +1,47 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daily Plan · Production V2</title><link rel="stylesheet" href="css/app.css?v=20260831-light1"><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script></head><body><header class="top"><div class="brand">PRODUCTION V2</div><div class="badge">ISOLATED V2 • prodV2_* ONLY</div></header><div class="shell"><nav><a href="index.html" class="">Dashboard</a><a href="entry.html" class="">Production Entry</a><a href="plan.html" class="active">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a><a href="../index.html">← ระบบเดิม</a></nav><main><div class="pagehead"><div><h1>Daily Plan</h1><div class="sub">Dynamic Pallet Timeline & calculated plan</div></div></div><div class="card"><div class="placeholder">Daily Plan skeleton — รอ Master Setup</div></div></main></div><script src="js/firebase-v2.js"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Daily Production Plan · Production V2</title>
+  <link rel="stylesheet" href="css/app.css?v=20260901-ui3">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="site-wrap">
+  <header class="app-nav">
+    <div class="app-name">Production System <span>V2</span></div>
+    <nav class="app-links"><a href="index.html" class="">Dashboard</a><a href="entry.html" class="">Production Entry</a><a href="plan.html" class="active">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a></nav>
+    <a class="legacy-link" href="../index.html">ระบบเดิม</a>
+  </header>
+
+
+  <section class="hero">
+    <div>
+      <div class="eyebrow">DAILY PLAN · V2</div>
+      <h1>Daily Production Plan</h1>
+      <p>สร้างแผนรายวันจาก Shift Master + Physical Pallet/Jig Layout</p>
+    </div>
+    <div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div></div>
+  </section>
+
+  <main class="content">
+
+  <section class="filter-card">
+    <div class="fake-filter"><span>DATE</span><b>เลือกวันที่</b></div>
+    <div class="fake-filter"><span>LINE</span><b>เลือก Line</b></div>
+    <div class="fake-filter"><span>SHIFT</span><b>Day / Night</b></div>
+    <div class="filter-note">รองรับ Add / Remove Pallet มีผลเฉพาะ Time Block หลังจุดเปลี่ยน</div>
+  </section>
+  <section class="section-card">
+    <div class="section-title-row"><div><h2>Plan Builder</h2><p>Master พร้อมแล้ว ขั้นต่อไปจะเชื่อม Plan calculation และ Snapshot</p></div><span class="soft-badge blue">NEXT STEP</span></div>
+    <div class="empty-state">Time Blocks · Active Pallets · Model/Door Plan · Daily Snapshot</div>
+  </section>
+
+  </main>
+</div>
+<script src="js/firebase-v2.js?v=20260901-ui3"></script>
+</body>
+</html>
