@@ -1,0 +1,1 @@
+Daily pallet order: move up/down or enter position. Saved in Daily Plan snapshot; does not modify Physical Master.

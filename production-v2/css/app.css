@@ -245,3 +245,10 @@ input,select,textarea,.grid input,.grid select{
 .change-controls-v3 select,.change-controls-v3 input{width:100%}
 @media(max-width:1050px){.change-controls-v3{grid-template-columns:1fr 1fr}.change-controls-v3 .apply-wrap{grid-column:1/-1}}
 @media(max-width:650px){.change-controls-v3{grid-template-columns:1fr}}
+
+/* Step 5.4 Daily Pallet Order */
+.pallet-order-note{grid-column:1/-1;padding:9px 11px;margin-bottom:10px;border-radius:8px;background:#f3f8ff;color:#4f6f8e;font-size:11px}
+.order-card{display:grid;grid-template-columns:auto 1fr auto;align-items:start}.pallet-body{min-width:0}.pallet-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
+.pallet-top b{margin:0;color:#1d4ed8}.physical-id{font-size:10px!important;color:#7b8ca1!important}
+.order-tools{display:grid;grid-template-columns:30px 30px 48px;gap:4px}.order-tools button{padding:4px 6px;min-width:0;background:#fff;color:#315b85;border:1px solid #d5e0eb}
+.order-tools input{width:48px;padding:4px;text-align:center;border:1px solid #d5e0eb;border-radius:6px;font-size:11px}
