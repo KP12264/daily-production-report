@@ -344,3 +344,9 @@ input,select,textarea,.grid input,.grid select{
  .production-matrix-viewport .actual-grid .sum-actual,
  .production-matrix-viewport .actual-grid .sum-ach{position:sticky !important}
 }
+
+/* STEP 6.3 — vertical Enter + Model order */
+.model-cell-main{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.model-order-controls{display:flex;align-items:center;gap:4px}
+.model-order-controls button{width:26px;height:26px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#0f2747;font-weight:800;cursor:pointer}
+.model-order-controls input{width:38px;height:26px;border:1px solid #cbd5e1;border-radius:7px;text-align:center;font-size:11px;color:#0f2747}
