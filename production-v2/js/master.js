@@ -65,6 +65,75 @@ lineBody.addEventListener('click',async e=>{
   catch(err){setStatus(err.message,'err');btn.disabled=false}
 });
 
+
+/* Initial Model & Door seed.
+   This creates/merges only prodV2_models. Existing matching IDs are not duplicated. */
+const INITIAL_MODEL_DOORS = [
+  // Line A — confirmed/historical model-door names from the production workbook.
+  ['A','620/550 หน้าเรียบ','R'],
+  ['A','620/550 ก๊อกน้ำ','R'],
+  ['A','636','F'],
+  ['A','520 หน้าเรียบ','RR'],
+  ['A','520 ก๊อกน้ำ','RR'],
+  ['A','520','RL'],
+  ['A','G3 320','F'], ['A','G3 320','R'],
+  ['A','G3 350','F'], ['A','G3 350','R'],
+  ['A','T-Door US','RR'], ['A','T-Door US','RL'], ['A','T-Door US','FR'], ['A','T-Door US','FL'],
+  ['A','T-Door Horizontal เรียบ','RR'], ['A','T-Door Horizontal เรียบ','RL'], ['A','T-Door Horizontal เรียบ','FR'], ['A','T-Door Horizontal เรียบ','FL'],
+  ['A','T-Door Horizontal ก๊อก','RR'], ['A','T-Door Horizontal ก๊อก','RL'], ['A','T-Door Horizontal ก๊อก','FR'], ['A','T-Door Horizontal ก๊อก','FL'],
+  ['A','TM1012','F'], ['A','TM1012','R'],
+
+  // Line B
+  ['B','EHRT 2070 NL','F'], ['B','EHRT 2070 NL','R'],
+  ['B','EHRT 2570 NL','F'], ['B','EHRT 2570 NL','R'],
+  ['B','Door 5.3 Cu.(159) C','R'],
+  ['B','Door 5.3 Cu.(159) F','R'],
+  ['B','Door 6.6 Cu.(199) C','R'],
+  ['B','Door 6.6 Cu.(199) F','R'],
+
+  // Line C — current confirmed layout/model-door set.
+  ['C','BM','RR'], ['C','BM','RL'], ['C','BM','FT'], ['C','BM','FB'],
+  ['C','FUF14','R'],
+  ['C','FUF18/22','R'],
+  ['C','TM19','F'], ['C','TM19','R'],
+  ['C','TM14','F'], ['C','TM14','R'],
+  ['C','BMT-G','RR'], ['C','BMT-G','RL'], ['C','BMT-G','FT'], ['C','BMT-G','FB'],
+  ['C','BM28','FR'], ['C','BM28','FL']
+];
+
+document.getElementById('initModelMaster').addEventListener('click', async ()=>{
+  const ok = confirm(`Initialize ${INITIAL_MODEL_DOORS.length} Model / Door records for Lines A, B and C?\n\nExisting matching records will be merged, not duplicated.`);
+  if(!ok) return;
+  const btn=document.getElementById('initModelMaster');
+  try{
+    btn.disabled=true;
+    setStatus('Initializing Master…');
+    const counters={A:0,B:0,C:0};
+    for(const [lineId,modelName,doorCode] of INITIAL_MODEL_DOORS){
+      counters[lineId]+=1;
+      const data={
+        lineId, modelName, doorCode,
+        displayName:`${modelName} / ${doorCode}`,
+        order:counters[lineId],
+        active:true,
+        source:'initial-master-v1',
+        updatedAt:Date.now()
+      };
+      const id=`model_${safeKey(lineId)}_${safeKey(modelName)}_${safeKey(doorCode)}`;
+      await ProdV2DB.set(MODEL_COLLECTION,id,data,{merge:true});
+    }
+    setStatus(`✓ Initialized ${INITIAL_MODEL_DOORS.length} records`,'ok');
+    await loadModels();
+    alert('Initialize Master Data สำเร็จ\n\nLine A, B และ C ถูกสร้างใน prodV2_models แล้ว');
+  }catch(err){
+    setStatus(err.message,'err');
+    alert('Initialize ไม่สำเร็จ: '+err.message);
+  }finally{
+    btn.disabled=false;
+  }
+});
+
+
 /* Model & Door */
 function modelRowHtml(x={},docId='',isNew=false){
   const lineId=x.lineId||modelLineFilter.value||'';
