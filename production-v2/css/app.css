@@ -255,3 +255,9 @@ input,select,textarea,.grid input,.grid select{
 
 /* Step 5.5 — deterministic 24-hour time field */
 #chgTime{font-variant-numeric:tabular-nums;letter-spacing:.03em}
+
+/* STEP 6 — Production Entry */
+.entry-filters label{display:flex;flex-direction:column;gap:6px;min-width:160px}.entry-filters label span{font-size:11px;font-weight:800;color:#64748b;letter-spacing:.06em}.entry-filters input,.entry-filters select{height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:0 12px;background:#fff;color:#0f2747}
+.entry-kpis{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:12px;margin:14px 0}.entry-kpi{background:#fff;border:1px solid #dbe5f0;border-radius:14px;padding:14px;box-shadow:0 3px 12px rgba(15,39,71,.04)}.entry-kpi small{display:block;color:#64748b;font-size:10px;font-weight:800;letter-spacing:.05em}.entry-kpi b{display:block;color:#0f2747;font-size:24px;margin-top:5px}
+.actual-grid th,.actual-grid td{text-align:center;min-width:118px}.actual-grid th:first-child,.actual-grid td:first-child{min-width:150px}.actual-sticky{position:sticky;left:0;background:#fff;z-index:2;text-align:left!important}.actual-cell{padding:7px!important}.cell-plan{font-size:10px;color:#64748b;margin-bottom:4px}.actual-input{width:78px;height:34px;border:1px solid #cbd5e1;border-radius:8px;text-align:center;font-weight:700;color:#0f2747;background:#fff}.actual-input:focus{outline:2px solid #93c5fd;border-color:#3b82f6}
+@media(max-width:900px){.entry-kpis{grid-template-columns:repeat(2,1fr)}}
