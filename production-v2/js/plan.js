@@ -1,4 +1,4 @@
-(()=>{const $=id=>document.getElementById(id);let S={lines:[],shift:null,pallets:[],active:new Set(),baseActive:new Set(),events:[],palletOrder:[],matrix:[],loaded:false};
+(()=>{const $=id=>document.getElementById(id);let S={lines:[],shift:null,pallets:[],active:new Set(),baseActive:new Set(),events:[],losses:[],palletOrder:[],matrix:[],loaded:false};
 const val=x=>String(x??"").trim(), lineOf=x=>val(x.lineId||x.line||x.lineCode).toUpperCase(), shiftOf=x=>val(x.shift).toUpperCase();
 function stat(t,c=""){$("planStatus").textContent=t;$("planStatus").className="hero-status "+c}
 function note(t,c=""){$("planMessage").textContent=t;$("planMessage").className="notice info-notice "+c}
@@ -36,12 +36,23 @@ function mapForSlots(slots){
   return [...m.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door))
 }
 function mapForSet(set){return mapForSlots((S.palletOrder||S.pallets.map(p=>p.id)).map((id,i)=>({position:i+1,physicalId:id,compositionSourceId:id,active:set.has(id)})))}
+function addMinutes24(t,n){let x=(mins(t)+Number(n||0))%1440;return `${String(Math.floor(x/60)).padStart(2,"0")}:${String(x%60).padStart(2,"0")}`}
+function lossAtInterval(st,en){
+  let sm=mins(st),em=mins(en);if(em<sm)em+=1440;
+  return (S.losses||[]).reduce((sum,l)=>{let a=mins(l.start),b=mins(l.end);if(b<a)b+=1440;if(a<sm)a+=1440;if(b<=sm||a>=em)return sum;return sum+Math.max(0,Math.min(em,b)-Math.max(sm,a))},0)
+}
 function splitBlocks(){
   let blocks=(S.shift?.blocks||[]).filter(b=>val(b.type).toUpperCase()==="WORK"),out=[];
   blocks.forEach(b=>{
-    let cuts=[b.start,b.end];(S.events||[]).forEach(e=>{if(e.effectiveFrom>b.start&&e.effectiveFrom<b.end)cuts.push(e.effectiveFrom)});
+    let cuts=[b.start,b.end];
+    (S.events||[]).forEach(e=>{[e.actualTime,e.effectiveFrom].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
+    (S.losses||[]).forEach(l=>{[l.start,l.end].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
     cuts=[...new Set(cuts)].sort();let cycle=Number(b.cycle||S.shift?.standardCycleMinPerRound||10);
-    for(let i=0;i<cuts.length-1;i++){let st=cuts[i],en=cuts[i+1],duration=mins(en)-mins(st);if(duration<0)duration+=1440;out.push({start:st,end:en,minutes:duration,cycle,rounds:Math.floor(duration/cycle)})}
+    for(let i=0;i<cuts.length-1;i++){
+      let st=cuts[i],en=cuts[i+1],duration=mins(en)-mins(st);if(duration<0)duration+=1440;
+      let lossMinutes=lossAtInterval(st,en),productiveMinutes=Math.max(0,duration-lossMinutes);
+      out.push({start:st,end:en,minutes:duration,cycle,scheduledRounds:Math.floor(duration/cycle),lossMinutes,productiveMinutes,rounds:Math.floor(productiveMinutes/cycle)})
+    }
   });return out
 }
 function build(){
@@ -50,8 +61,8 @@ function build(){
   let cols=[...allKeys.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
   S.matrix=blocks.map(b=>{
     let slots=slotStateAt(b.start),pm=new Map(mapForSlots(slots).map(p=>[p.model+"|||"+p.door,p]));
-    let cells=cols.map(c=>{let p=pm.get(c.model+"|||"+c.door),qty=p?.qty||0;return{...c,qty,plan:b.rounds*qty}});
-    return{start:b.start,end:b.end,minutes:b.minutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,cells,total:cells.reduce((s,c)=>s+c.plan,0)}
+    let cells=cols.map(c=>{let p=pm.get(c.model+"|||"+c.door),qty=p?.qty||0;return{...c,qty,originalPlan:b.scheduledRounds*qty,plan:b.rounds*qty}});
+    return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,cells,originalTotal:cells.reduce((s,c)=>s+c.originalPlan,0),total:cells.reduce((s,c)=>s+c.plan,0)}
   })
 }
 function normalize24h(v){
@@ -73,34 +84,34 @@ function events(){
     <div><small>FROM POSITION / PALLET</small><select id="chgPallet">${opts}</select></div>
     <div><small>ACTION</small><select id="chgAction"><option value="REPLACE">Replace Pallet</option><option value="REMOVE">Remove Only</option><option value="ADD">Add Only</option></select></div>
     <div id="replacementWrap"><small>NEW COMPOSITION</small><select id="chgReplacement">${opts}</select></div>
-    <div><small>ACTUAL CHANGE TIME (24H)</small><input id="chgTime" type="text" inputmode="numeric" maxlength="5" placeholder="14:20" autocomplete="off"></div>
+    <div><small>ACTUAL CHANGE TIME (24H)</small><input id="chgTime" type="text" inputmode="numeric" maxlength="5" placeholder="14:20" autocomplete="off"></div><div><small>CHANGE / LOSS TIME (MIN)</small><input id="chgLossMin" type="number" min="0" step="1" value="10"></div>
     <div class="apply-wrap"><button id="addChangeBtn" class="primary">Apply Change</button></div>
   </div>
-  <div class="change-help">ใส่เวลาที่เปลี่ยนจริง เช่น 14:20 • ถ้าไม่ตรงรอบ ระบบจะเริ่มมีผลที่รอบถัดไปอัตโนมัติ</div>
+  <div class="change-help">ใส่เวลาที่เครื่องเริ่มหยุดและ Loss Time • ระบบจะให้ Composition ใหม่เริ่มหลัง Loss และที่รอบถัดไป</div>
   <div class="change-list">${S.events.length?S.events.map((e,i)=>{
     let from=S.pallets.find(p=>p.id===e.palletId),to=S.pallets.find(p=>p.id===e.replacementPalletId);
     let text=e.action==="REPLACE"?`POSITION ${((S.palletOrder||[]).indexOf(e.palletId)+1)||'-'} · ${from?palletLabel(from):e.palletLabel} → ${to?palletLabel(to):e.replacementPalletLabel}`:`${e.action} · ${from?palletLabel(from):e.palletLabel}`;
-    let timing=e.actualTime!==e.effectiveFrom?`${e.actualTime} → effective ${e.effectiveFrom}`:e.effectiveFrom;
+    let timing=e.actualTime!==e.effectiveFrom?`${e.actualTime} → effective ${e.effectiveFrom}`:e.effectiveFrom;if(e.lossMinutes)timing+=` · Loss ${e.lossMinutes} min`;
     return `<div class="change-item change-item-v2"><b>${timing}</b><span>${text}</span><button data-del="${i}">×</button></div>`
   }).join(""):'<span class="change-empty">ยังไม่มีการเปลี่ยน Pallet กลางกะ</span>'}</div>`;
   let actionEl=document.getElementById("chgAction"),rw=document.getElementById("replacementWrap"),timeEl=document.getElementById("chgTime");
   timeEl.value=work[0]?.start||"08:00";timeEl.onblur=()=>{let t=normalize24h(timeEl.value);if(t)timeEl.value=t};
   function sync(){rw.style.display=actionEl.value==="REPLACE"?"block":"none"} actionEl.onchange=sync;sync();
   document.getElementById("addChangeBtn").onclick=()=>{
-    let pid=document.getElementById("chgPallet").value,action=actionEl.value,actual=normalize24h(timeEl.value),rid=document.getElementById("chgReplacement").value;
+    let pid=document.getElementById("chgPallet").value,action=actionEl.value,actual=normalize24h(timeEl.value),rid=document.getElementById("chgReplacement").value,lossMin=Math.max(0,Number(document.getElementById("chgLossMin")?.value||0));
     let p=S.pallets.find(x=>x.id===pid),rp=S.pallets.find(x=>x.id===rid);
     if(!actual){note("กรุณาใส่เวลาแบบ 24 ชั่วโมง เช่น 14:20","plan-warn");return} timeEl.value=actual;
     if(action==="REPLACE"&&pid===rid){note("Pallet เดิมและ Pallet ที่นำมาแทนต้องไม่ใช่ตัวเดียวกัน","plan-warn");return}
     let block=work.find(b=>actual>=b.start&&actual<b.end);
     if(!block){note("เวลาที่เลือกไม่ได้อยู่ใน WORK Time Block","plan-warn");return}
-    let effective=roundBoundary(block,actual);
+    let lossEnd=addMinutes24(actual,lossMin);let effective=roundBoundary(block,lossEnd);
     if(effective>=block.end && effective!==block.end){note("ไม่สามารถหา Effective Round ในช่วงนี้ได้","plan-warn");return}
-    S.events.push({palletId:pid,palletLabel:p?.palletCode||p?.palletNo||p?.name||pid,action,actualTime:actual,effectiveFrom:effective,replacementPalletId:action==="REPLACE"?rid:null,replacementPalletLabel:action==="REPLACE"?(rp?.palletCode||rp?.palletNo||rp?.name||rid):null});
+    S.events.push({palletId:pid,palletLabel:p?.palletCode||p?.palletNo||p?.name||pid,action,actualTime:actual,effectiveFrom:effective,lossMinutes:lossMin,lossEnd,replacementPalletId:action==="REPLACE"?rid:null,replacementPalletLabel:action==="REPLACE"?(rp?.palletCode||rp?.palletNo||rp?.name||rid):null});if(lossMin>0)S.losses.push({type:"PALLET_CHANGE",category:"Pallet Change",start:actual,end:lossEnd,minutes:lossMin,palletId:pid,source:"DAILY_PLAN"});
     build();table();kpis();events();$("snapshotBadge").textContent="NOT SAVED";
     let suffix=actual===effective?`ตั้งแต่ ${effective}`:`เวลาเปลี่ยนจริง ${actual} • มีผลรอบถัดไป ${effective}`;
     note(action==="REPLACE"?`เปลี่ยน Pallet ${p?.palletCode||p?.name||pid} → ${rp?.palletCode||rp?.name||rid} • ${suffix}`:`${action==="REMOVE"?"ถอด":"เพิ่ม"} Pallet ${p?.palletCode||p?.name||pid} • ${suffix}`,"plan-ok")
   };
-  host.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{S.events.splice(Number(x.dataset.del),1);build();table();kpis();events();$("snapshotBadge").textContent="NOT SAVED"})
+  host.querySelectorAll("[data-del]").forEach(x=>x.onclick=()=>{let e=S.events[Number(x.dataset.del)];S.losses=S.losses.filter(l=>!(l.source==="DAILY_PLAN"&&l.palletId===e?.palletId&&l.start===e?.actualTime));S.events.splice(Number(x.dataset.del),1);build();table();kpis();events();$("snapshotBadge").textContent="NOT SAVED"})
 }
 function orderedPallets(){let r=new Map((S.palletOrder||[]).map((id,i)=>[id,i]));return [...S.pallets].sort((a,b)=>(r.get(a.id)??9999)-(r.get(b.id)??9999))}
 function movePallet(id,dir){let a=[...S.palletOrder],i=a.indexOf(id),j=i+dir;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];S.palletOrder=a;pallets();$("snapshotBadge").textContent="NOT SAVED"}
@@ -124,10 +135,22 @@ function kpis(){
   $("kpiRounds").textContent=r;
   $("kpiPlan").textContent=t.toLocaleString();
 }
-function table(){if(!S.matrix.length){$("planTableArea").innerHTML='<div class="empty-state">ไม่มี WORK Time Block</div>';return}let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door)),h='<div class="table-scroll"><table class="grid plan-grid"><thead><tr><th>Time Block</th><th>Rounds</th>';ps.forEach(p=>h+=`<th>${p.model}<br><small>${p.door||"-"} · ${p.qty} pos</small></th>`);h+='<th>Total Plan</th></tr></thead><tbody>';S.matrix.forEach(x=>{h+=`<tr><td><b>${x.start}–${x.end}</b></td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td><b>${x.total}</b></td></tr>`});h+=`<tr class="total-row"><td>TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;ps.forEach((p,i)=>h+=`<td>${S.matrix.reduce((s,x)=>s+(x.cells[i]?.plan||0),0)}</td>`);h+=`<td>${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;$("planTableArea").innerHTML=h}
-async function load(){let l=val($("planLine").value).toUpperCase(),sh=$("planShift").value;try{stat("Loading Master...");let [ss,ls]=await Promise.all([all("prodV2_shiftMaster"),all("prodV2_jigLayouts")]);S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;S.pallets=ls.filter(x=>lineOf(x)===l&&x.active!==false);if(!S.shift){note(`ไม่พบ Shift Master: Line ${l} / ${sh}`,"plan-warn");stat("Master missing","err");return}S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;$("masterBadge").textContent=S.shift.verificationStatus||"MASTER";build();pallets();table();kpis();if(!S.matrix.length)note(`Line ${l} / ${sh} ยังไม่มี WORK Time Block — ไม่สร้างตัวเลข Plan`,"plan-warn");else note(`โหลด Master สำเร็จ • Line ${l} / ${sh}`,"plan-ok");stat("Master loaded","ok")}catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}}
-function snap(){return{date:$("planDate").value,lineId:$("planLine").value.toUpperCase(),shift:$("planShift").value,masterSnapshot:{shiftMasterId:S.shift?.id||null,shiftStatus:S.shift?.verificationStatus||null,palletOrder:[...S.palletOrder],activePalletIds:[...S.baseActive],palletChanges:S.events,activePallets:S.pallets.filter(p=>S.baseActive.has(p.id)||S.events.some(e=>e.palletId===p.id||e.replacementPalletId===p.id)).map(p=>({id:p.id,palletCode:p.palletCode||p.palletNo||p.name||p.id,positions:posOf(p)}))},blocks:S.matrix,totalPlan:S.matrix.reduce((s,x)=>s+x.total,0),plannedRounds:S.matrix.reduce((s,x)=>s+x.rounds,0),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),planningLogic:'POSITION_COMPOSITION',version:2}}
+function table(){
+ if(!S.matrix.length){$("planTableArea").innerHTML='<div class="empty-state">ไม่มี WORK Time Block</div>';return}
+ let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));
+ let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
+ let h='<div class="table-scroll"><table class="grid plan-grid"><thead><tr><th>Time Block</th><th>Sched. Rounds</th><th>Loss</th><th>Adj. Rounds</th>';
+ ps.forEach(p=>h+=`<th>${p.model}<br><small>${p.door||"-"}</small></th>`);
+ h+='<th>Original Plan</th><th>Adjusted Plan</th></tr></thead><tbody>';
+ S.matrix.forEach(x=>{h+=`<tr><td><b>${x.start}–${x.end}</b></td><td>${x.scheduledRounds}</td><td>${x.lossMinutes?`<b>${x.lossMinutes} min</b>`:"-"}</td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td>${x.originalTotal}</td><td><b>${x.total}</b></td></tr>`});
+ h+=`<tr class="total-row"><td>TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.scheduledRounds,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.lossMinutes,0)} min</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;
+ ps.forEach((p,i)=>h+=`<td>${S.matrix.reduce((s,x)=>s+(x.cells[i]?.plan||0),0)}</td>`);
+ h+=`<td>${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;
+ $("planTableArea").innerHTML=h
+}
+async function load(){let l=val($("planLine").value).toUpperCase(),sh=$("planShift").value;try{stat("Loading Master...");let [ss,ls]=await Promise.all([all("prodV2_shiftMaster"),all("prodV2_jigLayouts")]);S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;S.pallets=ls.filter(x=>lineOf(x)===l&&x.active!==false);if(!S.shift){note(`ไม่พบ Shift Master: Line ${l} / ${sh}`,"plan-warn");stat("Master missing","err");return}S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.losses=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;$("masterBadge").textContent=S.shift.verificationStatus||"MASTER";build();pallets();table();kpis();if(!S.matrix.length)note(`Line ${l} / ${sh} ยังไม่มี WORK Time Block — ไม่สร้างตัวเลข Plan`,"plan-warn");else note(`โหลด Master สำเร็จ • Line ${l} / ${sh}`,"plan-ok");stat("Master loaded","ok")}catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}}
+function snap(){return{date:$("planDate").value,lineId:$("planLine").value.toUpperCase(),shift:$("planShift").value,masterSnapshot:{shiftMasterId:S.shift?.id||null,shiftStatus:S.shift?.verificationStatus||null,palletOrder:[...S.palletOrder],activePalletIds:[...S.baseActive],palletChanges:S.events,palletChangeLosses:S.losses,activePallets:S.pallets.filter(p=>S.baseActive.has(p.id)||S.events.some(e=>e.palletId===p.id||e.replacementPalletId===p.id)).map(p=>({id:p.id,palletCode:p.palletCode||p.palletNo||p.name||p.id,positions:posOf(p)}))},blocks:S.matrix,originalPlan:S.matrix.reduce((s,x)=>s+x.originalTotal,0),adjustedPlan:S.matrix.reduce((s,x)=>s+x.total,0),totalPlan:S.matrix.reduce((s,x)=>s+x.total,0),lossMinutes:S.matrix.reduce((s,x)=>s+x.lossMinutes,0),scheduledRounds:S.matrix.reduce((s,x)=>s+x.scheduledRounds,0),plannedRounds:S.matrix.reduce((s,x)=>s+x.rounds,0),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),planningLogic:'POSITION_COMPOSITION_WITH_CHANGE_LOSS',version:3}}
 async function save(){if(!S.loaded||!S.matrix.length){note("Load Master ที่มี WORK Time Block ก่อน","plan-warn");return}let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;try{stat("Saving...");await ProdV2DB.set("prodV2_dailyPlans",id,snap(),true);$("snapshotBadge").textContent="SAVED";note(`บันทึก Daily Plan แล้ว • ${d} • Line ${l} • ${sh}`,"plan-ok");stat("Saved","ok")}catch(e){note(e.message,"plan-warn");stat("Save failed","err")}}
-async function copy(){let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,p=prevDate(d),id=`plan_${p}_${l}_${sh}`;try{let doc=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();if(!doc.exists){note(`ไม่พบ Daily Plan ของวันก่อน (${p})`,"plan-warn");return}await load();let avail=new Set(S.pallets.map(x=>x.id)),ids=doc.data().masterSnapshot?.activePalletIds||[];S.active=new Set(ids.filter(x=>avail.has(x)));S.baseActive=new Set(S.active);let oo=doc.data().masterSnapshot?.palletOrder||[];S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];S.events=(doc.data().masterSnapshot?.palletChanges||[]).filter(e=>avail.has(e.palletId));build();pallets();table();kpis();events();$("snapshotBadge").textContent="COPIED · NOT SAVED";note(`คัดลอกจาก ${p} แล้ว • ตรวจสอบก่อน Save Plan`,"plan-ok")}catch(e){note(e.message,"plan-warn")}}
+async function copy(){let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,p=prevDate(d),id=`plan_${p}_${l}_${sh}`;try{let doc=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();if(!doc.exists){note(`ไม่พบ Daily Plan ของวันก่อน (${p})`,"plan-warn");return}await load();let avail=new Set(S.pallets.map(x=>x.id)),ids=doc.data().masterSnapshot?.activePalletIds||[];S.active=new Set(ids.filter(x=>avail.has(x)));S.baseActive=new Set(S.active);let oo=doc.data().masterSnapshot?.palletOrder||[];S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];S.events=(doc.data().masterSnapshot?.palletChanges||[]).filter(e=>avail.has(e.palletId));S.losses=(doc.data().masterSnapshot?.palletChangeLosses||[]).filter(l=>!l.palletId||avail.has(l.palletId));build();pallets();table();kpis();events();$("snapshotBadge").textContent="COPIED · NOT SAVED";note(`คัดลอกจาก ${p} แล้ว • ตรวจสอบก่อน Save Plan`,"plan-ok")}catch(e){note(e.message,"plan-warn")}}
 async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=load;$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");stat("Ready","ok")}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}}
 addEventListener("DOMContentLoaded",init)})();
