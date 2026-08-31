@@ -315,3 +315,120 @@ document.getElementById('initABLayout')?.addEventListener('click',async()=>{
   }catch(err){setStatus(err.message,'err');alert('Initialize ไม่สำเร็จ: '+err.message);}
   finally{btn.disabled=false;}
 });
+
+
+/* Step 4 — Shift & Time Master */
+const SHIFT_COLLECTION='prodV2_shiftMaster';
+
+const C_DAY_BLOCKS=[
+  ['08:00','09:00','WORK',60,10,6],
+  ['09:00','10:00','WORK',60,10,6],
+  ['10:00','11:40','WORK',100,10,10],
+  ['11:40','12:20','BREAK',40,null,0],
+  ['12:20','13:00','WORK',40,10,4],
+  ['13:00','14:00','WORK',60,10,6],
+  ['14:00','14:40','WORK',40,10,4],
+  ['14:40','15:00','BREAK',20,null,0],
+  ['15:00','16:00','WORK',60,10,6],
+  ['16:00','17:00','WORK',60,10,6],
+  ['17:00','17:20','BREAK',20,null,0],
+  ['17:20','18:00','WORK',40,10,4],
+  ['18:00','19:00','WORK',60,10,6],
+  ['19:00','19:50','WORK',50,10,5]
+];
+
+/* Night shift: only confirmed break windows are seeded.
+   Other time windows stay pending until exact shift start/end is verified. */
+const C_NIGHT_BLOCKS=[
+  ['23:10','00:00','BREAK',50,null,0],
+  ['02:30','03:00','BREAK',30,null,0],
+  ['05:10','05:30','BREAK',20,null,0]
+];
+
+function shiftRecord(lineId,shift,blocks,status,cycleMin){
+  return {
+    lineId,shift,blocks:blocks.map((b,i)=>({
+      order:i+1,start:b[0],end:b[1],type:b[2],minutes:b[3],
+      cycleMin:b[4],plannedRounds:b[5]
+    })),
+    standardCycleMinPerRound:cycleMin,
+    verificationStatus:status,
+    active:true,updatedAt:Date.now()
+  };
+}
+async function saveShift(id,data){ await ProdV2DB.set(SHIFT_COLLECTION,id,data,{merge:true}); }
+
+async function initLineCShift(){
+  await saveShift('shift_C_DAY',shiftRecord('C','DAY',C_DAY_BLOCKS,'CONFIRMED',10));
+  await saveShift('shift_C_NIGHT',shiftRecord('C','NIGHT',C_NIGHT_BLOCKS,'PENDING',10));
+}
+async function initABShiftDraft(){
+  /* Provisional 12 min/round = 5 rounds/hour. No fabricated time blocks. */
+  for(const lineId of ['A','B']){
+    for(const shift of ['DAY','NIGHT']){
+      await saveShift(`shift_${lineId}_${shift}`,{
+        lineId,shift,blocks:[],standardCycleMinPerRound:12,
+        provisionalRoundsPerHour:5,verificationStatus:'PENDING',
+        active:true,updatedAt:Date.now()
+      });
+    }
+  }
+}
+async function loadShiftMaster(){
+  const lineSel=document.getElementById('shiftLineFilter');
+  const shiftSel=document.getElementById('shiftTypeFilter');
+  if(!lineSel||!shiftSel)return;
+  if(!lineSel.options.length){
+    const lines=await v2ReadAll(LINE_COLLECTION);
+    lineSel.innerHTML=lines.sort((a,b)=>(a.order||999)-(b.order||999))
+      .map(l=>`<option value="${esc(l.lineId)}">Line ${esc(l.lineId)}</option>`).join('');
+    if([...lineSel.options].some(o=>o.value==='C'))lineSel.value='C';
+    lineSel.addEventListener('change',loadShiftMaster);
+    shiftSel.addEventListener('change',loadShiftMaster);
+  }
+  const id=`shift_${lineSel.value}_${shiftSel.value}`;
+  const all=await v2ReadAll(SHIFT_COLLECTION);
+  const rec=all.find(x=>x.id===id);
+  const body=document.getElementById('shiftRows'), sum=document.getElementById('shiftSummary');
+  if(!rec){
+    sum.textContent=`Line ${lineSel.value} / ${shiftSel.value}: ยังไม่มี Shift Master`;
+    body.innerHTML='<tr><td colspan="6">ยังไม่มีข้อมูล</td></tr>'; return;
+  }
+  const blocks=rec.blocks||[];
+  const workMin=blocks.filter(b=>b.type==='WORK').reduce((s,b)=>s+Number(b.minutes||0),0);
+  const rounds=blocks.reduce((s,b)=>s+Number(b.plannedRounds||0),0);
+  const state=rec.verificationStatus||'PENDING';
+  sum.textContent=`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds} planned rounds • ${state}`;
+  if(!blocks.length){
+    body.innerHTML=`<tr><td colspan="6">Draft only — provisional ${rec.provisionalRoundsPerHour||'-'} rounds/hour. Time blocks Pending Verification.</td></tr>`;
+    return;
+  }
+  body.innerHTML=blocks.map(b=>`<tr>
+    <td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.type)}</td><td>${b.minutes}</td>
+    <td>${b.cycleMin??'-'}</td><td>${b.plannedRounds??0}</td><td>${state}</td>
+  </tr>`).join('');
+}
+
+document.getElementById('initShiftC')?.addEventListener('click',async()=>{
+  if(!confirm('Initialize Line C Shift Master?\n\nDAY = confirmed 63 rounds / 630 work min\nNIGHT = break windows only, Pending Verification'))return;
+  const btn=document.getElementById('initShiftC');
+  try{
+    btn.disabled=true;setStatus('Initializing Line C Shift…');
+    await initLineCShift();setStatus('✓ Line C Shift initialized','ok');
+    document.getElementById('shiftLineFilter').value='C';
+    document.getElementById('shiftTypeFilter').value='DAY';
+    await loadShiftMaster();
+  }catch(e){setStatus(e.message,'err');alert(e.message)}finally{btn.disabled=false}
+});
+document.getElementById('initShiftDraft')?.addEventListener('click',async()=>{
+  if(!confirm('Initialize A/B Shift Draft?\n\nCycle = provisional 12 min/round (5 rounds/hour).\nNo time blocks will be invented.'))return;
+  const btn=document.getElementById('initShiftDraft');
+  try{
+    btn.disabled=true;setStatus('Initializing A/B Shift Draft…');
+    await initABShiftDraft();setStatus('✓ A/B Shift Draft initialized','ok');
+    document.getElementById('shiftLineFilter').value='A';
+    document.getElementById('shiftTypeFilter').value='DAY';
+    await loadShiftMaster();
+  }catch(e){setStatus(e.message,'err');alert(e.message)}finally{btn.disabled=false}
+});
+document.querySelector('[data-tab="shifts"]')?.addEventListener('click',()=>loadShiftMaster().catch(e=>setStatus(e.message,'err')));

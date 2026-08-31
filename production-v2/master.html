@@ -57,9 +57,25 @@
   </section>
 
   <section class="tabpane" data-pane="shifts">
-    <div class="card"><h2>Shift & Time</h2><div class="placeholder">Step 4 — WORK / BREAK / Cycle / Planned Rounds จะทำต่อหลัง Pallet / Jig Layout</div></div>
+    <div class="notice">Shift & Time Master แยกตาม Line + Shift และรองรับ Effective Date ในขั้นต่อไป • BREAK ไม่ถือเป็น Loss</div>
+    <div class="card">
+      <div class="pagehead">
+        <div><h2>Shift & Time Master</h2><div class="sub">WORK / BREAK / Cycle / Planned Rounds by time block</div></div>
+        <div class="toolbar">
+          <button id="initShiftDraft">Initialize A/B Draft</button>
+          <button id="initShiftC" class="primary">Initialize Line C</button>
+          <label>Line <select id="shiftLineFilter"></select></label>
+          <label>Shift <select id="shiftTypeFilter"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+        </div>
+      </div>
+      <div id="shiftSummary" class="notice">เลือก Line / Shift เพื่อดู Time Blocks</div>
+      <table class="grid">
+        <thead><tr><th>Time</th><th>Type</th><th>Minutes</th><th>Cycle</th><th>Planned Rounds</th><th>Status</th></tr></thead>
+        <tbody id="shiftRows"></tbody>
+      </table>
+    </div>
   </section>
 </main>
 </div>
-<script src="js/firebase-v2.js?v=20260831-fix3"></script><script src="js/master.js?v=20260831-ab1"></script>
+<script src="js/firebase-v2.js?v=20260831-fix3"></script><script src="js/master.js?v=20260901-step4"></script>
 </body></html>
