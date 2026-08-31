@@ -1,0 +1,1 @@
+Step 5.3: actual pallet-change time input; snaps to next cycle boundary; auto-splits WORK time block; integer rounds only; earlier plan unchanged; saves actualTime and effectiveFrom in Daily Plan snapshot.

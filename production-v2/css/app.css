@@ -225,3 +225,23 @@ input,select,textarea,.grid input,.grid select{
 .change-item{display:grid;grid-template-columns:90px 1fr 34px;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155}
 .change-item b{color:#2563eb}.change-item button{padding:3px 7px;color:#dc2626;background:#fff}.change-empty{color:#8090a3;font-size:12px}
 @media(max-width:800px){.change-controls{grid-template-columns:1fr}.change-item{grid-template-columns:75px 1fr 34px}}
+
+/* Step 5.2 — replacement pallet */
+.change-controls-v2{grid-template-columns:1.6fr 1fr 1.6fr 1.1fr auto;align-items:end}
+.change-controls-v2>div{display:flex;flex-direction:column;gap:5px}
+.change-controls-v2 small{font-size:9px;color:#718399;font-weight:700;letter-spacing:.06em}
+.change-controls-v2 select{width:100%}
+.apply-wrap{justify-content:flex-end}
+.change-help{margin-top:9px;padding:8px 10px;background:#f3f8ff;border-radius:7px;color:#4f6f8e;font-size:11px}
+.change-item-v2{grid-template-columns:75px 1fr 34px}
+.change-item-v2 span{line-height:1.45}
+@media(max-width:1050px){.change-controls-v2{grid-template-columns:1fr 1fr}.apply-wrap{grid-column:1/-1}}
+@media(max-width:650px){.change-controls-v2{grid-template-columns:1fr}}
+
+/* Step 5.3 exact change time */
+.change-controls-v3{grid-template-columns:1.6fr 1fr 1.6fr 1fr auto;align-items:end}
+.change-controls-v3>div{display:flex;flex-direction:column;gap:5px}
+.change-controls-v3 small{font-size:9px;color:#718399;font-weight:700;letter-spacing:.06em}
+.change-controls-v3 select,.change-controls-v3 input{width:100%}
+@media(max-width:1050px){.change-controls-v3{grid-template-columns:1fr 1fr}.change-controls-v3 .apply-wrap{grid-column:1/-1}}
+@media(max-width:650px){.change-controls-v3{grid-template-columns:1fr}}
