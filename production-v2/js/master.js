@@ -194,7 +194,8 @@ const LAYOUT_COLLECTION='prodV2_jigLayouts';
 
 async function v2ReadAll(collectionName){
   if(!String(collectionName).startsWith('prodV2_')) throw new Error('V2 read blocked: invalid collection');
-  const snap=await db.collection(collectionName).get();
+  const ref=ProdV2DB.collection(collectionName);
+  const snap=await ref.get();
   return snap.docs.map(d=>({id:d.id,...d.data()}));
 }
 
