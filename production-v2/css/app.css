@@ -5,3 +5,60 @@ label{color:var(--muted);font-size:13px}
 label select{margin-left:6px;min-width:110px}
 .grid input[readonly]{opacity:.8;background:#101827}
 .grid td input{max-width:210px}
+
+
+/* ===== Production V2 Light Industrial Theme =====
+   Visual-only override inspired by the user's Quality Dashboard.
+   No Firebase/data logic is changed. */
+:root{
+  --bg:#f3f5f8;
+  --panel:#ffffff;
+  --panel2:#f8fafc;
+  --navy:#0d2f50;
+  --navy2:#123b63;
+  --text:#102033;
+  --muted:#71839b;
+  --line:#dbe3ec;
+  --blue:#2563eb;
+  --green:#16a34a;
+  --orange:#f59e0b;
+  --danger:#dc2626;
+}
+html,body{background:var(--bg)!important;color:var(--text)!important}
+body{min-height:100vh}
+.topbar{background:var(--navy)!important;border-bottom:0!important;color:#fff!important}
+.brand,.topbar strong,.topbar b{color:#fff!important}
+.shell,.app{background:var(--bg)!important}
+.sidebar{background:var(--bg)!important;border-right:1px solid var(--line)!important}
+.sidebar a,.nav a{color:#355879!important;border-radius:9px!important}
+.sidebar a:hover,.nav a:hover{background:#e8eef6!important;color:var(--navy)!important}
+.sidebar a.active,.nav a.active{background:var(--navy)!important;color:#fff!important}
+main{background:var(--bg)!important}
+h1,h2,h3{color:var(--text)!important}
+.sub,.muted{color:var(--muted)!important}
+.card,.panel{background:var(--panel)!important;border:1px solid var(--line)!important;
+  box-shadow:0 2px 8px rgba(15,47,80,.05)!important;border-radius:14px!important}
+.notice{background:#eef6ff!important;border-color:#2f80c9!important;color:#244866!important}
+.tabs{gap:7px!important}
+.tab{background:#f1f5f9!important;color:#294966!important;border:1px solid var(--line)!important}
+.tab.active{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}
+button{background:#f5f8fb!important;color:#173650!important;border:1px solid #cfd9e5!important}
+button:hover{background:#eaf1f8!important}
+button.primary,.primary{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}
+input,select,textarea{background:#fff!important;color:var(--text)!important;border:1px solid #cbd6e2!important}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)!important;outline:2px solid rgba(37,99,235,.12)!important}
+.grid,table{color:var(--text)!important}
+.grid th,table th{color:#60758d!important;border-bottom:1px solid var(--line)!important;background:#f8fafc!important}
+.grid td,table td{border-bottom:1px solid #e5ebf2!important}
+.grid tbody tr:hover,table tbody tr:hover{background:#f7faff!important}
+.status{color:#526c84!important}
+.status.ok{color:var(--green)!important}
+.status.err{color:var(--danger)!important}
+.placeholder{background:#f8fafc!important;color:#7b8da1!important;border-color:var(--line)!important}
+.badge,.pill{border-color:var(--line)!important}
+.kpi,.metric{background:#fff!important;color:var(--text)!important;border-color:var(--line)!important}
+@media(max-width:900px){
+  .sidebar{background:var(--navy)!important}
+  .sidebar a{color:#d8e7f5!important}
+  .sidebar a.active{background:var(--blue)!important}
+}
