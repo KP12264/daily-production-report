@@ -207,25 +207,14 @@ input,select,textarea,.grid input,.grid select{
   letter-spacing:.02em;
 }
 
-
-/* Dashboard hero: match the approved Production Entry navy header */
-.dashboard-hero{
-  background:linear-gradient(110deg,#123f6c,#174a7a);
-  border-color:#174a7a;
-  color:#fff;
-  box-shadow:0 3px 10px rgba(15,47,80,.10);
-}
-.dashboard-hero .eyebrow{
-  color:#7fc0ff;
-}
-.dashboard-hero h1{
-  color:#fff;
-}
-.dashboard-hero p{
-  color:#d7e6f4;
-}
-.dashboard-hero .isolation-pill{
-  background:rgba(13,148,136,.10);
-  border-color:#2dd4bf;
-  color:#6ee7d8;
-}
+/* Step 5 Daily Plan */
+.plan-filter label{display:flex;flex-direction:column;gap:6px}.plan-filter label input,.plan-filter label select{min-width:160px}
+.plan-actions{display:flex;gap:8px;align-items:flex-end;justify-content:flex-end;flex-wrap:wrap}.plan-kpis{grid-template-columns:repeat(4,1fr)}
+.plan-ok{background:#f0fdf4!important;color:#28714a!important;border-left-color:#52ad77!important}.plan-warn{background:#fff8eb!important;color:#8a5a12!important;border-left-color:#f59e0b!important}
+.compact-empty{min-height:90px}.pallet-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px;margin-top:15px}
+.pallet-card{display:flex;align-items:flex-start;gap:10px;border:1px solid #dce4ec;border-radius:10px;padding:12px;background:#fff;cursor:pointer;color:#334155}
+.pallet-card:hover{border-color:#9bb7d2;background:#fbfdff}.pallet-card.selected{border-color:#6aa4df;background:#f3f8ff}.pallet-card input{margin-top:3px}
+.pallet-card b{display:block;font-size:12px;color:#1f2937;margin-bottom:5px}.pallet-card span{display:block;font-size:11px;color:#64748b;line-height:1.45}
+.table-scroll{overflow:auto;margin-top:14px}.plan-grid{min-width:900px}.plan-grid th{text-align:center;vertical-align:bottom}.plan-grid td{text-align:center}.plan-grid small{font-size:9px;color:#8090a3;font-weight:500}
+.plan-grid .total-row td{font-weight:700;background:#f8fafc;border-top:2px solid #dce4ec}
+@media(max-width:900px){.plan-kpis{grid-template-columns:repeat(2,1fr)}.pallet-grid{grid-template-columns:1fr}.plan-actions{justify-content:flex-start}}

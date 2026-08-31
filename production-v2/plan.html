@@ -1,47 +1,13 @@
-<!doctype html>
-<html lang="th">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Daily Production Plan · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260901-theme-v3">
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-</head>
-<body>
-
-<div class="site-wrap">
-  <header class="app-nav">
-    <div class="app-name">Production System <span>V2</span></div>
-    <nav class="app-links"><a href="index.html" class="">Dashboard</a><a href="entry.html" class="">Production Entry</a><a href="plan.html" class="active">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a></nav>
-    <a class="legacy-link" href="../index.html">ระบบเดิม</a>
-  </header>
-
-
-  <section class="hero">
-    <div>
-      <div class="eyebrow">DAILY PLAN · V2</div>
-      <h1>Daily Production Plan</h1>
-      <p>สร้างแผนรายวันจาก Shift Master + Physical Pallet/Jig Layout</p>
-    </div>
-    <div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div></div>
-  </section>
-
-  <main class="content">
-
-  <section class="filter-card">
-    <div class="fake-filter"><span>DATE</span><b>เลือกวันที่</b></div>
-    <div class="fake-filter"><span>LINE</span><b>เลือก Line</b></div>
-    <div class="fake-filter"><span>SHIFT</span><b>Day / Night</b></div>
-    <div class="filter-note">รองรับ Add / Remove Pallet มีผลเฉพาะ Time Block หลังจุดเปลี่ยน</div>
-  </section>
-  <section class="section-card">
-    <div class="section-title-row"><div><h2>Plan Builder</h2><p>Master พร้อมแล้ว ขั้นต่อไปจะเชื่อม Plan calculation และ Snapshot</p></div><span class="soft-badge blue">NEXT STEP</span></div>
-    <div class="empty-state">Time Blocks · Active Pallets · Model/Door Plan · Daily Snapshot</div>
-  </section>
-
-  </main>
-</div>
-<script src="js/firebase-v2.js?v=20260901-ui3"></script>
-</body>
-</html>
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Plan · Production V2</title><link rel="stylesheet" href="css/app.css?v=20260901-step5">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script></head><body>
+<div class="site-wrap"><header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links">
+<a href="index.html">Dashboard</a><a href="entry.html">Production Entry</a><a class="active" href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<section class="hero"><div><div class="eyebrow">DAILY PLAN · V2</div><h1>Daily Production Plan</h1><p>สร้างแผนรายวันจาก Shift Master + Physical Pallet / Jig Layout</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="planStatus" class="hero-status">Ready</div></div></section>
+<main class="content">
+<section class="filter-card plan-filter"><label>DATE<input id="planDate" type="date"></label><label>LINE<select id="planLine"></select></label><label>SHIFT<select id="planShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label><div class="plan-actions"><button id="loadPlanBtn" class="primary">Load Master</button><button id="copyPlanBtn">Copy Previous Day</button><button id="savePlanBtn" class="primary">Save Plan</button></div></section>
+<div id="planMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วกด Load Master</div>
+<section class="kpi-grid plan-kpis"><div class="kpi-card"><div class="kpi-label">PHYSICAL PALLETS</div><div id="kpiPallets" class="kpi-value">—</div><div class="kpi-unit">pallets</div></div><div class="kpi-card accent-blue"><div class="kpi-label">ACTIVE POSITIONS</div><div id="kpiPositions" class="kpi-value">—</div><div class="kpi-unit">pcs / full round</div></div><div class="kpi-card accent-green"><div class="kpi-label">PLANNED ROUNDS</div><div id="kpiRounds" class="kpi-value">—</div><div class="kpi-unit">rounds / shift</div></div><div class="kpi-card accent-orange"><div class="kpi-label">TOTAL PLAN</div><div id="kpiPlan" class="kpi-value">—</div><div class="kpi-unit">pcs</div></div></section>
+<section class="section-card"><div class="section-title-row"><div><h2>Active Pallet / Jig Configuration</h2><p>เลือก Pallet ที่ใช้ผลิตวันนี้</p></div><span id="masterBadge" class="soft-badge">MASTER</span></div><div id="palletArea" class="empty-state compact-empty">Load Master เพื่อดู Pallet / Jig</div></section>
+<section class="section-card"><div class="section-title-row"><div><h2>Plan by Time Block</h2><p>Plan Qty = Planned Rounds × Active Position ของ Model / Door</p></div><span id="snapshotBadge" class="soft-badge blue">NOT SAVED</span></div><div id="planTableArea" class="empty-state">ยังไม่มีแผน</div></section>
+</main></div><script src="js/firebase-v2.js?v=20260901-step5"></script><script src="js/plan.js?v=20260901-step5"></script></body></html>
