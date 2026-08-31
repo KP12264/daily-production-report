@@ -22,7 +22,7 @@ function render(){
  if(!S.plan){$("entryTableArea").innerHTML='<div class="empty-state">ไม่พบ Daily Plan</div>';return}
  let ps=planKeys(),blocks=S.plan.blocks||[],h='<div class="table-scroll"><table class="grid actual-grid"><thead><tr><th>Model / Door</th>';
  blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>Plan ${Number(b.total||0)}</small></th>`);
- h+='<th>Plan</th><th>Actual</th><th>Diff</th><th>Ach.</th></tr></thead><tbody>';
+ h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
  ps.forEach(p=>{
    let rowPlan=0,rowActual=0;h+=`<tr><td class="actual-sticky"><b>${esc(p.model)}</b><br><small>${esc(p.door||"-")}</small></td>`;
    blocks.forEach((b,bi)=>{
@@ -32,12 +32,12 @@ function render(){
      h+=`<td class="actual-cell"><div class="cell-plan">P ${pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
    });
    let diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
-   h+=`<td><b>${rowPlan}</b></td><td data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td>${diff>0?"+":""}${diff}</td><td>${ach.toFixed(1)}%</td></tr>`
+   h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
    el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;renderKpis();$("saveBadge").textContent="SAVING...";queueSave(el.dataset.key,n)});
-   el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let next=arr[i+1];if(next){next.focus();next.select()}}})
+   el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let next=arr[i+1];if(next){next.focus();next.select()}}})
  });
  renderKpis()
 }

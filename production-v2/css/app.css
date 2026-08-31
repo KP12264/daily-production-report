@@ -261,3 +261,21 @@ input,select,textarea,.grid input,.grid select{
 .entry-kpis{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:12px;margin:14px 0}.entry-kpi{background:#fff;border:1px solid #dbe5f0;border-radius:14px;padding:14px;box-shadow:0 3px 12px rgba(15,39,71,.04)}.entry-kpi small{display:block;color:#64748b;font-size:10px;font-weight:800;letter-spacing:.05em}.entry-kpi b{display:block;color:#0f2747;font-size:24px;margin-top:5px}
 .actual-grid th,.actual-grid td{text-align:center;min-width:118px}.actual-grid th:first-child,.actual-grid td:first-child{min-width:150px}.actual-sticky{position:sticky;left:0;background:#fff;z-index:2;text-align:left!important}.actual-cell{padding:7px!important}.cell-plan{font-size:10px;color:#64748b;margin-bottom:4px}.actual-input{width:78px;height:34px;border:1px solid #cbd5e1;border-radius:8px;text-align:center;font-weight:700;color:#0f2747;background:#fff}.actual-input:focus{outline:2px solid #93c5fd;border-color:#3b82f6}
 @media(max-width:900px){.entry-kpis{grid-template-columns:repeat(2,1fr)}}
+
+/* STEP 6.1 — Production Entry usability */
+.actual-grid{border-collapse:separate;border-spacing:0}
+.actual-grid thead th{position:sticky;top:0;z-index:5;background:#f8fafc}
+.actual-grid th:first-child{position:sticky;left:0;z-index:8;background:#f8fafc;box-shadow:4px 0 8px rgba(15,39,71,.06)}
+.actual-grid .actual-sticky{position:sticky;left:0;z-index:4;background:#fff;box-shadow:4px 0 8px rgba(15,39,71,.06)}
+.actual-grid tr.entry-active-row td{background:#f8fbff}
+.actual-grid tr.entry-active-row .actual-sticky{background:#eef6ff}
+.actual-input:focus{outline:3px solid rgba(59,130,246,.22);border-color:#2563eb;background:#fff;box-shadow:0 0 0 1px #2563eb}
+.actual-grid .sum-col{position:sticky;background:#fff;z-index:3;border-left:1px solid #e5edf5}
+.actual-grid thead .sum-col{z-index:7;background:#f8fafc}
+.actual-grid .sum-ach{right:0;min-width:86px}
+.actual-grid .sum-diff{right:86px;min-width:86px}
+.actual-grid .sum-actual{right:172px;min-width:92px}
+.actual-grid .sum-plan{right:264px;min-width:92px;box-shadow:-5px 0 9px rgba(15,39,71,.06)}
+.actual-grid tr.entry-active-row .sum-col{background:#eef6ff}
+.table-scroll{scrollbar-gutter:stable}
+@media(max-width:1100px){.actual-grid .sum-plan,.actual-grid .sum-diff{position:static}.actual-grid .sum-actual{right:86px}.actual-grid .sum-ach{right:0}}
