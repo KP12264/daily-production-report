@@ -279,3 +279,68 @@ input,select,textarea,.grid input,.grid select{
 .actual-grid tr.entry-active-row .sum-col{background:#eef6ff}
 .table-scroll{scrollbar-gutter:stable}
 @media(max-width:1100px){.actual-grid .sum-plan,.actual-grid .sum-diff{position:static}.actual-grid .sum-actual{right:86px}.actual-grid .sum-ach{right:0}}
+
+/* STEP 6.2 — fixed production matrix */
+.production-matrix-viewport{
+  width:100%;
+  max-width:100%;
+  overflow:auto;
+  position:relative;
+  max-height:68vh;
+  border:1px solid #e3ebf4;
+  border-radius:12px;
+  background:#fff;
+}
+.production-matrix-viewport .actual-grid{
+  width:max-content;
+  min-width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
+.production-matrix-viewport .actual-grid th,
+.production-matrix-viewport .actual-grid td{background:#fff}
+.production-matrix-viewport .actual-grid thead th{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:#f8fafc;
+}
+.production-matrix-viewport .actual-grid .model-col{
+  position:sticky !important;
+  left:0 !important;
+  min-width:170px;
+  width:170px;
+  max-width:170px;
+  z-index:18;
+  background:#fff;
+  box-shadow:5px 0 10px rgba(15,39,71,.09);
+}
+.production-matrix-viewport .actual-grid thead .model-col{
+  z-index:40;
+  background:#f8fafc;
+}
+.production-matrix-viewport .actual-grid .sum-col{
+  position:sticky !important;
+  background:#fff;
+  z-index:16;
+}
+.production-matrix-viewport .actual-grid thead .sum-col{
+  z-index:35;
+  background:#f8fafc;
+}
+.production-matrix-viewport .actual-grid .sum-ach{right:0 !important;min-width:88px}
+.production-matrix-viewport .actual-grid .sum-diff{right:88px !important;min-width:88px}
+.production-matrix-viewport .actual-grid .sum-actual{right:176px !important;min-width:94px}
+.production-matrix-viewport .actual-grid .sum-plan{right:270px !important;min-width:94px;box-shadow:-5px 0 10px rgba(15,39,71,.09)}
+.production-matrix-viewport .actual-grid tr.entry-active-row td{background:#f8fbff}
+.production-matrix-viewport .actual-grid tr.entry-active-row .model-col,
+.production-matrix-viewport .actual-grid tr.entry-active-row .sum-col{background:#eef6ff}
+.production-matrix-viewport::-webkit-scrollbar{height:14px;width:12px}
+.production-matrix-viewport::-webkit-scrollbar-thumb{background:#aebdce;border-radius:10px;border:3px solid #f8fafc}
+.production-matrix-viewport::-webkit-scrollbar-track{background:#f8fafc}
+@media(max-width:1100px){
+ .production-matrix-viewport .actual-grid .sum-plan,
+ .production-matrix-viewport .actual-grid .sum-diff,
+ .production-matrix-viewport .actual-grid .sum-actual,
+ .production-matrix-viewport .actual-grid .sum-ach{position:sticky !important}
+}

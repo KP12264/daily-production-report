@@ -20,11 +20,11 @@ function renderKpis(){
 }
 function render(){
  if(!S.plan){$("entryTableArea").innerHTML='<div class="empty-state">ไม่พบ Daily Plan</div>';return}
- let ps=planKeys(),blocks=S.plan.blocks||[],h='<div class="table-scroll"><table class="grid actual-grid"><thead><tr><th>Model / Door</th>';
+ let ps=planKeys(),blocks=S.plan.blocks||[],h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
  blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>Plan ${Number(b.total||0)}</small></th>`);
  h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
  ps.forEach(p=>{
-   let rowPlan=0,rowActual=0;h+=`<tr><td class="actual-sticky"><b>${esc(p.model)}</b><br><small>${esc(p.door||"-")}</small></td>`;
+   let rowPlan=0,rowActual=0;h+=`<tr><td class="model-col actual-sticky"><b>${esc(p.model)}</b><br><small>${esc(p.door||"-")}</small></td>`;
    blocks.forEach((b,bi)=>{
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
