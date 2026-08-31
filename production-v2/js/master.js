@@ -264,3 +264,54 @@ document.getElementById('initLineCLayout')?.addEventListener('click',async()=>{
 
 /* Load Step 3 data when its tab is opened */
 document.querySelector('[data-tab="pallets"]')?.addEventListener('click',()=>loadLayouts().catch(e=>setStatus(e.message,'err')));
+
+
+/* Step 3B — A/B draft physical layouts.
+   These are intentionally Pending Verification and contain NO rounds/hour setting. */
+function draftABPallets(){
+  const rows=[]; let seq={A:1,B:1};
+  const add=(lineId,label,positions)=>{
+    const palletNo=seq[lineId]++;
+    rows.push({
+      lineId,palletNo,palletName:`${lineId}-D${String(palletNo).padStart(2,'0')}`,
+      layoutLabel:label,positions,
+      pcsPerRound:positions.reduce((s,p)=>s+Number(p.qty||0),0),
+      active:true, verificationStatus:'PENDING',
+      source:'draft-ab-composition-v1',updatedAt:Date.now()
+    });
+  };
+
+  /* A: only confirmed composition relationships; quantities/counts remain draft. */
+  add('A','G3 320 F+R',[{modelName:'G3 320',doorCode:'F',qty:1},{modelName:'G3 320',doorCode:'R',qty:1}]);
+  add('A','G3 350 F+R',[{modelName:'G3 350',doorCode:'F',qty:1},{modelName:'G3 350',doorCode:'R',qty:1}]);
+  add('A','T-Door Horizontal ก๊อก RR+FR',[{modelName:'T-Door Horizontal ก๊อก',doorCode:'RR',qty:1},{modelName:'T-Door Horizontal ก๊อก',doorCode:'FR',qty:1}]);
+  add('A','T-Door Horizontal ก๊อก RL+FL',[{modelName:'T-Door Horizontal ก๊อก',doorCode:'RL',qty:1},{modelName:'T-Door Horizontal ก๊อก',doorCode:'FL',qty:1}]);
+  add('A','TM1012 F+R',[{modelName:'TM1012',doorCode:'F',qty:1},{modelName:'TM1012',doorCode:'R',qty:1}]);
+
+  /* B: confirmed composition relationships only. */
+  add('B','EHRT 2070 NL F+R',[{modelName:'EHRT 2070 NL',doorCode:'F',qty:1},{modelName:'EHRT 2070 NL',doorCode:'R',qty:1}]);
+  add('B','EHRT 2570 NL F+R',[{modelName:'EHRT 2570 NL',doorCode:'F',qty:1},{modelName:'EHRT 2570 NL',doorCode:'R',qty:1}]);
+  add('B','Door 5.3 Cu.(159) C R',[{modelName:'Door 5.3 Cu.(159) C',doorCode:'R',qty:1}]);
+  add('B','Door 5.3 Cu.(159) F R',[{modelName:'Door 5.3 Cu.(159) F',doorCode:'R',qty:1}]);
+  add('B','Door 6.6 Cu.(199) C R',[{modelName:'Door 6.6 Cu.(199) C',doorCode:'R',qty:1}]);
+  add('B','Door 6.6 Cu.(199) F R',[{modelName:'Door 6.6 Cu.(199) F',doorCode:'R',qty:1}]);
+  return rows;
+}
+const AB_DRAFT_LAYOUT=draftABPallets();
+
+document.getElementById('initABLayout')?.addEventListener('click',async()=>{
+  if(!confirm('Initialize Line A/B DRAFT composition?\\n\\nThese records are marked PENDING verification. Jig counts and rounds/hour are NOT locked.')) return;
+  const btn=document.getElementById('initABLayout');
+  try{
+    btn.disabled=true; setStatus('Initializing A/B Draft…');
+    for(const row of AB_DRAFT_LAYOUT){
+      const id=`layout_${row.lineId}_D${String(row.palletNo).padStart(2,'0')}`;
+      await ProdV2DB.set(LAYOUT_COLLECTION,id,row,{merge:true});
+    }
+    setStatus('✓ A/B Draft initialized — Pending Verification','ok');
+    const sel=document.getElementById('layoutLineFilter'); if(sel) sel.value='A';
+    await loadLayouts();
+    alert('A/B Draft Layout สำเร็จ\\nข้อมูลถูกทำเครื่องหมาย Pending Verification\\nยังไม่ได้ล็อก Jig count หรือ rounds/hour');
+  }catch(err){setStatus(err.message,'err');alert('Initialize ไม่สำเร็จ: '+err.message);}
+  finally{btn.disabled=false;}
+});
