@@ -206,3 +206,26 @@ input,select,textarea,.grid input,.grid select{
   font-weight:600;
   letter-spacing:.02em;
 }
+
+
+/* Dashboard hero: match the approved Production Entry navy header */
+.dashboard-hero{
+  background:linear-gradient(110deg,#123f6c,#174a7a);
+  border-color:#174a7a;
+  color:#fff;
+  box-shadow:0 3px 10px rgba(15,47,80,.10);
+}
+.dashboard-hero .eyebrow{
+  color:#7fc0ff;
+}
+.dashboard-hero h1{
+  color:#fff;
+}
+.dashboard-hero p{
+  color:#d7e6f4;
+}
+.dashboard-hero .isolation-pill{
+  background:rgba(13,148,136,.10);
+  border-color:#2dd4bf;
+  color:#6ee7d8;
+}
