@@ -252,3 +252,6 @@ input,select,textarea,.grid input,.grid select{
 .pallet-top b{margin:0;color:#1d4ed8}.physical-id{font-size:10px!important;color:#7b8ca1!important}
 .order-tools{display:grid;grid-template-columns:30px 30px 48px;gap:4px}.order-tools button{padding:4px 6px;min-width:0;background:#fff;color:#315b85;border:1px solid #d5e0eb}
 .order-tools input{width:48px;padding:4px;text-align:center;border:1px solid #d5e0eb;border-radius:6px;font-size:11px}
+
+/* Step 5.5 — deterministic 24-hour time field */
+#chgTime{font-variant-numeric:tabular-nums;letter-spacing:.03em}

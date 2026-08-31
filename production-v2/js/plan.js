@@ -50,6 +50,15 @@ function build(){
     return{start:b.start,end:b.end,minutes:b.minutes,rounds:b.rounds,activePalletIds:[...activeAt(b.start)],cells,total:cells.reduce((s,c)=>s+c.plan,0)}
   })
 }
+function normalize24h(v){
+  let s=String(v||"").trim().replace(".",":");
+  if(/^\d{3,4}$/.test(s))s=s.padStart(4,"0").slice(0,2)+":"+s.padStart(4,"0").slice(2);
+  let m=s.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m)return null;
+  let h=Number(m[1]),mi=Number(m[2]);
+  if(h<0||h>23||mi<0||mi>59)return null;
+  return String(h).padStart(2,"0")+":"+String(mi).padStart(2,"0");
+}
 function events(){
   let host=document.getElementById("changeArea");if(!host)return;
   if(!S.loaded||!(S.shift?.blocks||[]).some(b=>val(b.type).toUpperCase()==="WORK")){host.innerHTML='<div class="empty-state compact-empty">Load Master ที่มี WORK Time Block ก่อน</div>';return}
@@ -60,7 +69,7 @@ function events(){
     <div><small>FROM PALLET</small><select id="chgPallet">${opts}</select></div>
     <div><small>ACTION</small><select id="chgAction"><option value="REPLACE">Replace Pallet</option><option value="REMOVE">Remove Only</option><option value="ADD">Add Only</option></select></div>
     <div id="replacementWrap"><small>REPLACE WITH</small><select id="chgReplacement">${opts}</select></div>
-    <div><small>ACTUAL CHANGE TIME</small><input id="chgTime" type="time" step="60"></div>
+    <div><small>ACTUAL CHANGE TIME (24H)</small><input id="chgTime" type="text" inputmode="numeric" maxlength="5" placeholder="14:20" autocomplete="off"></div>
     <div class="apply-wrap"><button id="addChangeBtn" class="primary">Apply Change</button></div>
   </div>
   <div class="change-help">ใส่เวลาที่เปลี่ยนจริง เช่น 14:20 • ถ้าไม่ตรงรอบ ระบบจะเริ่มมีผลที่รอบถัดไปอัตโนมัติ</div>
@@ -71,12 +80,12 @@ function events(){
     return `<div class="change-item change-item-v2"><b>${timing}</b><span>${text}</span><button data-del="${i}">×</button></div>`
   }).join(""):'<span class="change-empty">ยังไม่มีการเปลี่ยน Pallet กลางกะ</span>'}</div>`;
   let actionEl=document.getElementById("chgAction"),rw=document.getElementById("replacementWrap"),timeEl=document.getElementById("chgTime");
-  timeEl.value=work[0]?.start||"08:00";
+  timeEl.value=work[0]?.start||"08:00";timeEl.onblur=()=>{let t=normalize24h(timeEl.value);if(t)timeEl.value=t};
   function sync(){rw.style.display=actionEl.value==="REPLACE"?"block":"none"} actionEl.onchange=sync;sync();
   document.getElementById("addChangeBtn").onclick=()=>{
-    let pid=document.getElementById("chgPallet").value,action=actionEl.value,actual=timeEl.value,rid=document.getElementById("chgReplacement").value;
+    let pid=document.getElementById("chgPallet").value,action=actionEl.value,actual=normalize24h(timeEl.value),rid=document.getElementById("chgReplacement").value;
     let p=S.pallets.find(x=>x.id===pid),rp=S.pallets.find(x=>x.id===rid);
-    if(!actual){note("กรุณาเลือกเวลาเปลี่ยน Pallet","plan-warn");return}
+    if(!actual){note("กรุณาใส่เวลาแบบ 24 ชั่วโมง เช่น 14:20","plan-warn");return} timeEl.value=actual;
     if(action==="REPLACE"&&pid===rid){note("Pallet เดิมและ Pallet ที่นำมาแทนต้องไม่ใช่ตัวเดียวกัน","plan-warn");return}
     let block=work.find(b=>actual>=b.start&&actual<b.end);
     if(!block){note("เวลาที่เลือกไม่ได้อยู่ใน WORK Time Block","plan-warn");return}
@@ -101,6 +110,15 @@ function pallets(){
  $("palletArea").querySelectorAll("[data-down]").forEach(e=>e.onclick=()=>movePallet(e.dataset.down,1));
  $("palletArea").querySelectorAll("[data-pos]").forEach(e=>e.onchange=()=>setPalletPosition(e.dataset.pos,e.value));
  events();
+}
+function kpis(){
+  let p=mapForSet(S.baseActive||S.active).reduce((s,x)=>s+x.qty,0);
+  let r=S.matrix.reduce((s,x)=>s+x.rounds,0);
+  let t=S.matrix.reduce((s,x)=>s+x.total,0);
+  $("kpiPallets").textContent=S.active.size;
+  $("kpiPositions").textContent=p;
+  $("kpiRounds").textContent=r;
+  $("kpiPlan").textContent=t.toLocaleString();
 }
 function table(){if(!S.matrix.length){$("planTableArea").innerHTML='<div class="empty-state">ไม่มี WORK Time Block</div>';return}let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door)),h='<div class="table-scroll"><table class="grid plan-grid"><thead><tr><th>Time Block</th><th>Rounds</th>';ps.forEach(p=>h+=`<th>${p.model}<br><small>${p.door||"-"} · ${p.qty} pos</small></th>`);h+='<th>Total Plan</th></tr></thead><tbody>';S.matrix.forEach(x=>{h+=`<tr><td><b>${x.start}–${x.end}</b></td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td><b>${x.total}</b></td></tr>`});h+=`<tr class="total-row"><td>TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;ps.forEach((p,i)=>h+=`<td>${S.matrix.reduce((s,x)=>s+(x.cells[i]?.plan||0),0)}</td>`);h+=`<td>${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;$("planTableArea").innerHTML=h}
 async function load(){let l=val($("planLine").value).toUpperCase(),sh=$("planShift").value;try{stat("Loading Master...");let [ss,ls]=await Promise.all([all("prodV2_shiftMaster"),all("prodV2_jigLayouts")]);S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;S.pallets=ls.filter(x=>lineOf(x)===l&&x.active!==false);if(!S.shift){note(`ไม่พบ Shift Master: Line ${l} / ${sh}`,"plan-warn");stat("Master missing","err");return}S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;$("masterBadge").textContent=S.shift.verificationStatus||"MASTER";build();pallets();table();kpis();if(!S.matrix.length)note(`Line ${l} / ${sh} ยังไม่มี WORK Time Block — ไม่สร้างตัวเลข Plan`,"plan-warn");else note(`โหลด Master สำเร็จ • Line ${l} / ${sh}`,"plan-ok");stat("Master loaded","ok")}catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}}
