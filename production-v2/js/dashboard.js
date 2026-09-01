@@ -6,26 +6,37 @@ function note(t,c=""){$("dashMessage").textContent=t;$("dashMessage").className=
 async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
 const k=(m,d)=>`${m}|||${d}`;
 function splitKey(x){let p=String(x).split("|||");return {model:p[0]||"",door:p[1]||""}}
+function planMatrix(){
+ let ms=S.plan?.masterSnapshot||{};
+ return S.plan?.planMatrix||S.plan?.matrix||ms.planMatrix||ms.matrix||[];
+}
 function blocks(){
- // Canonical schema written by plan.js snap(): S.plan.blocks[] — each block has
- // {start,end,cells:[{model,door,plan,originalPlan}],total,originalTotal,...}
- return S.plan?.blocks||[];
+ let ms=S.plan?.masterSnapshot||{};
+ return S.plan?.timeBlocks||ms.timeBlocks||S.plan?.blocks||[];
 }
 function rowsFromPlan(){
- // Read plan quantities directly from the same field entry.js already reads
- // (S.plan.blocks[bi].cells[].plan) so Dashboard can never diverge from Entry.
- let out={};
- blocks().forEach((b,bi)=>{
-  (b.cells||[]).forEach(c=>{
-   let kk=k(c.model,c.door);
-   (out[kk]??=[])[bi]=Number(c.plan||0);
+ let matrix=planMatrix(), out={};
+ if(Array.isArray(matrix)){
+  matrix.forEach((b,bi)=>{
+   let vals=b.values||b.qtyByModel||b.planByModel||b.models||{};
+   if(Array.isArray(vals)) vals.forEach(x=>{let kk=k(x.model||x.modelName,x.door||x.doorName);(out[kk]??=[])[bi]=Number(x.qty||x.plan||x.adjustedPlan||0)});
+   else Object.entries(vals||{}).forEach(([kk,v])=>{(out[kk]??=[])[bi]=Number(typeof v==="object"?(v.qty??v.plan??v.adjustedPlan??0):v)});
   });
- });
+ }
+ // Saved Step5 snapshots may store rows under masterSnapshot.planRows
+ let pr=S.plan?.planRows||S.plan?.masterSnapshot?.planRows;
+ if(Array.isArray(pr))pr.forEach(r=>{let kk=k(r.model||r.modelName,r.door||r.doorName);out[kk]=(r.blocks||r.values||r.qtyByBlock||[]).map(Number)});
  return out;
 }
 function actualRows(){
  let out={},a=S.actual?.actualByCell||{};
  Object.entries(a).forEach(([cell,v])=>{let p=cell.split("|||"),bi=Number(p[0]),kk=k(p[1],p[2]);(out[kk]??=[])[bi]=Number(v||0)});
+ return out;
+}
+function fallbackPlanRows(){
+ // Production Entry snapshot is authoritative if it stores plan by cell/row.
+ let out={}, src=S.actual?.planByCell||S.actual?.planSnapshot?.planByCell||{};
+ Object.entries(src).forEach(([cell,v])=>{let p=cell.split("|||"),bi=Number(p[0]),kk=k(p[1],p[2]);(out[kk]??=[])[bi]=Number(v||0)});
  return out;
 }
 function filters(keys){
@@ -38,7 +49,7 @@ function selected(keys){let m=$("dashModel").value,d=$("dashDoor").value;return 
 function autoLoss(){return S.plan?.masterSnapshot?.palletChangeLosses||[]}
 function lossRows(){return [...autoLoss().map(x=>({...x,category:x.category||"Pallet Change"})),...S.manual]}
 function render(){
- let P=rowsFromPlan();let A=actualRows();let keys=[...new Set([...Object.keys(P),...Object.keys(A)])];S.keys=keys;filters(keys);let use=selected(keys);
+ let P=rowsFromPlan();if(!Object.keys(P).length)P=fallbackPlanRows();let A=actualRows();let keys=[...new Set([...Object.keys(P),...Object.keys(A)])];S.keys=keys;filters(keys);let use=selected(keys);
  let n=Math.max(0,...use.flatMap(x=>[(P[x]||[]).length,(A[x]||[]).length])), labels=[];
  let bs=blocks();for(let i=0;i<n;i++)labels.push(bs[i]?(bs[i].label||`${bs[i].start||bs[i].startTime||""}–${bs[i].end||bs[i].endTime||""}`):`Block ${i+1}`);
  let pb=Array(n).fill(0),ab=Array(n).fill(0);use.forEach(x=>{for(let i=0;i<n;i++){pb[i]+=Number(P[x]?.[i]||0);ab[i]+=Number(A[x]?.[i]||0)}});
