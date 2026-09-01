@@ -6,6 +6,8 @@ function note(t,c=""){$("entryMessage").textContent=t;$("entryMessage").classNam
 function stat(t,c=""){$("entryStatus").textContent=t;$("entryStatus").className="hero-status "+c}
 async function all(n){const s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
 function key(blockIndex,model,door){return `${blockIndex}|||${model}|||${door}`}
+function rowId(i){return `entryRow_${i}`}
+
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function planKeys(){
  let m=new Map;(S.plan?.blocks||[]).forEach(b=>(b.cells||[]).forEach(c=>m.set(`${c.model}|||${c.door}`,{model:c.model,door:c.door})));
@@ -37,17 +39,29 @@ function openModelOrder(){
 function closeModelOrder(){$("modelOrderModal")?.classList.remove("open");render()}
 function actualTotal(){return Object.values(S.actual).reduce((s,x)=>s+(Number(x)||0),0)}
 function updateRowSummary(input){
-  const tr=input.closest("tr"); if(!tr)return;
-  const inputs=[...tr.querySelectorAll("input.actual-input")];
-  const rowActual=inputs.reduce((s,el)=>s+(Number(el.value)||0),0);
-  const rowPlan=inputs.reduce((s,el)=>s+(Number(el.dataset.plan)||0),0);
+  const ri=Number(input.dataset.rowIndex);
+  const ps=planKeys(), p=ps[ri]; if(!p)return;
+  let rowPlan=0,rowActual=0;
+  (S.plan?.blocks||[]).forEach((b,bi)=>{
+    const c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door);
+    rowPlan+=Number(c?.plan||0);
+    rowActual+=Number(S.actual[key(bi,p.model,p.door)]||0);
+  });
   const diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
-  const a=tr.querySelector("[data-rowactual] b");
-  const d=tr.querySelector("td.sum-diff");
-  const h=tr.querySelector("td.sum-ach");
+  const tr=document.getElementById(rowId(ri)); if(!tr)return;
+  const a=tr.querySelector("[data-role='row-actual']");
+  const d=tr.querySelector("[data-role='row-diff']");
+  const h=tr.querySelector("[data-role='row-ach']");
   if(a)a.textContent=rowActual.toLocaleString();
   if(d)d.textContent=(diff>0?"+":"")+diff.toLocaleString();
   if(h)h.textContent=ach.toFixed(1)+"%";
+}
+
+
+function refreshAllRowSummaries(){
+  document.querySelectorAll(".actual-input[data-row-index]").forEach(el=>{
+    if(Number(el.dataset.blockIndex)===0)updateRowSummary(el);
+  });
 }
 
 function adjustedPlan(){return Number(S.plan?.adjustedPlan??S.plan?.totalPlan??0)}
@@ -61,23 +75,23 @@ function render(){
  let ps=planKeys(),blocks=S.plan.blocks||[],h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
  blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>Plan ${Number(b.total||0)}</small></th>`);
  h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
- ps.forEach(p=>{
-   let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div></td>`;
+ ps.forEach((p,ri)=>{
+   let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr id="${rowId(ri)}"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div></td>`;
    blocks.forEach((b,bi)=>{
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
      let disabled=pl===0?"":"";
-     h+=`<td class="actual-cell"><div class="cell-plan">P ${pl}</div><input class="actual-input" data-key="${esc(k)}" data-model="${esc(p.model)}" data-door="${esc(p.door)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
+     h+=`<td class="actual-cell"><div class="cell-plan">P ${pl}</div><input class="actual-input" data-key="${esc(k)}" data-model="${esc(p.model)}" data-door="${esc(p.door)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ri}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
    });
    let diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
-   h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
+   h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual"><b data-role="row-actual">${rowActual}</b></td><td class="sum-col sum-diff" data-role="row-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach" data-role="row-ach">${ach.toFixed(1)}%</td></tr>`
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
    el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;updateRowSummary(el);renderKpis();queueSave()});
    el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>{el.closest("tr")?.classList.remove("entry-active-row");flushSave()});el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();flushSave();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
- renderKpis()
+ refreshAllRowSummaries();renderKpis()
 }
 function queueSave(){
   S.dirty=true;
@@ -121,7 +135,7 @@ async function load(){
   stat("Loading...");let [pd,ad]=await Promise.all([ProdV2DB.collection("prodV2_dailyPlans").doc(pid).get(),ProdV2DB.collection("prodV2_actualLogs").doc(aid).get()]);
   if(!pd.exists){S.plan=null;S.actual={};render();renderKpis();$("saveBadge").textContent="NO PLAN";note(`ไม่พบ Saved Daily Plan: ${d} · Line ${l} · ${sh} — ต้อง Save Daily Plan ก่อน`,"plan-warn");stat("Plan missing","err");return}
   S.plan={id:pd.id,...pd.data()};S.docId=aid;S.actual=ad.exists?(ad.data().actualByCell||{}):{};S.dirty=false;S.savingPromise=null;S.modelOrder=ad.exists?(ad.data().modelOrder||[]):[];
-  render();$("saveBadge").textContent=ad.exists?"LOADED":"READY TO ENTER";note(`โหลด Saved Plan สำเร็จ · ${d} · Line ${l} · ${sh}`,"plan-ok");stat("Plan loaded","ok")
+  render();refreshAllRowSummaries();$("saveBadge").textContent=ad.exists?"LOADED":"READY TO ENTER";note(`โหลด Saved Plan สำเร็จ · ${d} · Line ${l} · ${sh}`,"plan-ok");stat("Plan loaded","ok")
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
 async function init(){
