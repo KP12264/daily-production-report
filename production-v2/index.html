@@ -1,48 +1,34 @@
-<!doctype html>
-<html lang="th">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Daily Production · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260901-step5">
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-</head>
-<body>
-
-<div class="site-wrap">
-  <header class="app-nav">
-    <div class="app-name">Production System <span>V2</span></div>
-    <nav class="app-links"><a href="index.html" class="active">Dashboard</a><a href="entry.html" class="">Production Entry</a><a href="plan.html" class="">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a></nav>
-    <a class="legacy-link" href="../index.html">ระบบเดิม</a>
-  </header>
-
-
-  <section class="hero">
-    <div>
-      <div class="eyebrow">PRODUCTION DASHBOARD · V2</div>
-      <h1>Daily Production</h1>
-      <p>ติดตาม Plan, Actual, Gap, Achievement และ Loss ในมุมมองเดียว</p>
-    </div>
-    <div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div></div>
-  </section>
-
-  <main class="content">
-
-  <section class="kpi-grid">
-    <div class="kpi-card"><div class="kpi-label">PLAN TO NOW</div><div class="kpi-value">—</div><div class="kpi-unit">pcs</div></div>
-    <div class="kpi-card accent-green"><div class="kpi-label">ACTUAL</div><div class="kpi-value">—</div><div class="kpi-unit">pcs</div></div>
-    <div class="kpi-card accent-blue"><div class="kpi-label">GAP</div><div class="kpi-value">—</div><div class="kpi-unit">pcs</div></div>
-    <div class="kpi-card"><div class="kpi-label">ACHIEVEMENT</div><div class="kpi-value">—</div><div class="kpi-unit">%</div></div>
-    <div class="kpi-card accent-orange"><div class="kpi-label">LOSS</div><div class="kpi-value">—</div><div class="kpi-unit">min</div></div>
-  </section>
-  <section class="section-card">
-    <div class="section-title-row"><div><h2>Production Overview</h2><p>Dashboard จะเชื่อมข้อมูลหลัง Daily Plan และ Production Entry พร้อมใช้งาน</p></div><span class="soft-badge">COMING NEXT</span></div>
-    <div class="empty-state">Plan vs Actual · Hourly Trend · Model Performance · Loss Analysis</div>
-  </section>
-
-  </main>
-</div>
+<!doctype html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260901-step8">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a class="active" href="index.html">Dashboard</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<section class="hero"><div><div class="eyebrow">STEP 8 · LIVE PRODUCTION OVERVIEW</div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div></section>
+<main class="content">
+<section class="filter-card dash-filters">
+<label><span>DATE</span><input id="dashDate" type="date"></label>
+<label><span>LINE</span><select id="dashLine"></select></label>
+<label><span>SHIFT</span><select id="dashShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+<label><span>MODEL</span><select id="dashModel"><option value="">All Models</option></select></label>
+<label><span>DOOR</span><select id="dashDoor"><option value="">All Doors</option></select></label>
+<button id="dashLoadBtn" class="primary">Load Dashboard</button>
+</section>
+<div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
+<section id="dashKpis" class="dash-kpis"></section>
+<section class="dash-grid">
+<div class="section-card"><div class="section-title-row"><div><h2>Plan vs Actual by Time Block</h2><p>Adjusted Plan เทียบกับยอดผลิตจริง</p></div></div><div class="chart-box"><canvas id="hourlyChart"></canvas></div></div>
+<div class="section-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา</p></div></div><div class="chart-box"><canvas id="cumChart"></canvas></div></div>
+</section>
+<section class="dash-grid">
+<div class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
+<div class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
+</section>
+</main></div>
 <script src="js/firebase-v2.js?v=20260901-ui3"></script>
-</body>
-</html>
+<script src="js/context-v2.js?v=20260901-step8"></script>
+<script src="js/dashboard.js?v=20260901-step8"></script>
+</body></html>
