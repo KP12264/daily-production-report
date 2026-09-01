@@ -1,16 +1,6 @@
 (()=>{const $=id=>document.getElementById(id);
 let S={lines:[],plan:null,actual:{},modelOrder:[],docId:null,saveTimers:new Map()};
 const val=x=>String(x??"").trim();
-function actualMap(){return S.actual?.actualByCell||{}}
-function cellActual(bi,model,door){return Number(actualMap()[`${bi}|||${model}|||${door}`]||0)}
-function rowActual(model,door){
-  let total=0, n=(S.plan?.masterSnapshot?.matrix||S.plan?.matrix||[]).length;
-  if(!n){let ks=Object.keys(actualMap()).filter(x=>x.endsWith(`|||${model}|||${door}`));return ks.reduce((s,x)=>s+Number(actualMap()[x]||0),0)}
-  for(let i=0;i<n;i++) total+=cellActual(i,model,door);
-  return total;
-}
-function totalActual(){return Object.values(actualMap()).reduce((s,v)=>s+Number(v||0),0)}
-
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
 function note(t,c=""){$("entryMessage").textContent=t;$("entryMessage").className="notice info-notice "+c}
 function stat(t,c=""){$("entryStatus").textContent=t;$("entryStatus").className="hero-status "+c}
@@ -46,6 +36,20 @@ function openModelOrder(){
 }
 function closeModelOrder(){$("modelOrderModal")?.classList.remove("open");render()}
 function actualTotal(){return Object.values(S.actual).reduce((s,x)=>s+(Number(x)||0),0)}
+function updateRowSummary(input){
+  const tr=input.closest("tr"); if(!tr)return;
+  const inputs=[...tr.querySelectorAll(".actual-input")];
+  const rowActual=inputs.reduce((s,el)=>s+(Number(el.value)||0),0);
+  const rowPlan=inputs.reduce((s,el)=>s+(Number(el.dataset.plan)||0),0);
+  const diff=rowActual-rowPlan, ach=rowPlan?100*rowActual/rowPlan:0;
+  const a=tr.querySelector(".sum-actual b");
+  const d=tr.querySelector(".sum-diff");
+  const h=tr.querySelector(".sum-ach");
+  if(a)a.textContent=rowActual.toLocaleString();
+  if(d)d.textContent=(diff>0?"+":"")+diff.toLocaleString();
+  if(h)h.textContent=ach.toFixed(1)+"%";
+}
+
 function adjustedPlan(){return Number(S.plan?.adjustedPlan??S.plan?.totalPlan??0)}
 function originalPlan(){return Number(S.plan?.originalPlan??S.plan?.totalPlan??0)}
 function renderKpis(){
@@ -70,7 +74,7 @@ function render(){
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
-   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;renderKpis();$("saveBadge").textContent="SAVING...";queueSave(el.dataset.key,n)});
+   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;updateRowSummary(el);renderKpis();$("saveBadge").textContent="SAVING...";queueSave(el.dataset.key,n)});
    el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
  renderKpis()
@@ -78,7 +82,7 @@ function render(){
 async function queueSave(k,v){
  clearTimeout(S.saveTimers.get(k));S.saveTimers.set(k,setTimeout(async()=>{
    try{
-    let payload={date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,actualByCell:{[k]:v},modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
+    let payload={date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,actualByCell:{...S.actual},modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
     await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);$("saveBadge").textContent="SAVED";stat("Saved","ok");
    }catch(e){console.error(e);$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn")}
  },450))
