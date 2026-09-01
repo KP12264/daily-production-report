@@ -5,7 +5,17 @@ try{if(typeof firebase!=="undefined"){if(!firebase.apps.length)firebase.initiali
 const V2_PREFIX="prodV2_";
 function assertV2Collection(name){if(typeof name!=="string"||!name.startsWith(V2_PREFIX))throw new Error("SAFETY BLOCK: Production V2 may write only to prodV2_* collections. Blocked: "+name);return name;}
 function v2Collection(name){if(!dbV2)throw new Error("Firestore is not available");return dbV2.collection(assertV2Collection(name));}
-async function v2Set(collection,id,data,options){return v2Collection(collection).doc(id).set(data,options||{});}
+function normalizeSetOptions(options){
+ // Firestore requires a SetOptions object like {merge:true}. Some call sites in this
+ // codebase historically passed the boolean literal `true` instead, which Firestore
+ // does NOT treat as merge:true — it silently falls back to a full overwrite of the
+ // document. Normalize any truthy-but-not-object value to {merge:true} so every
+ // v2Set() call merges as intended, and preserve real SetOptions objects untouched.
+ if(options&&typeof options==="object")return options;
+ if(options)return{merge:true};
+ return{};
+}
+async function v2Set(collection,id,data,options){return v2Collection(collection).doc(id).set(data,normalizeSetOptions(options));}
 async function v2Add(collection,data){return v2Collection(collection).add(data);}
 async function v2Update(collection,id,data){return v2Collection(collection).doc(id).update(data);}
 async function v2Delete(collection,id){return v2Collection(collection).doc(id).delete();}

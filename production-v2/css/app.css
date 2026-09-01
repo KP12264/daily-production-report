@@ -375,3 +375,20 @@ input,select,textarea,.grid input,.grid select{
 /* STEP 8 — Dashboard */
 .dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:#64748b}.dash-filters input,.dash-filters select{height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:0 11px;background:#fff;color:#0f2747}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}
 @media(max-width:1100px){.dash-filters{grid-template-columns:repeat(3,1fr)}.dash-kpis{grid-template-columns:repeat(3,1fr)}.dash-grid{grid-template-columns:1fr}}
+
+/* AUTH — Production V2 login gate */
+.auth-gate{min-height:60vh;display:flex;align-items:center;justify-content:center;padding:40px 16px}
+.auth-card{width:min(380px,100%);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 26px;box-shadow:var(--shadow)}
+.auth-card h2{margin:0 0 8px;font-size:19px;color:#0f2747}
+.auth-card p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5}
+.auth-card label{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.auth-card label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:#64748b}
+.auth-card input{height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:0 12px;background:#fff;color:#0f2747}
+.auth-card button.primary{width:100%;margin-top:6px;height:44px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}
+.auth-card #authError{margin-top:12px}
+.auth-user{color:#dbe8f5;font-size:12px;font-weight:600;margin-right:2px}
+.link-btn{background:none;border:0;color:#dbe8f5;text-decoration:underline;font-size:12px;cursor:pointer;padding:0}
+.link-btn:hover{color:#fff}
+.auth-card .link-btn{color:#2563eb;display:block;text-align:center;width:100%}
+.auth-card .link-btn:hover{color:#1d4ed8}
+#authBar{display:flex;align-items:center;gap:8px}
