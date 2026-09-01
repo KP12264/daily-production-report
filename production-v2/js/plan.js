@@ -148,79 +148,54 @@ function table(){
  h+=`<td>${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
-async function load(){let l=val($("planLine").value).toUpperCase(),sh=$("planShift").value;ProdV2Context.set({date:$("planDate").value,lineId:l,shift:sh});try{stat("Loading Master...");let [ss,ls]=await Promise.all([all("prodV2_shiftMaster"),all("prodV2_jigLayouts")]);S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;S.pallets=ls.filter(x=>lineOf(x)===l&&x.active!==false);if(!S.shift){note(`ไม่พบ Shift Master: Line ${l} / ${sh}`,"plan-warn");stat("Master missing","err");return}S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.losses=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;$("masterBadge").textContent=S.shift.verificationStatus||"MASTER";build();pallets();table();kpis();if(!S.matrix.length)note(`Line ${l} / ${sh} ยังไม่มี WORK Time Block — ไม่สร้างตัวเลข Plan`,"plan-warn");else note(`โหลด Master สำเร็จ • Line ${l} / ${sh}`,"plan-ok");stat("Master loaded","ok")}catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}}
+async function load(){
+ let d=$("planDate").value,l=val($("planLine").value).toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;
+ ProdV2Context.set({date:d,lineId:l,shift:sh});
+ try{
+  stat("Loading...");
+  let [ss,ls,savedDoc]=await Promise.all([
+   all("prodV2_shiftMaster"),all("prodV2_jigLayouts"),
+   ProdV2DB.collection("prodV2_dailyPlans").doc(id).get()
+  ]);
+  S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;
+  S.pallets=ls.filter(x=>lineOf(x)===l&&x.active!==false);
+  if(!S.shift){note(`ไม่พบ Shift Master: Line ${l} / ${sh}`,"plan-warn");stat("Master missing","err");return}
+  let avail=new Set(S.pallets.map(x=>x.id));
+  if(savedDoc.exists){
+   let saved=savedDoc.data(), ms=saved.masterSnapshot||{};
+   let ids=ms.activePalletIds||S.pallets.map(x=>x.id);
+   S.active=new Set(ids.filter(x=>avail.has(x))); S.baseActive=new Set(S.active);
+   let oo=ms.palletOrder||[];
+   S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];
+   S.events=(ms.palletChanges||[]).filter(e=>!e.palletId||avail.has(e.palletId));
+   S.losses=(ms.palletChangeLosses||[]).filter(x=>!x.palletId||avail.has(x.palletId));
+   S.loaded=true; $("masterBadge").textContent=S.shift.verificationStatus||"MASTER";
+   build(); pallets(); table(); kpis(); events();
+   $("snapshotBadge").textContent="SAVED";
+   note(`โหลด Saved Daily Plan แล้ว • ${d} • Line ${l} / ${sh}`,"plan-ok"); stat("Saved plan loaded","ok");
+  }else{
+   S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.losses=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;
+   $("masterBadge").textContent=S.shift.verificationStatus||"MASTER";build();pallets();table();kpis();events();
+   $("snapshotBadge").textContent="NOT SAVED";
+   if(!S.matrix.length)note(`Line ${l} / ${sh} ยังไม่มี WORK Time Block — ไม่สร้างตัวเลข Plan`,"plan-warn");else note(`ยังไม่มี Saved Daily Plan • โหลด Master เริ่มต้นแล้ว`,"plan-warn");
+   stat("Master loaded","ok");
+  }
+ }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
+}
 function snap(){return{date:$("planDate").value,lineId:$("planLine").value.toUpperCase(),shift:$("planShift").value,masterSnapshot:{shiftMasterId:S.shift?.id||null,shiftStatus:S.shift?.verificationStatus||null,palletOrder:[...S.palletOrder],activePalletIds:[...S.baseActive],palletChanges:S.events,palletChangeLosses:S.losses,activePallets:S.pallets.filter(p=>S.baseActive.has(p.id)||S.events.some(e=>e.palletId===p.id||e.replacementPalletId===p.id)).map(p=>({id:p.id,palletCode:p.palletCode||p.palletNo||p.name||p.id,positions:posOf(p)}))},blocks:S.matrix,originalPlan:S.matrix.reduce((s,x)=>s+x.originalTotal,0),adjustedPlan:S.matrix.reduce((s,x)=>s+x.total,0),totalPlan:S.matrix.reduce((s,x)=>s+x.total,0),lossMinutes:S.matrix.reduce((s,x)=>s+x.lossMinutes,0),scheduledRounds:S.matrix.reduce((s,x)=>s+x.scheduledRounds,0),plannedRounds:S.matrix.reduce((s,x)=>s+x.rounds,0),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),planningLogic:'POSITION_COMPOSITION_WITH_CHANGE_LOSS',version:3}}
 async function save(){if(!S.loaded||!S.matrix.length){note("Load Master ที่มี WORK Time Block ก่อน","plan-warn");return}let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;try{stat("Saving...");await ProdV2DB.set("prodV2_dailyPlans",id,snap(),true);$("snapshotBadge").textContent="SAVED";note(`บันทึก Daily Plan แล้ว • ${d} • Line ${l} • ${sh}`,"plan-ok");stat("Saved","ok")}catch(e){note(e.message,"plan-warn");stat("Save failed","err")}}
-async function copy(){let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,p=prevDate(d),id=`plan_${p}_${l}_${sh}`;try{let doc=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();if(!doc.exists){note(`ไม่พบ Daily Plan ของวันก่อน (${p})`,"plan-warn");return}await load();let avail=new Set(S.pallets.map(x=>x.id)),ids=doc.data().masterSnapshot?.activePalletIds||[];S.active=new Set(ids.filter(x=>avail.has(x)));S.baseActive=new Set(S.active);let oo=doc.data().masterSnapshot?.palletOrder||[];S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];S.events=(doc.data().masterSnapshot?.palletChanges||[]).filter(e=>avail.has(e.palletId));S.losses=(doc.data().masterSnapshot?.palletChangeLosses||[]).filter(l=>!l.palletId||avail.has(l.palletId));build();pallets();table();kpis();events();$("snapshotBadge").textContent="COPIED · NOT SAVED";note(`คัดลอกจาก ${p} แล้ว • ตรวจสอบก่อน Save Plan`,"plan-ok")}catch(e){note(e.message,"plan-warn")}}
-async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=load;$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("planDate"),$("planLine"),$("planShift"));stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}}
-addEventListener("DOMContentLoaded",init)})();
 
-/* STEP 7.3 — restore a SAVED Daily Plan when reopening the same Date/Line/Shift.
-   Existing load() builds Master defaults. This wrapper then replaces editable daily state
-   with the persisted snapshot so Pallet Change history/order/config are not lost on navigation. */
-(()=>{
-  if(typeof load!=="function" || typeof S==="undefined") return;
-  const _baseLoad=load;
-  const clone=x=>x==null?x:JSON.parse(JSON.stringify(x));
-  function pick(obj,names){for(const n of names)if(obj && obj[n]!==undefined)return obj[n]}
-  async function readSavedPlan(){
-    const d=document.getElementById("planDate")?.value;
-    const l=document.getElementById("planLine")?.value?.toUpperCase();
-    const sh=document.getElementById("planShift")?.value;
-    if(!d||!l||!sh)return null;
-    const id=`plan_${d}_${l}_${sh}`;
-    const snap=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();
-    return snap.exists?{id:snap.id,...snap.data()}:null;
-  }
-  function restore(saved){
-    if(!saved)return false;
-    // Persisted field names used across Step 5.x variants. Restore whichever are present.
-    const maps=[
-      [["dailyPallets","pallets","activePallets","palletOrder"],["dailyPallets","pallets","activePallets","palletOrder"]],
-      [["palletChanges","changeHistory","palletChangeHistory"],["palletChanges","changeHistory","palletChangeHistory"]],
-      [["planRows","rows","timeBlockPlans","blocks"],["planRows","rows","timeBlockPlans","blocks"]],
-      [["masterSnapshot"],["masterSnapshot"]],
-      [["originalPlan","originalPlanTotal"],["originalPlan","originalPlanTotal"]],
-      [["adjustedPlan","adjustedPlanTotal"],["adjustedPlan","adjustedPlanTotal"]],
-      [["plannedRounds","roundsTotal"],["plannedRounds","roundsTotal"]]
-    ];
-    for(const [srcNames,dstNames] of maps){
-      const v=pick(saved,srcNames);
-      if(v!==undefined){
-        // Prefer an already existing S property; otherwise use first canonical destination.
-        let dst=dstNames.find(n=>Object.prototype.hasOwnProperty.call(S,n))||dstNames[0];
-        S[dst]=clone(v);
-      }
-    }
-    // Some builds persist the whole working state under snapshot/state/dailyState.
-    const packed=pick(saved,["dailyState","state","snapshot"]);
-    if(packed && typeof packed==="object"){
-      for(const [k,v] of Object.entries(packed)){
-        if(k!=="lines") S[k]=clone(v);
-      }
-    }
-    S.savedPlan=saved;
-    S.loaded=true;
-    S.isSaved=true;
-    return true;
-  }
-  load=async function(...args){
-    await _baseLoad(...args);
-    try{
-      const saved=await readSavedPlan();
-      if(saved && restore(saved)){
-        // Re-render after restoration using the page's existing render function.
-        if(typeof render==="function") render();
-        const badge=document.querySelector("#planBadge,.plan-badge,[data-plan-status]");
-        if(badge){badge.textContent="SAVED PLAN";badge.classList.remove("warn")}
-        const status=document.getElementById("planStatus");
-        if(status) status.textContent="Loaded saved Daily Plan";
-        if(typeof note==="function") note("โหลด Saved Daily Plan แล้ว · Pallet Change / ลำดับ Pallet / Adjusted Plan ถูกเรียกคืน","plan-ok");
-        if(typeof stat==="function") stat("Saved plan loaded","ok");
-      }
-    }catch(e){
-      console.error("STEP7.3 saved-plan restore:",e);
-      if(typeof note==="function") note("โหลด Master ได้ แต่เรียก Saved Daily Plan ไม่สำเร็จ: "+e.message,"plan-warn");
-    }
-  };
-})();
+async function deleteSavedPlan(){
+ let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;
+ if(!confirm(`ลบ Saved Daily Plan ${d} • Line ${l} • ${sh} ?\nPallet Change Loss ที่หน้า Loss จะหายตามแผนนี้`))return;
+ try{
+  stat("Deleting...");
+  await ProdV2DB.delete("prodV2_dailyPlans",id);
+  note("ลบ Saved Daily Plan แล้ว • กำลังกลับไป Master เริ่มต้น","plan-ok");
+  await load();
+ }catch(e){note(e.message,"plan-warn");stat("Delete failed","err")}
+}
+
+async function copy(){let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,p=prevDate(d),id=`plan_${p}_${l}_${sh}`;try{let doc=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();if(!doc.exists){note(`ไม่พบ Daily Plan ของวันก่อน (${p})`,"plan-warn");return}await load();let avail=new Set(S.pallets.map(x=>x.id)),ids=doc.data().masterSnapshot?.activePalletIds||[];S.active=new Set(ids.filter(x=>avail.has(x)));S.baseActive=new Set(S.active);let oo=doc.data().masterSnapshot?.palletOrder||[];S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];S.events=(doc.data().masterSnapshot?.palletChanges||[]).filter(e=>avail.has(e.palletId));S.losses=(doc.data().masterSnapshot?.palletChangeLosses||[]).filter(l=>!l.palletId||avail.has(l.palletId));build();pallets();table();kpis();events();$("snapshotBadge").textContent="COPIED · NOT SAVED";note(`คัดลอกจาก ${p} แล้ว • ตรวจสอบก่อน Save Plan`,"plan-ok")}catch(e){note(e.message,"plan-warn")}}
+async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=load;$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;let dp=$("deletePlanBtn");if(dp)dp.onclick=deleteSavedPlan;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("planDate"),$("planLine"),$("planShift"));stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}}
+addEventListener("DOMContentLoaded",init)})();
