@@ -42,6 +42,28 @@ function renderKpis(){
  let a=actualTotal(),adj=adjustedPlan(),orig=originalPlan(),gap=a-adj,ach=adj?100*a/adj:0,loss=Number(S.plan?.lossMinutes||0);
  $("entryKpis").innerHTML=`<div class="entry-kpi"><small>ORIGINAL PLAN</small><b>${orig.toLocaleString()}</b></div><div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${adj.toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${a.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP vs ADJ.</small><b>${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`
 }
+function rowPlanFor(model,door){
+ let sum=0;(S.plan?.blocks||[]).forEach(b=>{let c=(b.cells||[]).find(x=>x.model===model&&x.door===door);sum+=Number(c?.plan||0)});
+ return sum;
+}
+function rowActualFor(model,door){
+ let sum=0;(S.plan?.blocks||[]).forEach((b,bi)=>{sum+=Number(S.actual[key(bi,model,door)]||0)});
+ return sum;
+}
+function updateRowSummary(model,door){
+ // Live-updates just this row's Plan/Actual/Diff/Ach cells on every keystroke,
+ // instead of waiting for a full render() (which previously only happened again
+ // on page reload / Load Saved Plan — hence the "ต้องไปหน้า Dashboard แล้วกลับมา" symptom).
+ let mk=`${model}|||${door}`;
+ let cell=[...document.querySelectorAll(".sum-actual")].find(c=>c.dataset.rowactual===mk);
+ if(!cell)return;
+ let rowPlan=rowPlanFor(model,door),rowActual=rowActualFor(model,door),diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
+ cell.innerHTML=`<b>${rowActual}</b>`;
+ let tr=cell.closest("tr");
+ let diffCell=tr?.querySelector(".sum-diff"),achCell=tr?.querySelector(".sum-ach");
+ if(diffCell)diffCell.textContent=`${diff>0?"+":""}${diff}`;
+ if(achCell)achCell.textContent=`${ach.toFixed(1)}%`;
+}
 function render(){
  if(!S.plan){$("entryTableArea").innerHTML='<div class="empty-state">ไม่พบ Daily Plan</div>';return}
  let ps=planKeys(),blocks=S.plan.blocks||[],h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
@@ -60,7 +82,7 @@ function render(){
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
-   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;renderKpis();$("saveBadge").textContent="SAVING...";scheduleSave()});
+   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;let parts=el.dataset.key.split("|||");updateRowSummary(parts[1],parts[2]);renderKpis();$("saveBadge").textContent="SAVING...";scheduleSave()});
    el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
  renderKpis()
