@@ -1,5 +1,5 @@
 (()=>{const $=id=>document.getElementById(id);
-let S={lines:[],plan:null,actual:{},modelOrder:[],docId:null,saveTimers:new Map()};
+let S={lines:[],plan:null,actual:{},modelOrder:[],docId:null,saveTimer:null,saving:false,savePending:false};
 const val=x=>String(x??"").trim();
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
 function note(t,c=""){$("entryMessage").textContent=t;$("entryMessage").className="notice info-notice "+c}
@@ -24,9 +24,9 @@ function setModelPosition(key,n){
  let a=[...S.modelOrder],i=a.indexOf(key),to=Math.max(0,Math.min(a.length-1,Number(n)-1));if(i<0||Number.isNaN(to))return;
  a.splice(i,1);a.splice(to,0,key);S.modelOrder=a;render();saveModelOrder()
 }
-async function saveModelOrder(){
+function saveModelOrder(){
  if(!S.docId)return;
- try{await ProdV2DB.set("prodV2_actualLogs",S.docId,{modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},true);$("saveBadge").textContent="SAVED"}catch(e){console.error(e)}
+ scheduleSave();
 }
 function openModelOrder(){
  let ps=planKeys(),host=$("modelOrderList");if(!host)return;
@@ -60,18 +60,27 @@ function render(){
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
-   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;renderKpis();$("saveBadge").textContent="SAVING...";queueSave(el.dataset.key,n)});
+   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;renderKpis();$("saveBadge").textContent="SAVING...";scheduleSave()});
    el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
  renderKpis()
 }
-async function queueSave(k,v){
- clearTimeout(S.saveTimers.get(k));S.saveTimers.set(k,setTimeout(async()=>{
-   try{
-    let payload={date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,actualByCell:{[k]:v},modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
-    await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);$("saveBadge").textContent="SAVED";stat("Saved","ok");
-   }catch(e){console.error(e);$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn")}
- },450))
+function scheduleSave(){
+ clearTimeout(S.saveTimer);
+ S.saveTimer=setTimeout(doSave,450);
+}
+async function doSave(){
+ if(!S.docId)return;
+ if(S.saving){S.savePending=true;return} // a write is already in flight — mark that newer state must be saved next, don't fire a second write now
+ S.saving=true;
+ try{
+  let payload={date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,actualByCell:{...S.actual},modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
+  await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);$("saveBadge").textContent="SAVED";stat("Saved","ok");
+ }catch(e){console.error(e);$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn")}
+ finally{
+  S.saving=false;
+  if(S.savePending){S.savePending=false;await doSave()} // state changed while we were saving — save the latest full map now
+ }
 }
 async function load(){
  let d=$("entryDate").value,l=$("entryLine").value.toUpperCase(),sh=$("entryShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});let pid=`plan_${d}_${l}_${sh}`,aid=`actual_${d}_${l}_${sh}`;
