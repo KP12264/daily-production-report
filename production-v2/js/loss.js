@@ -18,7 +18,7 @@ function render(){
  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>remove(b.dataset.del))
 }
 async function load(){
- let d=$("lossDate").value,l=$("lossLine").value.toUpperCase(),sh=$("lossShift").value,pid=`plan_${d}_${l}_${sh}`;
+ let d=$("lossDate").value,l=$("lossLine").value.toUpperCase(),sh=$("lossShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});let pid=`plan_${d}_${l}_${sh}`;
  try{stat("Loading...");let [pd,snap]=await Promise.all([ProdV2DB.collection("prodV2_dailyPlans").doc(pid).get(),ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get()]);
  S.plan=pd.exists?{id:pd.id,...pd.data()}:null;S.manual=snap.docs.map(x=>({id:x.id,...x.data()}));S.loaded=true;render();$("lossBadge").textContent="LOADED";note(pd.exists?"โหลดข้อมูลสำเร็จ · Pallet Change Loss เชื่อมจาก Saved Daily Plan แล้ว":"โหลดข้อมูลสำเร็จ · ไม่พบ Saved Daily Plan จึงไม่มี Pallet Change Loss อัตโนมัติ",pd.exists?"plan-ok":"plan-warn");stat("Loaded","ok")
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
@@ -32,5 +32,5 @@ async function add(){
  try{stat("Saving...");let r=await ProdV2DB.add("prodV2_lossLogs",data);S.manual.push({id:r.id,...data});render();$("lossStart").value="";$("lossEnd").value="";$("lossRemark").value="";note(`บันทึก ${category} Loss ${m} นาทีแล้ว`,"plan-ok");stat("Saved","ok")}catch(e){note(e.message,"plan-warn");stat("Save failed","err")}
 }
 async function remove(id){try{await ProdV2DB.delete("prodV2_lossLogs",id);S.manual=S.manual.filter(x=>x.id!==id);render();note("ลบ Loss แล้ว","plan-ok")}catch(e){note(e.message,"plan-warn")}}
-async function init(){$("lossDate").value=localDate();$("loadLossBtn").onclick=load;$("addLossBtn").onclick=add;["lossStart","lossEnd"].forEach(id=>$(id).onblur=()=>{let t=norm($(id).value);if(t)$(id).value=t});try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("lossLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("")}catch(e){note(e.message,"plan-warn")}}
+async function init(){$("lossDate").value=localDate();$("loadLossBtn").onclick=load;$("addLossBtn").onclick=add;["lossStart","lossEnd"].forEach(id=>$(id).onblur=()=>{let t=norm($(id).value);if(t)$(id).value=t});try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("lossLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("lossDate"),$("lossLine"),$("lossShift"));let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn")}}
 addEventListener("DOMContentLoaded",init)})();
