@@ -38,15 +38,13 @@ function closeModelOrder(){$("modelOrderModal")?.classList.remove("open");render
 function actualTotal(){return Object.values(S.actual).reduce((s,x)=>s+(Number(x)||0),0)}
 function updateRowSummary(input){
   const tr=input.closest("tr"); if(!tr)return;
-  const model=input.dataset.model||"", door=input.dataset.door||"";
-  let rowActual=0,rowPlan=0;
-  (S.plan?.blocks||[]).forEach((b,bi)=>{
-    const c=(b.cells||[]).find(x=>x.model===model&&x.door===door);
-    rowPlan+=Number(c?.plan||0);
-    rowActual+=Number(S.actual[key(bi,model,door)]||0);
-  });
-  const diff=rowActual-rowPlan, ach=rowPlan?100*rowActual/rowPlan:0;
-  const a=tr.querySelector(".sum-actual b"),d=tr.querySelector(".sum-diff"),h=tr.querySelector(".sum-ach");
+  const inputs=[...tr.querySelectorAll("input.actual-input")];
+  const rowActual=inputs.reduce((s,el)=>s+(Number(el.value)||0),0);
+  const rowPlan=inputs.reduce((s,el)=>s+(Number(el.dataset.plan)||0),0);
+  const diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
+  const a=tr.querySelector("[data-rowactual] b");
+  const d=tr.querySelector("td.sum-diff");
+  const h=tr.querySelector("td.sum-ach");
   if(a)a.textContent=rowActual.toLocaleString();
   if(d)d.textContent=(diff>0?"+":"")+diff.toLocaleString();
   if(h)h.textContent=ach.toFixed(1)+"%";
@@ -85,38 +83,49 @@ function queueSave(){
   S.dirty=true;
   $("saveBadge").textContent="SAVING...";
   clearTimeout(S.saveTimer);
-  S.saveTimer=setTimeout(()=>flushSave(),180);
+  S.saveTimer=setTimeout(()=>flushSave(),220);
 }
 async function flushSave(){
-  if(!S.docId||!S.plan||!S.dirty)return S.savingPromise;
-  clearTimeout(S.saveTimer);S.saveTimer=null;S.dirty=false;
+  clearTimeout(S.saveTimer);S.saveTimer=null;
+  // Never allow two Firestore writes to the same actual document to race.
+  if(S.savingPromise){
+    await S.savingPromise.catch(()=>{});
+    if(S.dirty)return flushSave();
+    return;
+  }
+  if(!S.docId||!S.plan||!S.dirty)return;
+  S.dirty=false;
   const payload={
     date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,
     planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,
-    actualByCell:{...S.actual},modelOrder:[...S.modelOrder],
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1
+    actualByCell:{...S.actual},
+    modelOrder:[...S.modelOrder],
+    actualTotal:Object.values(S.actual).reduce((s,v)=>s+(Number(v)||0),0),
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:2
   };
-  S.savingPromise=(async()=>{
-    try{
-      await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);
-      $("saveBadge").textContent="SAVED";stat("Saved","ok");
-    }catch(e){
-      console.error(e);S.dirty=true;$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn");throw e;
-    }finally{S.savingPromise=null}
-  })();
-  return S.savingPromise;
+  S.savingPromise=ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);
+  try{
+    await S.savingPromise;
+    $("saveBadge").textContent="SAVED";stat("Saved","ok");
+  }catch(e){
+    console.error(e);S.dirty=true;$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn");
+  }finally{
+    S.savingPromise=null;
+  }
+  // If user typed again while this write was in-flight, save the newest full map next.
+  if(S.dirty)return flushSave();
 }
 async function load(){
  let d=$("entryDate").value,l=$("entryLine").value.toUpperCase(),sh=$("entryShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});let pid=`plan_${d}_${l}_${sh}`,aid=`actual_${d}_${l}_${sh}`;
  try{
   stat("Loading...");let [pd,ad]=await Promise.all([ProdV2DB.collection("prodV2_dailyPlans").doc(pid).get(),ProdV2DB.collection("prodV2_actualLogs").doc(aid).get()]);
   if(!pd.exists){S.plan=null;S.actual={};render();renderKpis();$("saveBadge").textContent="NO PLAN";note(`ไม่พบ Saved Daily Plan: ${d} · Line ${l} · ${sh} — ต้อง Save Daily Plan ก่อน`,"plan-warn");stat("Plan missing","err");return}
-  S.plan={id:pd.id,...pd.data()};S.docId=aid;S.actual=ad.exists?(ad.data().actualByCell||{}):{};S.modelOrder=ad.exists?(ad.data().modelOrder||[]):[];
+  S.plan={id:pd.id,...pd.data()};S.docId=aid;S.actual=ad.exists?(ad.data().actualByCell||{}):{};S.dirty=false;S.savingPromise=null;S.modelOrder=ad.exists?(ad.data().modelOrder||[]):[];
   render();$("saveBadge").textContent=ad.exists?"LOADED":"READY TO ENTER";note(`โหลด Saved Plan สำเร็จ · ${d} · Line ${l} · ${sh}`,"plan-ok");stat("Plan loaded","ok")
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
 async function init(){
- $("entryDate").value=localDate();$("loadEntryBtn").onclick=load;$("openModelOrderBtn").onclick=()=>{if(!S.plan){note("Load Saved Plan ก่อนจัดลำดับ Model","plan-warn");return}openModelOrder()};$("closeModelOrderBtn").onclick=closeModelOrder;$("doneModelOrderBtn").onclick=closeModelOrder;
+ $("entryDate").value=localDate();$("loadEntryBtn").onclick=load;let sab=$("saveActualBtn");if(sab)sab.onclick=async()=>{S.dirty=true;await flushSave();note("บันทึก Actual ทั้งหมดแล้ว","plan-ok")};$("openModelOrderBtn").onclick=()=>{if(!S.plan){note("Load Saved Plan ก่อนจัดลำดับ Model","plan-warn");return}openModelOrder()};$("closeModelOrderBtn").onclick=closeModelOrder;$("doneModelOrderBtn").onclick=closeModelOrder;
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("entryLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");ProdV2Context.bind($("entryDate"),$("entryLine"),$("entryShift"));stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
 }
 
