@@ -1,5 +1,5 @@
 (()=>{const $=id=>document.getElementById(id);
-let S={lines:[],plan:null,actual:{},modelOrder:[],docId:null,saveTimers:new Map()};
+let S={lines:[],plan:null,actual:{},modelOrder:[],docId:null,saveTimer:null,savingPromise:null,dirty:false};
 const val=x=>String(x??"").trim();
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
 function note(t,c=""){$("entryMessage").textContent=t;$("entryMessage").className="notice info-notice "+c}
@@ -38,13 +38,15 @@ function closeModelOrder(){$("modelOrderModal")?.classList.remove("open");render
 function actualTotal(){return Object.values(S.actual).reduce((s,x)=>s+(Number(x)||0),0)}
 function updateRowSummary(input){
   const tr=input.closest("tr"); if(!tr)return;
-  const inputs=[...tr.querySelectorAll(".actual-input")];
-  const rowActual=inputs.reduce((s,el)=>s+(Number(el.value)||0),0);
-  const rowPlan=inputs.reduce((s,el)=>s+(Number(el.dataset.plan)||0),0);
+  const model=input.dataset.model||"", door=input.dataset.door||"";
+  let rowActual=0,rowPlan=0;
+  (S.plan?.blocks||[]).forEach((b,bi)=>{
+    const c=(b.cells||[]).find(x=>x.model===model&&x.door===door);
+    rowPlan+=Number(c?.plan||0);
+    rowActual+=Number(S.actual[key(bi,model,door)]||0);
+  });
   const diff=rowActual-rowPlan, ach=rowPlan?100*rowActual/rowPlan:0;
-  const a=tr.querySelector(".sum-actual b");
-  const d=tr.querySelector(".sum-diff");
-  const h=tr.querySelector(".sum-ach");
+  const a=tr.querySelector(".sum-actual b"),d=tr.querySelector(".sum-diff"),h=tr.querySelector(".sum-ach");
   if(a)a.textContent=rowActual.toLocaleString();
   if(d)d.textContent=(diff>0?"+":"")+diff.toLocaleString();
   if(h)h.textContent=ach.toFixed(1)+"%";
@@ -67,25 +69,42 @@ function render(){
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
      let disabled=pl===0?"":"";
-     h+=`<td class="actual-cell"><div class="cell-plan">P ${pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
+     h+=`<td class="actual-cell"><div class="cell-plan">P ${pl}</div><input class="actual-input" data-key="${esc(k)}" data-model="${esc(p.model)}" data-door="${esc(p.door)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
    });
    let diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
    h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
-   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;updateRowSummary(el);renderKpis();$("saveBadge").textContent="SAVING...";queueSave(el.dataset.key,n)});
-   el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
+   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;updateRowSummary(el);renderKpis();queueSave()});
+   el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>{el.closest("tr")?.classList.remove("entry-active-row");flushSave()});el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();flushSave();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
  renderKpis()
 }
-async function queueSave(k,v){
- clearTimeout(S.saveTimers.get(k));S.saveTimers.set(k,setTimeout(async()=>{
-   try{
-    let payload={date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,actualByCell:{...S.actual},modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
-    await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);$("saveBadge").textContent="SAVED";stat("Saved","ok");
-   }catch(e){console.error(e);$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn")}
- },450))
+function queueSave(){
+  S.dirty=true;
+  $("saveBadge").textContent="SAVING...";
+  clearTimeout(S.saveTimer);
+  S.saveTimer=setTimeout(()=>flushSave(),180);
+}
+async function flushSave(){
+  if(!S.docId||!S.plan||!S.dirty)return S.savingPromise;
+  clearTimeout(S.saveTimer);S.saveTimer=null;S.dirty=false;
+  const payload={
+    date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,
+    planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,
+    actualByCell:{...S.actual},modelOrder:[...S.modelOrder],
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1
+  };
+  S.savingPromise=(async()=>{
+    try{
+      await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);
+      $("saveBadge").textContent="SAVED";stat("Saved","ok");
+    }catch(e){
+      console.error(e);S.dirty=true;$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn");throw e;
+    }finally{S.savingPromise=null}
+  })();
+  return S.savingPromise;
 }
 async function load(){
  let d=$("entryDate").value,l=$("entryLine").value.toUpperCase(),sh=$("entryShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});let pid=`plan_${d}_${l}_${sh}`,aid=`actual_${d}_${l}_${sh}`;
@@ -100,4 +119,16 @@ async function init(){
  $("entryDate").value=localDate();$("loadEntryBtn").onclick=load;$("openModelOrderBtn").onclick=()=>{if(!S.plan){note("Load Saved Plan ก่อนจัดลำดับ Model","plan-warn");return}openModelOrder()};$("closeModelOrderBtn").onclick=closeModelOrder;$("doneModelOrderBtn").onclick=closeModelOrder;
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("entryLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");ProdV2Context.bind($("entryDate"),$("entryLine"),$("entryShift"));stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
 }
+
+addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll(".app-links a,.legacy-link").forEach(a=>{
+    a.addEventListener("click",async e=>{
+      if(!S.dirty&&!S.savingPromise)return;
+      e.preventDefault();
+      const href=a.href;
+      try{await flushSave();if(S.savingPromise)await S.savingPromise;location.href=href}catch(err){}
+    });
+  });
+});
+addEventListener("pagehide",()=>{if(S.dirty)flushSave()});
 addEventListener("DOMContentLoaded",init)})();

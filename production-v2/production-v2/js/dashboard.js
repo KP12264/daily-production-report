@@ -58,7 +58,7 @@ function render(){
   const labels=blockLabels(n), pb=Array(n).fill(0),ab=Array(n).fill(0);
   use.forEach(x=>{for(let i=0;i<n;i++){pb[i]+=Number(P[x]?.[i]||0);ab[i]+=Number(A[x]?.[i]||0)}});
 
-  const plan=pb.reduce((a,b)=>a+b,0), actual=ab.reduce((a,b)=>a+b,0);
+  let plan=pb.reduce((a,b)=>a+b,0), actual=ab.reduce((a,b)=>a+b,0);if(!plan&&!$("dashModel").value&&!$("dashDoor").value)plan=Number(S.plan?.adjustedPlan??S.plan?.totalPlan??0);
   const gap=actual-plan, ach=plan?actual/plan*100:0;
   const loss=lossRows().reduce((s,x)=>s+Number(x.minutes||0),0);
   const status=plan>0 && actual>=plan?"ON TARGET":"BEHIND PLAN";
