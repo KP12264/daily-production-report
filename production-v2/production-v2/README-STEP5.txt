@@ -1,0 +1,1 @@
+Step 5 Daily Plan: Line C Day first functional path. Uses only prodV2_* collections. Saves snapshots to prodV2_dailyPlans. No writes to old productionLogs.

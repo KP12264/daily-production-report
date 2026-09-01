@@ -1,1 +1,38 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Production Entry · Production V2</title><link rel="stylesheet" href="css/app.css?v=20260901-quality-theme2"><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script></head><body><header class="top"><div class="brand">PRODUCTION V2</div><div class="badge">ISOLATED V2 • prodV2_* ONLY</div></header><div class="shell"><nav><a href="index.html" class="">Dashboard</a><a href="entry.html" class="active">Production Entry</a><a href="plan.html" class="">Daily Plan</a><a href="loss.html" class="">Loss / Downtime</a><a href="master.html" class="">Master Setup</a><a href="../index.html">← ระบบเดิม</a></nav><main><div class="pagehead"><div><h1>Hourly Production Entry</h1><div class="sub">Actual Qty by Model / Door / Time Block</div></div></div><div class="card"><div class="placeholder">Production Entry skeleton — จะสร้างหลัง Daily Plan engine</div></div></main></div><script src="js/firebase-v2.js"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Production Entry · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260901-step7-1">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div>
+<nav class="app-links"><a href="index.html">Dashboard</a><a href="entry.html" class="active">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="master.html">Master Setup</a></nav>
+<a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<section class="hero"><div><div class="eyebrow">PRODUCTION ENTRY · STEP 6</div><h1>Actual Production Entry</h1><p>กรอกยอดผลิตจริงตาม Model / Door / Time Block โดยตรง</p></div>
+<div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="entryStatus" class="hero-status">Ready</div></div></section>
+<main class="content">
+<section class="filter-card entry-filters">
+<label><span>DATE</span><input id="entryDate" type="date"></label>
+<label><span>LINE</span><select id="entryLine"></select></label>
+<label><span>SHIFT</span><select id="entryShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+<button id="loadEntryBtn" class="primary">Load Saved Plan</button>
+<div class="filter-note">Actual = จำนวนชิ้นจริง · Auto-save per cell · Enter → ช่องถัดไป</div>
+</section>
+<div id="entryMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วกด Load Saved Plan</div>
+<section id="entryKpis" class="entry-kpis"></section>
+<section class="section-card">
+<div class="section-title-row"><div><h2>Actual Production Matrix</h2><p>Plan ดึงจาก Daily Plan Snapshot ที่ Save ไว้ · Actual กรอกเป็นจำนวนชิ้นจริง</p></div><div class="entry-actions"><button id="openModelOrderBtn" class="secondary-btn">จัดลำดับ Model</button><span id="saveBadge" class="soft-badge">NOT LOADED</span></div></div>
+<div id="entryTableArea" class="empty-state">ยังไม่ได้โหลด Daily Plan</div>
+</section>
+</main></div>
+<div id="modelOrderModal" class="entry-modal">
+ <div class="entry-modal-card">
+  <div class="entry-modal-head"><div><h3>จัดลำดับ Model / Door</h3><p>ใช้ ↑ ↓ เพื่อจัดลำดับเฉพาะหน้ากรอก Production</p></div><button id="closeModelOrderBtn" class="modal-x">×</button></div>
+  <div id="modelOrderList" class="model-order-list"></div>
+  <div class="entry-modal-foot"><button id="doneModelOrderBtn" class="primary">เสร็จสิ้น</button></div>
+ </div>
+</div>
+<script src="js/firebase-v2.js?v=20260901-ui3"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/entry.js?v=20260901-step8-1"></script>
+</body></html>
