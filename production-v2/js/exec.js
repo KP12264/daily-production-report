@@ -118,7 +118,7 @@ async function loadTrend(){
    labels.push(date.slice(5));ach.push(plan?Math.round(actual/plan*1000)/10:null);
   }
   if(S.trendChart)S.trendChart.destroy();
-  S.trendChart=new Chart($("trendChart"),{type:"line",data:{labels,datasets:[{label:"Achievement %",data:ach,tension:.25,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,suggestedMax:120}}}});
+  S.trendChart=new Chart($("trendChart"),{type:"line",data:{labels,datasets:[{label:"Achievement %",data:ach,tension:.25,spanGaps:true,borderColor:"#b45309",backgroundColor:"#b45309",pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,suggestedMax:120}}}});
   $("trendMsg").textContent=`Achievement % ย้อนหลัง ${days} วัน (รวมทุก Line/กะ) · วันที่ไม่มี Saved Plan จะเว้นช่องว่าง`;
  }catch(e){console.error(e);$("trendMsg").textContent="โหลดเทรนด์ไม่สำเร็จ: "+e.message}
 }
