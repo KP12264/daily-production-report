@@ -429,6 +429,7 @@ input,select,textarea,.grid input,.grid select{
 #appMain.readonly-mode #addLine,
 #appMain.readonly-mode #addModelDoor,
 #appMain.readonly-mode #initABLayout,
+#appMain.readonly-mode #initLineBLayout,
 #appMain.readonly-mode #initLineCLayout,
 #appMain.readonly-mode #initModelMaster,
 #appMain.readonly-mode #initShiftC,

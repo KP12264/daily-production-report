@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Master Setup · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260902-fix7">
+  <link rel="stylesheet" href="css/app.css?v=20260902-fix8">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -61,7 +61,7 @@
     <div class="section-card">
       <div class="pagehead">
         <div><h2>Pallet / Jig Layout</h2><div class="sub">Line C confirmed: 24 physical pallets / 50 pcs per full round</div></div>
-        <div class="toolbar"><button id="initABLayout">Initialize A/B Draft</button><button id="initLineCLayout" class="primary">Initialize Line C Layout</button><label>Line <select id="layoutLineFilter"></select></label></div>
+        <div class="toolbar"><button id="initABLayout">Initialize Line A Draft</button><button id="initLineBLayout" class="primary">Initialize Line B Layout</button><button id="initLineCLayout" class="primary">Initialize Line C Layout</button><label>Line <select id="layoutLineFilter"></select></label></div>
       </div>
       <div id="layoutSummary" class="notice info-notice">เลือก Line เพื่อดู Physical Pallet Composition</div>
       <table class="grid"><thead><tr><th>Pallet</th><th>Composition</th><th>pcs / round</th><th>Status</th></tr></thead><tbody id="layoutRows"></tbody></table>
@@ -92,7 +92,7 @@
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script>
 <script src="js/auth-v2.js?v=20260902-fix7"></script>
-<script src="js/master.js?v=20260902-fix4"></script>
+<script src="js/master.js?v=20260902-fix9"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>
