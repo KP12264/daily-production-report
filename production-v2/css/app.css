@@ -396,7 +396,7 @@ input,select,textarea,.grid input,.grid select{
 .danger-plan:hover{background:#fff1f2}
 
 /* STEP 8 — Dashboard */
-.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}
+.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}
 @media(max-width:1100px){.dash-filters{grid-template-columns:repeat(3,1fr)}.dash-kpis{grid-template-columns:repeat(3,1fr)}.dash-grid{grid-template-columns:1fr}}
 
 /* AUTH — Production V2 slim read-only banner (page content stays visible/usable
@@ -494,3 +494,15 @@ input,select,textarea,.grid input,.grid select{
 /* THEME — Light/Dark toggle button in the header */
 .theme-toggle-btn{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:6px}
 .theme-toggle-btn:hover{background:rgba(255,255,255,.16)}
+
+/* DASHBOARD — prominent status banner, above the small KPI grid */
+.dash-status-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-radius:14px;padding:18px 24px;margin:16px 0;box-shadow:var(--shadow)}
+.dash-status-banner:empty{display:none}
+.dash-status-icon{font-size:28px;line-height:1}
+.dash-status-text{font-size:26px;font-weight:800;letter-spacing:.02em}
+.dash-status-sub{font-size:13px;opacity:.85;margin-left:auto}
+.dash-status-banner.kpi-good-bg{background:var(--green-soft);color:#15803d;border:1px solid #bbf7d0}
+.dash-status-banner.kpi-bad-bg{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+[data-theme="dark"] .dash-status-banner.kpi-good-bg{background:#0f2417;color:#4ade80;border-color:#166534}
+[data-theme="dark"] .dash-status-banner.kpi-bad-bg{background:#2a1414;color:#f87171;border-color:#7f1d1d}
+@media(max-width:720px){.dash-status-banner{flex-direction:column;align-items:flex-start}.dash-status-sub{margin-left:0}}

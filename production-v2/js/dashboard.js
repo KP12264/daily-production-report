@@ -83,8 +83,16 @@ function render(){
  let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gap=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().reduce((s,x)=>s+Number(x.minutes||0),0);
  let expected=expectedByNow(pb,bs,$("dashDate").value);
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
- $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi"><small>STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b></div>`;
+ statusBanner(status,actual,expected);
+ $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+}
+function statusBanner(status,actual,expected){
+ let ok=status==="ON TARGET";
+ let host=$("dashStatusBanner");
+ if(!host)return;
+ host.className="dash-status-banner "+(ok?"kpi-good-bg":"kpi-bad-bg");
+ host.innerHTML=`<span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span><span class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}</span>`;
 }
 function charts(labels,p,a){
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
@@ -94,8 +102,12 @@ function charts(labels,p,a){
 }
 function performance(P,A,keys){
  if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
+ // Worst-Achievement-first — so the thing most in need of attention is always
+ // at the top, instead of a fixed Model order the reader has to scan through.
+ let rows=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
+ rows.sort((r1,r2)=>r1.z-r2.z);
  let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th></tr></thead><tbody>';
- keys.forEach(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0),g=a-p,z=p?a/p*100:0,q=splitKey(x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${p}</td><td><b>${a}</b></td><td class="${g<0?"kpi-bad":"kpi-good"}">${g>0?"+":""}${g}</td><td>${z.toFixed(1)}%</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td>${r.z.toFixed(1)}%</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
 function lossView(){let rows=lossRows(),t={};rows.forEach(x=>{let c=x.category||"Other";t[c]=(t[c]||0)+Number(x.minutes||0)});let arr=Object.entries(t).sort((a,b)=>b[1]-a[1]);$("lossAnalysis").innerHTML=arr.length?'<div class="loss-category-summary">'+arr.map(([c,m])=>`<div class="loss-cat"><span>${esc(c)}</span><b>${m} min</b></div>`).join("")+'</div>':'<div class="empty-state">ไม่มี Loss</div>'}
 async function load(){
