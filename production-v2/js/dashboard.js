@@ -73,6 +73,6 @@ async function load(){
 }
 async function init(){
  $("dashDate").value=localDate();$("dashLoadBtn").onclick=load;$("dashModel").onchange=render;$("dashDoor").onchange=render;
- try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn")}
+ try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn")}
 }
 addEventListener("DOMContentLoaded",init)})();

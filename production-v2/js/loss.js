@@ -1,5 +1,5 @@
-(()=>{const $=id=>document.getElementById(id);let S={lines:[],plan:null,manual:[],loaded:false,editId:null};
-const val=x=>String(x??"").trim(), esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+(()=>{const $=id=>document.getElementById(id);let S={lines:[],plan:null,shift:null,manual:[],loaded:false,editId:null};
+const val=x=>String(x??"").trim(), esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])), lineOf=x=>val(x.lineId||x.line||x.lineCode).toUpperCase(), shiftOf=x=>val(x.shift).toUpperCase();
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
 function mins(t){let [h,m]=String(t).split(":").map(Number);return h*60+m}
 function norm(t){let s=val(t).replace(/[^\d:]/g,"");if(/^\d{4}$/.test(s))s=s.slice(0,2)+":"+s.slice(2);if(!/^\d{1,2}:\d{2}$/.test(s))return null;let [h,m]=s.split(":").map(Number);if(h>23||m>59)return null;return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`}
@@ -12,7 +12,11 @@ function autoRows(){return autoLosses().map((x,i)=>({...x,id:`auto_${i}`,auto:tr
 function allRows(){return [...autoRows(),...S.manual.map(x=>({...x,auto:false}))]}
 
 function timeBlocks(){
- let raw=S.plan?.masterSnapshot?.timeBlocks||S.plan?.timeBlocks||S.plan?.blocks||[];
+ // The saved Daily Plan's `blocks` field only ever contains WORK-type blocks —
+ // plan.js filters BREAK blocks out before saving, since Plan/Actual math only
+ // applies to WORK time. So BREAK windows must come from the actual Shift Master
+ // document (S.shift, fetched in load()) which still has the full WORK+BREAK list.
+ let raw=S.shift?.blocks||[];
  return Array.isArray(raw)?raw:[];
 }
 function scheduledBreaks(){
@@ -54,8 +58,8 @@ function beginEdit(id){
 }
 async function load(){
  let d=$("lossDate").value,l=$("lossLine").value.toUpperCase(),sh=$("lossShift").value;window.ProdV2Context?.set({date:d,lineId:l,shift:sh});let pid=`plan_${d}_${l}_${sh}`;
- try{stat("Loading...");let [pd,snap]=await Promise.all([ProdV2DB.collection("prodV2_dailyPlans").doc(pid).get(),ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get()]);
- S.plan=pd.exists?{id:pd.id,...pd.data()}:null;S.manual=snap.docs.map(x=>({id:x.id,...x.data()}));S.loaded=true;clearForm();render();$("lossBadge").textContent="LOADED";note(pd.exists?"โหลดข้อมูลสำเร็จ · Scheduled Break จะไม่ถูกนับเป็น Loss":"โหลดข้อมูลสำเร็จ · ไม่พบ Saved Daily Plan จึงตรวจ Scheduled Break ไม่ได้",pd.exists?"plan-ok":"plan-warn");stat("Loaded","ok")
+ try{stat("Loading...");let [pd,snap,ss]=await Promise.all([ProdV2DB.collection("prodV2_dailyPlans").doc(pid).get(),ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get(),all("prodV2_shiftMaster")]);
+ S.plan=pd.exists?{id:pd.id,...pd.data()}:null;S.manual=snap.docs.map(x=>({id:x.id,...x.data()}));S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;S.loaded=true;clearForm();render();$("lossBadge").textContent="LOADED";note(S.shift?"โหลดข้อมูลสำเร็จ · Scheduled Break จะไม่ถูกนับเป็น Loss":"โหลดข้อมูลสำเร็จ · ไม่พบ Shift Master จึงตรวจ Scheduled Break ไม่ได้",S.shift?"plan-ok":"plan-warn");stat("Loaded","ok")
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
 async function saveLoss(){
@@ -82,7 +86,7 @@ async function init(){
  ["lossStart","lossEnd"].forEach(id=>$(id).onblur=()=>{let t=norm($(id).value);if(t)$(id).value=t});
  try{
    S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));
-   $("lossLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");
+   $("lossLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");
    let c=window.ProdV2Context?.get?.()||{};if(c.date)$("lossDate").value=c.date;if(c.lineId&&[...$("lossLine").options].some(o=>o.value===c.lineId))$("lossLine").value=c.lineId;if(c.shift)$("lossShift").value=c.shift;
    if(c.date&&c.lineId&&c.shift)load();
  }catch(e){note(e.message,"plan-warn")}

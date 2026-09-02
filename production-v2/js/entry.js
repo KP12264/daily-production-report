@@ -115,6 +115,6 @@ async function load(){
 }
 async function init(){
  $("entryDate").value=localDate();$("loadEntryBtn").onclick=load;$("openModelOrderBtn").onclick=()=>{if(!S.plan){note("Load Saved Plan ก่อนจัดลำดับ Model","plan-warn");return}openModelOrder()};$("closeModelOrderBtn").onclick=closeModelOrder;$("doneModelOrderBtn").onclick=closeModelOrder;
- try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("entryLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");ProdV2Context.bind($("entryDate"),$("entryLine"),$("entryShift"));stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
+ try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("entryLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");ProdV2Context.bind($("entryDate"),$("entryLine"),$("entryShift"));stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
 }
 addEventListener("DOMContentLoaded",init)})();
