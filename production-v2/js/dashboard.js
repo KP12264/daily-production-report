@@ -84,7 +84,7 @@ function render(){
  let expected=expectedByNow(pb,bs,$("dashDate").value);
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
  statusBanner(status,actual,expected);
- thisBlockCard(labels,pb,ab,bs,$("dashDate").value);
+ thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
  $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
@@ -104,20 +104,44 @@ function currentBlockIndex(bs,viewDate){
  for(let i=0;i<u.length;i++)if(now>=u[i].startU&&now<u[i].endU)return i;
  return -1;
 }
-function thisBlockCard(labels,pb,ab,bs,viewDate){
- let host=$("dashThisBlock");
+function thisBlockCard(labels,pb,ab,bs,viewDate,P,A,use){
+ let host=$("dashThisBlock"),tableHost=$("dashThisBlockTable");
  if(!host)return;
  let idx=currentBlockIndex(bs,viewDate);
- if(idx<0||bs[idx]?.type==="BREAK"){host.innerHTML="";host.style.display="none";return}
+ if(idx<0||bs[idx]?.type==="BREAK"){
+  host.innerHTML="";host.style.display="none";
+  if(tableHost){tableHost.innerHTML="";tableHost.style.display="none"}
+  return;
+ }
  let p=Number(pb[idx]||0),a=Number(ab[idx]||0),d=a-p;
  host.style.display="block";
  host.innerHTML=`<div class="dash-this-block-label">THIS BLOCK · ${esc(labels[idx]||"")}</div><div class="dash-this-block-nums"><span>Plan <b>${p}</b></span><span>Actual <b>${a}</b></span><span class="dash-this-block-diff ${d<0?"kpi-bad":"kpi-good"}">Diff <b>${d>0?"+":""}${d}</b></span></div>`;
+ if(!tableHost)return;
+ // Per-Model/Door breakdown for just this one block — worst Diff first, so
+ // whichever model is dragging this hour down shows up right at the top.
+ let rows=(use||[]).map(x=>{
+  let pv=Number(P[x]?.[idx]||0),av=Number(A[x]?.[idx]||0);
+  return {x,p:pv,a:av,d:av-pv};
+ }).filter(r=>r.p||r.a);
+ if(!rows.length){tableHost.innerHTML="";tableHost.style.display="none";return}
+ rows.sort((r1,r2)=>r1.d-r2.d);
+ let h=`<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
+ h+=`<tr class="dash-this-block-total"><td colspan="2">Total</td><td>${p}</td><td><b>${a}</b></td><td class="${d<0?"kpi-bad":"kpi-good"}">${d>0?"+":""}${d}</td></tr>`;
+ h+=`</tbody></table></div>`;
+ tableHost.style.display="block";
+ tableHost.innerHTML=h;
+}
+let datalabelsRegistered=false;
+function ensureDatalabels(){
+ if(!datalabelsRegistered&&window.ChartDataLabels){Chart.register(window.ChartDataLabels);datalabelsRegistered=true}
 }
 function charts(labels,p,a){
+ ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
- S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p},{label:"Actual",data:a}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
+ S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p},{label:"Actual",data:a}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{anchor:"end",align:"top",font:{size:10,weight:"bold"},formatter:v=>v?v.toLocaleString():""}}}});
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
- S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25},{label:"Cumulative Actual",data:ca,tension:.25}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
+ S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25},{label:"Cumulative Actual",data:ca,tension:.25}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
 }
 function performance(P,A,keys){
  if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
