@@ -388,3 +388,60 @@ input,select,textarea,.grid input,.grid select{
 .link-btn{background:none;border:0;color:#dbe8f5;text-decoration:underline;font-size:12px;cursor:pointer;padding:0}
 .link-btn:hover{color:#fff}
 #authBar{display:flex;align-items:center;gap:8px}
+
+/* AUTH — readonly-mode: grey out / disable write-only controls when signed out.
+   #appMain gets this class via auth-v2.js mountGate({lockTargetId:"appMain"}).
+   Read-only controls (Date/Line/Shift pickers, Load buttons, view filters) are
+   deliberately NOT included here — only controls that ultimately trigger a
+   Firestore write are locked. pointer-events:none is enough here since the real
+   enforcement is server-side (Firestore Rules); this is just a visual/UX cue. */
+#appMain.readonly-mode{position:relative}
+#appMain.readonly-mode input,#appMain.readonly-mode select,#appMain.readonly-mode button,#appMain.readonly-mode textarea{cursor:not-allowed}
+
+/* Entry: per-cell Actual inputs + the model-order button */
+#appMain.readonly-mode #entryTableArea input[data-key],
+#appMain.readonly-mode #openModelOrderBtn{pointer-events:none;opacity:.5;background:#f1f5f9}
+
+/* Daily Plan: Save/Copy/Delete + pallet order & pallet-change editing controls */
+#appMain.readonly-mode #savePlanBtn,
+#appMain.readonly-mode #copyPlanBtn,
+#appMain.readonly-mode #deletePlanBtn,
+#appMain.readonly-mode #palletArea input,
+#appMain.readonly-mode #palletArea button,
+#appMain.readonly-mode #changeArea input,
+#appMain.readonly-mode #changeArea select,
+#appMain.readonly-mode #changeArea button{pointer-events:none;opacity:.5;background:#f1f5f9}
+
+/* Loss / Downtime: the Add Loss form + per-row Edit/Delete */
+#appMain.readonly-mode #lossCategory,
+#appMain.readonly-mode #lossStart,
+#appMain.readonly-mode #lossEnd,
+#appMain.readonly-mode #lossRemark,
+#appMain.readonly-mode #addLossBtn,
+#appMain.readonly-mode #cancelEditBtn,
+#appMain.readonly-mode .loss-edit,
+#appMain.readonly-mode .loss-delete{pointer-events:none;opacity:.5;background:#f1f5f9}
+
+/* Master Setup: Init/Add buttons + every editable row across all 4 tabs
+   (line/model-door/pallet-jig/shift tables) — filter dropdowns for browsing
+   (modelLineFilter, layoutLineFilter, shiftLineFilter, shiftTypeFilter) are
+   deliberately left enabled since choosing what to view isn't a write. */
+#appMain.readonly-mode #addLine,
+#appMain.readonly-mode #addModelDoor,
+#appMain.readonly-mode #initABLayout,
+#appMain.readonly-mode #initLineCLayout,
+#appMain.readonly-mode #initModelMaster,
+#appMain.readonly-mode #initShiftC,
+#appMain.readonly-mode #initShiftDraft,
+#appMain.readonly-mode #lineRows input,
+#appMain.readonly-mode #lineRows select,
+#appMain.readonly-mode #lineRows button,
+#appMain.readonly-mode #modelRows input,
+#appMain.readonly-mode #modelRows select,
+#appMain.readonly-mode #modelRows button,
+#appMain.readonly-mode #layoutRows input,
+#appMain.readonly-mode #layoutRows select,
+#appMain.readonly-mode #layoutRows button,
+#appMain.readonly-mode #shiftRows input,
+#appMain.readonly-mode #shiftRows select,
+#appMain.readonly-mode #shiftRows button{pointer-events:none;opacity:.5;background:#f1f5f9}

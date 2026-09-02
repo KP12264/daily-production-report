@@ -37,7 +37,11 @@
  // actual Firestore *writes* are blocked (by Firestore Rules, not by hiding UI).
  // The banner shows a compact login form while signed out, and disappears once
  // signed in (logoutHostId then shows "<code> · ออกจากระบบ").
- function mountGate({hostId,logoutHostId,onReady}){
+ // lockTargetId (optional): an element (e.g. "appMain") that gets a
+ // "readonly-mode" class while signed out, so CSS can grey out / disable the
+ // specific write-only controls each page has marked (see app.css) — without
+ // needing every render() call across the app to know about auth state.
+ function mountGate({hostId,logoutHostId,lockTargetId,onReady}){
   const host=document.getElementById(hostId);
   if(!host)return;
   host.innerHTML=`
@@ -59,9 +63,11 @@
   };
   host.querySelectorAll("#authEmail,#authPassword").forEach(el=>el.addEventListener("keydown",e=>{if(e.key==="Enter")host.querySelector("#authSignInBtn").click()}));
 
+  const lockTarget=lockTargetId?document.getElementById(lockTargetId):null;
   onAuthChange(user=>{
    if(user){
     host.style.display="none";
+    lockTarget?.classList.remove("readonly-mode");
     if(logoutHostId){
      const lh=document.getElementById(logoutHostId);
      if(lh)lh.innerHTML=`<span class="auth-user">${emailToCode(user.email)}</span> <button id="authSignOutBtn" class="link-btn">ออกจากระบบ</button>`,
@@ -70,6 +76,7 @@
     onReady&&onReady(user);
    }else{
     host.style.display="";
+    lockTarget?.classList.add("readonly-mode");
     if(logoutHostId){const lh=document.getElementById(logoutHostId);if(lh)lh.innerHTML=""}
     onReady&&onReady(null);
    }
