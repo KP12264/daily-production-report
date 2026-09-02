@@ -414,16 +414,26 @@ async function initLineCShift(){
   await saveShift('shift_C_DAY',shiftRecord('C','DAY',C_DAY_BLOCKS,'CONFIRMED',10));
   await saveShift('shift_C_NIGHT',shiftRecord('C','NIGHT',C_NIGHT_BLOCKS,'CONFIRMED',10));
 }
+function withCycle(blocks,cycleMin){
+  // Reuses Line C's confirmed start/end/type/minutes for each block, but
+  // recomputes plannedRounds at a different cycle time (for A/B's still-
+  // provisional cycle). BREAK blocks are untouched (no cycle/rounds).
+  return blocks.map(([start,end,type,minutes])=>
+    type==='WORK' ? [start,end,type,minutes,cycleMin,Math.floor(minutes/cycleMin)]
+                  : [start,end,type,minutes,null,0]
+  );
+}
 async function initABShiftDraft(){
-  /* Provisional 12 min/round = 5 rounds/hour. No fabricated time blocks. */
+  /* Work hours & break windows are now confirmed the SAME across every line
+     (per user, 2026-09-02) — so A and B reuse Line C's time blocks exactly.
+     What's still provisional for A/B is the cycle time itself (rounds/hour),
+     so plannedRounds here is only an estimate at 12 min/round, and
+     verificationStatus stays PENDING until that cycle rate is verified. */
+  const dayBlocks=withCycle(C_DAY_BLOCKS,12);
+  const nightBlocks=withCycle(C_NIGHT_BLOCKS,12);
   for(const lineId of ['A','B']){
-    for(const shift of ['DAY','NIGHT']){
-      await saveShift(`shift_${lineId}_${shift}`,{
-        lineId,shift,blocks:[],standardCycleMinPerRound:12,
-        provisionalRoundsPerHour:5,verificationStatus:'PENDING',
-        active:true,updatedAt:Date.now()
-      });
-    }
+    await saveShift(`shift_${lineId}_DAY`,shiftRecord(lineId,'DAY',dayBlocks,'PENDING',12));
+    await saveShift(`shift_${lineId}_NIGHT`,shiftRecord(lineId,'NIGHT',nightBlocks,'PENDING',12));
   }
 }
 async function loadShiftMaster(){
@@ -473,7 +483,7 @@ document.getElementById('initShiftC')?.addEventListener('click',async()=>{
   }catch(e){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message),'err');alert(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message)}finally{btn.disabled=false}
 });
 document.getElementById('initShiftDraft')?.addEventListener('click',async()=>{
-  if(!confirm('Initialize A/B Shift Draft?\n\nCycle = provisional 12 min/round (5 rounds/hour).\nNo time blocks will be invented.'))return;
+  if(!confirm('Initialize A/B Shift Draft?\n\nWork hours/breaks = same as Line C (confirmed).\nCycle = still provisional 12 min/round — plannedRounds is an estimate, not verified.'))return;
   const btn=document.getElementById('initShiftDraft');
   try{
     btn.disabled=true;setStatus('Initializing A/B Shift Draft…');
