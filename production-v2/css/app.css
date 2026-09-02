@@ -473,7 +473,7 @@ input,select,textarea,.grid input,.grid select{
 #appMain.readonly-mode #shiftRows button{pointer-events:none;opacity:.5;background:var(--bg-soft)}
 
 /* EXECUTIVE SUMMARY page */
-.exec-filters{display:flex;gap:12px;align-items:end}
+.exec-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
 .exec-hero{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:28px 32px;display:flex;justify-content:space-between;align-items:center;gap:24px;margin:16px 0;flex-wrap:wrap}
 .exec-hero-main{display:flex;flex-direction:column;gap:4px}
 .exec-hero-label{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
@@ -566,3 +566,24 @@ input,select,textarea,.grid input,.grid select{
 #layoutRows td input{width:100%;min-width:90px}
 .grid button.danger{border:1px solid #fecaca;background:var(--card);color:#dc2626;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:12px}
 .grid button.danger:hover{background:#fff1f2}
+
+/* MOBILE PHONE PASS — narrower fallbacks for components added later in this
+   file that only had tablet-width (900-1100px) breakpoints so far. The base
+   layout (.app-nav, .hero, .filter-card, .grid tables) already collapses
+   correctly on phones via the @media(max-width:720px) block above; this
+   block only tops up the newer Dashboard/Executive/Master pieces. */
+@media(max-width:560px){
+  .dash-filters{grid-template-columns:1fr!important}
+  .dash-kpis{grid-template-columns:repeat(2,1fr)!important}
+  .exec-hero-num{font-size:40px}
+  .dash-status-text{font-size:20px}
+  .dash-status-sub{margin-left:0;width:100%}
+  .loss-pareto-row{grid-template-columns:84px 1fr 56px;gap:6px}
+  .loss-pareto-label{font-size:11px}
+  .dash-hour-block-title{font-size:12px}
+  .theme-toggle-btn{padding:6px 9px;font-size:11px}
+}
+@media(max-width:380px){
+  .dash-kpis{grid-template-columns:1fr!important}
+  .exec-line-cards{grid-template-columns:1fr}
+}
