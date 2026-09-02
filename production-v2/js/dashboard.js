@@ -84,9 +84,19 @@ function render(){
  let expected=expectedByNow(pb,bs,$("dashDate").value);
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
  statusBanner(status,actual,expected);
+ achievementBar(plan,actual,ach);
  thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
  $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+}
+function achievementBar(plan,actual,ach){
+ let host=$("dashAchievementBar");
+ if(!host)return;
+ if(!plan){host.innerHTML="";return}
+ let pct=Math.min(100,Math.max(0,ach));
+ let remaining=Math.max(plan-actual,0);
+ let sub=actual>=plan?"Plan achieved":`${remaining.toLocaleString()} pcs remaining to Plan`;
+ host.innerHTML=`<div class="dash-ach-head"><span>Achievement</span><b>${ach.toFixed(1)}%</b></div><div class="dash-ach-track"><div class="dash-ach-fill${ach>=100?" full":""}" style="width:${pct}%"></div></div><div class="dash-ach-sub">${sub}</div>`;
 }
 function hourlySummary(){
  let host=$("dashHourly"),sel=$("dashHourlySelect");
@@ -173,7 +183,7 @@ function charts(labels,p,a){
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
  S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,pointRadius:2},{label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:actualColor,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
 }
-function statusEmoji(ach){return ach>=100?"🟢":ach>=90?"🟡":"🔴"}
+function statusEmoji(gap){return gap>=0?"🟢":gap>=-20?"🟡":"🔴"}
 function performance(P,A,keys){
  if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
  // Worst-Achievement-first — so the thing most in need of attention is always
@@ -181,16 +191,24 @@ function performance(P,A,keys){
  let rows=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
  rows.sort((r1,r2)=>r1.z-r2.z);
  let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
- rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td>${r.z.toFixed(1)}%</td><td>${r.p?statusEmoji(r.z):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td>${r.z.toFixed(1)}%</td><td>${r.p?statusEmoji(r.g):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
 function lossView(){
  let rows=lossRows(),t={};
  rows.forEach(x=>{let c=x.category||"Other";(t[c]??=[]).push(x)});
  let groups=Object.entries(t).map(([c,items])=>({c,items,total:items.reduce((s,x)=>s+Number(x.minutes||0),0)}));
  groups.sort((a,b)=>b.total-a.total);
- if(!groups.length){$("lossAnalysis").innerHTML='<div class="empty-state">ไม่มี Loss</div>';return}
- let h='<div class="loss-category-summary">';
- groups.forEach((g,gi)=>h+=`<div class="loss-cat loss-cat-toggle" data-idx="${gi}"><span>${esc(g.c)} <small>▾ ดูช่วงเวลา</small></span><b>${g.total} min</b></div>`);
+ if(!groups.length){$("lossAnalysis").innerHTML='<div class="empty-state">No production loss recorded</div>';return}
+ let max=Math.max(...groups.map(g=>g.total),1);
+ let h='<div class="loss-pareto">';
+ groups.forEach((g,gi)=>{
+  let pct=Math.round(g.total/max*100);
+  h+=`<div class="loss-pareto-row loss-cat-toggle" data-idx="${gi}">
+   <div class="loss-pareto-label">${esc(g.c)}</div>
+   <div class="loss-pareto-track"><div class="loss-pareto-fill" style="width:${pct}%"></div></div>
+   <div class="loss-pareto-value">${g.total} min</div>
+  </div>`;
+ });
  h+='</div>';
  groups.forEach((g,gi)=>{
   let items=[...g.items].sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));

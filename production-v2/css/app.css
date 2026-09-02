@@ -538,3 +538,23 @@ input,select,textarea,.grid input,.grid select{
 .chart-box-lg{height:400px}
 .dash-grid-6040{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px}
 @media(max-width:1000px){.dash-grid-6040{grid-template-columns:1fr}.chart-box-lg{height:320px}}
+
+/* DASHBOARD — Achievement progress bar */
+.dash-ach-bar{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.dash-ach-bar:empty{display:none}
+.dash-ach-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.dash-ach-head span{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.dash-ach-head b{font-size:20px;color:var(--heading)}
+.dash-ach-track{height:14px;border-radius:8px;background:var(--bg-soft);overflow:hidden}
+.dash-ach-fill{height:100%;border-radius:8px;background:var(--blue);transition:width .3s}
+.dash-ach-fill.full{background:var(--green)}
+.dash-ach-sub{margin-top:8px;font-size:12px;color:var(--muted)}
+
+/* DASHBOARD — Loss Analysis, Pareto-style horizontal bars */
+.loss-pareto{display:flex;flex-direction:column;gap:10px}
+.loss-pareto-row{display:grid;grid-template-columns:110px 1fr 70px;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.loss-pareto-label{font-size:12px;font-weight:700;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loss-pareto-track{height:16px;border-radius:6px;background:var(--bg-soft);overflow:hidden}
+.loss-pareto-fill{height:100%;border-radius:6px;background:var(--blue)}
+.loss-pareto-value{font-size:12px;font-weight:700;color:var(--heading);text-align:right}
+.loss-pareto-row:hover .loss-pareto-fill{background:var(--blue-deep)}

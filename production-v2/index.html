@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix23">
+<link rel="stylesheet" href="css/app.css?v=20260902-fix24">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -25,6 +25,7 @@
 </section>
 <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
 <section id="dashKpis" class="dash-kpis"></section>
+<section id="dashAchievementBar" class="dash-ach-bar"></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Plan vs Actual by Time Block</h2><p>Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
 <section class="dash-grid-6040">
@@ -35,5 +36,5 @@
 </main></div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
-<script src="js/dashboard.js?v=20260902-fix22"></script>
+<script src="js/dashboard.js?v=20260902-fix24"></script>
 </body></html>
