@@ -86,14 +86,26 @@ function render(){
  statusBanner(status,actual,expected);
  thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
  $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`;
- charts(labels,pb,ab); performance(P,A,use); lossView(); hourlySummary(labels,bs,P,A,use); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+ charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
-function hourlySummary(labels,bs,P,A,use){
- let host=$("dashHourly");
- if(!host)return;
+function hourlySummary(){
+ let host=$("dashHourly"),sel=$("dashHourlySelect");
+ if(!host||!S.hourlyArgs)return;
+ let {labels,bs,P,A,use}=S.hourlyArgs;
+ // Populate the block picker (WORK blocks only) — keep whatever was already
+ // selected if it's still a valid option after reloading.
+ if(sel){
+  let keepVal=sel.value;
+  let opts=['<option value="ALL">ทุกช่วงเวลา</option>'];
+  for(let i=0;i<labels.length;i++)if(bs[i]?.type!=="BREAK")opts.push(`<option value="${i}">${esc(labels[i]||"")}</option>`);
+  sel.innerHTML=opts.join("");
+  if([...sel.options].some(o=>o.value===keepVal))sel.value=keepVal;
+ }
+ let want=sel?sel.value:"ALL";
  let n=labels.length,h="";
  for(let i=0;i<n;i++){
   if(bs[i]?.type==="BREAK")continue;
+  if(want!=="ALL"&&String(i)!==want)continue;
   let rows=(use||[]).map(x=>{let pv=Number(P[x]?.[i]||0),av=Number(A[x]?.[i]||0);return {x,p:pv,a:av,d:av-pv}}).filter(r=>r.p||r.a);
   if(!rows.length)continue;
   rows.sort((r1,r2)=>r1.d-r2.d);
@@ -190,6 +202,7 @@ async function init(){
   $("dashHourly").style.display=open?"none":"block";
   $("dashHourlyToggle").textContent=open?"ดูสรุปรายชั่วโมง":"ซ่อนสรุปรายชั่วโมง";
  });
+ $("dashHourlySelect")?.addEventListener("change",hourlySummary);
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn")}
 }
 addEventListener("DOMContentLoaded",init)})();
