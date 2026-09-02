@@ -10,14 +10,18 @@ rules_version = '2';
 // 1. Authentication > Sign-in method > enable "Email/Password".
 // 2. Authentication > Users > Add user, for each employee who should be able to
 //    save Entry / Plan / Loss / Master data. (There is no self-signup in the app.)
+//    The login screen asks for a short "รหัสพนักงาน" (employee code) instead of a
+//    real email — when creating the user here, set the Email field to
+//    "<code>@prodv2.local" in lowercase (e.g. code "KP001" -> kp001@prodv2.local).
+//    Nothing is ever sent to that address; it's just an identifier.
 // 3. Firestore Database > Data > create a collection named exactly
 //    prodV2_authorizedUsers, and add ONE document per authorized employee,
-//    using their lowercase email address as the Document ID (any field/value
-//    inside is fine, e.g. {active: true} — only the document's existence matters).
-//    A user who can sign in but has no matching document here can read
-//    everything but cannot save anything — this is what keeps write access
-//    limited to employees even if someone finds another way to create a
-//    Firebase Auth account.
+//    using that same "<code>@prodv2.local" string as the Document ID (any
+//    field/value inside is fine, e.g. {active: true} — only the document's
+//    existence matters). A user who can sign in but has no matching document
+//    here can read everything but cannot save anything — this is what keeps
+//    write access limited to employees even if someone finds another way to
+//    create a Firebase Auth account.
 service cloud.firestore {
   match /databases/{database}/documents {
 

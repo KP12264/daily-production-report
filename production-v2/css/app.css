@@ -386,6 +386,7 @@ input,select,textarea,.grid input,.grid select{
 .auth-card input{height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:0 12px;background:#fff;color:#0f2747}
 .auth-card button.primary{width:100%;margin-top:6px;height:44px;border:0;border-radius:10px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}
 .auth-card #authError{margin-top:12px}
+.auth-forgot-note{font-size:11px;color:#94a3b8;text-align:center;margin:10px 0 0;line-height:1.5}
 .auth-user{color:#dbe8f5;font-size:12px;font-weight:600;margin-right:2px}
 .link-btn{background:none;border:0;color:#dbe8f5;text-decoration:underline;font-size:12px;cursor:pointer;padding:0}
 .link-btn:hover{color:#fff}
