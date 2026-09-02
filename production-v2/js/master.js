@@ -62,7 +62,7 @@ lineBody.addEventListener('click',async e=>{
   const data={lineId,lineName:get('lineName').trim()||('Line '+lineId),order:Number(get('order'))||0,active:get('active')==='true',updatedAt:Date.now()};
   const id=btn.dataset.saveLine||('line_'+safeKey(lineId));
   try{setStatus('Saving…');btn.disabled=true;await ProdV2DB.set(LINE_COLLECTION,id,data,{merge:true});setStatus('✓ Saved','ok');await loadLines();}
-  catch(err){setStatus(err.message,'err');btn.disabled=false}
+  catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
 });
 
 
@@ -126,8 +126,8 @@ document.getElementById('initModelMaster').addEventListener('click', async ()=>{
     await loadModels();
     alert('Initialize Master Data สำเร็จ\n\nLine A, B และ C ถูกสร้างใน prodV2_models แล้ว');
   }catch(err){
-    setStatus(err.message,'err');
-    alert('Initialize ไม่สำเร็จ: '+err.message);
+    setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');
+    alert('Initialize ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message));
   }finally{
     btn.disabled=false;
   }
@@ -183,7 +183,7 @@ modelBody.addEventListener('click',async e=>{
     setStatus('Saving…');btn.disabled=true;
     await ProdV2DB.set(MODEL_COLLECTION,id,data,{merge:true});
     setStatus('✓ Saved','ok');await loadModels();
-  }catch(err){setStatus(err.message,'err');btn.disabled=false}
+  }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
 });
 
 (async()=>{await loadLines();})();
@@ -258,7 +258,7 @@ document.getElementById('initLineCLayout')?.addEventListener('click',async()=>{
     const sel=document.getElementById('layoutLineFilter'); if(sel) sel.value='C';
     await loadLayouts();
     alert('Line C Layout สำเร็จ\\n24 physical pallets / 50 pcs per full round');
-  }catch(err){ setStatus(err.message,'err'); alert('Initialize ไม่สำเร็จ: '+err.message); }
+  }catch(err){ setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err'); alert('Initialize ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message)); }
   finally{btn.disabled=false;}
 });
 
@@ -312,7 +312,7 @@ document.getElementById('initABLayout')?.addEventListener('click',async()=>{
     const sel=document.getElementById('layoutLineFilter'); if(sel) sel.value='A';
     await loadLayouts();
     alert('A/B Draft Layout สำเร็จ\\nข้อมูลถูกทำเครื่องหมาย Pending Verification\\nยังไม่ได้ล็อก Jig count หรือ rounds/hour');
-  }catch(err){setStatus(err.message,'err');alert('Initialize ไม่สำเร็จ: '+err.message);}
+  }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');alert('Initialize ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message));}
   finally{btn.disabled=false;}
 });
 
@@ -418,7 +418,7 @@ document.getElementById('initShiftC')?.addEventListener('click',async()=>{
     document.getElementById('shiftLineFilter').value='C';
     document.getElementById('shiftTypeFilter').value='DAY';
     await loadShiftMaster();
-  }catch(e){setStatus(e.message,'err');alert(e.message)}finally{btn.disabled=false}
+  }catch(e){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message),'err');alert(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message)}finally{btn.disabled=false}
 });
 document.getElementById('initShiftDraft')?.addEventListener('click',async()=>{
   if(!confirm('Initialize A/B Shift Draft?\n\nCycle = provisional 12 min/round (5 rounds/hour).\nNo time blocks will be invented.'))return;
@@ -429,6 +429,6 @@ document.getElementById('initShiftDraft')?.addEventListener('click',async()=>{
     document.getElementById('shiftLineFilter').value='A';
     document.getElementById('shiftTypeFilter').value='DAY';
     await loadShiftMaster();
-  }catch(e){setStatus(e.message,'err');alert(e.message)}finally{btn.disabled=false}
+  }catch(e){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message),'err');alert(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message)}finally{btn.disabled=false}
 });
 document.querySelector('[data-tab="shifts"]')?.addEventListener('click',()=>loadShiftMaster().catch(e=>setStatus(e.message,'err')));

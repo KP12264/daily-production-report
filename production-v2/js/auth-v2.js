@@ -23,26 +23,34 @@
  async function signIn(code,password){if(!authV2)throw new Error("Auth not available");return authV2.signInWithEmailAndPassword(codeToEmail(code),password)}
  async function signOutV2(){if(!authV2)return;return authV2.signOut()}
  function currentUser(){return authV2?authV2.currentUser:null}
+ function isLoggedIn(){return !!currentUser()}
+ // Turns a raw Firestore/Auth error into a message a factory-floor user can act on.
+ // Every write path in this app should route its catch-block error through this.
+ function friendlyError(e){
+  let code=(e&&e.code)||"",msg=(e&&e.message)||String(e||"");
+  if(code==="permission-denied"||/permission-denied/i.test(msg))return"บันทึกไม่สำเร็จ: ต้อง Login ก่อนถึงจะแก้ไขข้อมูลได้ (กด Login ที่แถบด้านบน)";
+  return msg||code||"unknown error";
+ }
 
- // Renders a full-page login gate into `hostId` and calls onReady() once a signed-in
- // user is confirmed. Also wires up a "logout" control if `logoutHostId` is given.
+ // Renders a slim, non-blocking banner into `hostId` — page content underneath
+ // stays visible and usable for everyone (viewers included) at all times; only
+ // actual Firestore *writes* are blocked (by Firestore Rules, not by hiding UI).
+ // The banner shows a compact login form while signed out, and disappears once
+ // signed in (logoutHostId then shows "<code> · ออกจากระบบ").
  function mountGate({hostId,logoutHostId,onReady}){
   const host=document.getElementById(hostId);
   if(!host)return;
   host.innerHTML=`
-   <div class="auth-gate">
-    <div class="auth-card">
-     <h2>เข้าสู่ระบบ Production V2</h2>
-     <p>ต้อง Login ด้วยรหัสพนักงานที่แอดมินสร้างให้ก่อนใช้งานหน้านี้</p>
-     <label><span>รหัสพนักงาน</span><input id="authEmail" type="text" autocomplete="username" placeholder="เช่น KP001"></label>
-     <label><span>PASSWORD</span><input id="authPassword" type="password" autocomplete="current-password"></label>
-     <button id="authSignInBtn" class="primary">เข้าสู่ระบบ</button>
-     <p class="auth-forgot-note">ลืมรหัสผ่าน? ติดต่อแอดมินให้ตั้งรหัสใหม่ให้ (ไม่มีอีเมลรับลิงก์ตั้งรหัสผ่านเอง)</p>
-     <div id="authError" class="notice info-notice" style="display:none"></div>
-    </div>
+   <div class="auth-banner" id="authBanner">
+    <span class="auth-banner-icon">🔒</span>
+    <span class="auth-banner-text">กำลังดูแบบอ่านอย่างเดียว — Login เพื่อแก้ไขข้อมูล</span>
+    <input id="authEmail" type="text" placeholder="รหัสพนักงาน" autocomplete="username">
+    <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="authSignInBtn">เข้าสู่ระบบ</button>
+    <span id="authError" class="auth-banner-err" style="display:none"></span>
    </div>`;
   const err=host.querySelector("#authError");
-  function showErr(msg){err.textContent=msg;err.style.display="block"}
+  function showErr(msg){err.textContent=msg;err.style.display="inline"}
   host.querySelector("#authSignInBtn").onclick=async()=>{
    let code=host.querySelector("#authEmail").value,pw=host.querySelector("#authPassword").value;
    if(!code||!pw){showErr("กรอกรหัสพนักงานและ Password");return}
@@ -63,9 +71,10 @@
    }else{
     host.style.display="";
     if(logoutHostId){const lh=document.getElementById(logoutHostId);if(lh)lh.innerHTML=""}
+    onReady&&onReady(null);
    }
   });
  }
 
- window.ProdV2Auth={signIn,signOut:signOutV2,currentUser,onAuthChange,mountGate,codeToEmail};
+ window.ProdV2Auth={signIn,signOut:signOutV2,currentUser,isLoggedIn,friendlyError,onAuthChange,mountGate,codeToEmail};
 })();

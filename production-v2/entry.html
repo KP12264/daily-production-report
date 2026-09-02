@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Production Entry · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix3">
+<link rel="stylesheet" href="css/app.css?v=20260902-fix4">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -14,7 +14,7 @@
 <section class="hero"><div><div class="eyebrow">PRODUCTION ENTRY · STEP 6</div><h1>Actual Production Entry</h1><p>กรอกยอดผลิตจริงตาม Model / Door / Time Block โดยตรง</p></div>
 <div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="entryStatus" class="hero-status">Ready</div></div></section>
 <div id="authGateHost"></div>
-<main class="content" id="appMain" style="display:none">
+<main class="content" id="appMain">
 <section class="filter-card entry-filters">
 <label><span>DATE</span><input id="entryDate" type="date"></label>
 <label><span>LINE</span><select id="entryLine"></select></label>
@@ -36,6 +36,6 @@
   <div class="entry-modal-foot"><button id="doneModelOrderBtn" class="primary">เสร็จสิ้น</button></div>
  </div>
 </div>
-<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/auth-v2.js?v=20260902-fix3"></script><script src="js/entry.js?v=20260902-fix2"></script>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/auth-v2.js?v=20260902-fix4"></script><script src="js/entry.js?v=20260902-fix4"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body></html>

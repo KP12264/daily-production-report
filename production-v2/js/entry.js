@@ -98,7 +98,7 @@ async function doSave(){
  try{
   let payload={date:$("entryDate").value,lineId:$("entryLine").value.toUpperCase(),shift:$("entryShift").value,planId:S.plan.id||`plan_${$("entryDate").value}_${$("entryLine").value.toUpperCase()}_${$("entryShift").value}`,actualByCell:{...S.actual},modelOrder:[...S.modelOrder],updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
   await ProdV2DB.set("prodV2_actualLogs",S.docId,payload,true);$("saveBadge").textContent="SAVED";stat("Saved","ok");
- }catch(e){console.error(e);$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note(e.message,"plan-warn")}
+ }catch(e){console.error(e);$("saveBadge").textContent="SAVE FAILED";stat("Save failed","err");note((window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message),"plan-warn")}
  finally{
   S.saving=false;
   if(S.savePending){S.savePending=false;await doSave()} // state changed while we were saving — save the latest full map now

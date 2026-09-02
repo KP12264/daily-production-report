@@ -71,11 +71,11 @@ async function saveLoss(){
    if(S.editId){await ProdV2DB.set("prodV2_lossLogs",S.editId,data,true);let i=S.manual.findIndex(x=>x.id===S.editId);S.manual[i]={id:S.editId,...data};note(`แก้ไข ${category} Loss ${m} นาทีแล้ว`,"plan-ok")}
    else{let r=await ProdV2DB.add("prodV2_lossLogs",data);S.manual.push({id:r.id,...data});note(`บันทึก ${category} Loss ${m} นาทีแล้ว`,"plan-ok")}
    clearForm();render();stat("Saved","ok")
- }catch(e){note(e.message,"plan-warn");stat("Save failed","err")}
+ }catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Save failed","err")}
 }
 async function remove(id){
  if(!confirm("ลบ Manual Loss รายการนี้?"))return;
- try{await ProdV2DB.delete("prodV2_lossLogs",id);S.manual=S.manual.filter(x=>x.id!==id);if(S.editId===id)clearForm();render();note("ลบ Manual Loss แล้ว","plan-ok")}catch(e){note(e.message,"plan-warn")}
+ try{await ProdV2DB.delete("prodV2_lossLogs",id);S.manual=S.manual.filter(x=>x.id!==id);if(S.editId===id)clearForm();render();note("ลบ Manual Loss แล้ว","plan-ok")}catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn")}
 }
 async function init(){
  $("lossDate").value=localDate();$("loadLossBtn").onclick=load;$("addLossBtn").onclick=saveLoss;$("cancelEditBtn").onclick=()=>{clearForm();note("ยกเลิกการแก้ไขแล้ว")};

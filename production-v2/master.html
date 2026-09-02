@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Master Setup · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260902-fix3">
+  <link rel="stylesheet" href="css/app.css?v=20260902-fix4">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -29,7 +29,7 @@
   </section>
 
   <div id="authGateHost"></div>
-  <main class="content" id="appMain" style="display:none">
+  <main class="content" id="appMain">
 <div class="section-card master-tabs-card"><div class="tabs">
     <button class="tab active" data-tab="lines">Lines</button>
     <button class="tab" data-tab="models">Model & Door</button>
@@ -91,8 +91,8 @@
   </main>
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script>
-<script src="js/auth-v2.js?v=20260902-fix3"></script>
-<script src="js/master.js?v=20260901-step4"></script>
+<script src="js/auth-v2.js?v=20260902-fix4"></script>
+<script src="js/master.js?v=20260902-fix4"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>
