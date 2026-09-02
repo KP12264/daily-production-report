@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix15">
+<link rel="stylesheet" href="css/app.css?v=20260902-fix16">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -18,7 +18,10 @@
 <button id="dashLoadBtn" class="primary">Load Dashboard</button>
 </section>
 <div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
+<section class="dash-status-row">
 <section id="dashStatusBanner" class="dash-status-banner"></section>
+<section id="dashThisBlock" class="dash-this-block"></section>
+</section>
 <section id="dashKpis" class="dash-kpis"></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
 <section class="dash-grid">
@@ -29,5 +32,5 @@
 </main></div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
-<script src="js/dashboard.js?v=20260902-fix15"></script>
+<script src="js/dashboard.js?v=20260902-fix16"></script>
 </body></html>

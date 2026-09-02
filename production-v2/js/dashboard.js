@@ -84,6 +84,7 @@ function render(){
  let expected=expectedByNow(pb,bs,$("dashDate").value);
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
  statusBanner(status,actual,expected);
+ thisBlockCard(labels,pb,ab,bs,$("dashDate").value);
  $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
@@ -93,6 +94,24 @@ function statusBanner(status,actual,expected){
  if(!host)return;
  host.className="dash-status-banner "+(ok?"kpi-good-bg":"kpi-bad-bg");
  host.innerHTML=`<span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span><span class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}</span>`;
+}
+function currentBlockIndex(bs,viewDate){
+ // "Current block" only makes sense when looking at TODAY — a past/future
+ // date has no "now" inside its own timeline.
+ if(viewDate!==localDate()||!bs.length)return -1;
+ let u=unwrapBlockTimes(bs),now=nowMinutes();
+ if(now<u[0].startU)now+=1440;
+ for(let i=0;i<u.length;i++)if(now>=u[i].startU&&now<u[i].endU)return i;
+ return -1;
+}
+function thisBlockCard(labels,pb,ab,bs,viewDate){
+ let host=$("dashThisBlock");
+ if(!host)return;
+ let idx=currentBlockIndex(bs,viewDate);
+ if(idx<0||bs[idx]?.type==="BREAK"){host.innerHTML="";host.style.display="none";return}
+ let p=Number(pb[idx]||0),a=Number(ab[idx]||0),d=a-p;
+ host.style.display="block";
+ host.innerHTML=`<div class="dash-this-block-label">THIS BLOCK · ${esc(labels[idx]||"")}</div><div class="dash-this-block-nums"><span>Plan <b>${p}</b></span><span>Actual <b>${a}</b></span><span class="dash-this-block-diff ${d<0?"kpi-bad":"kpi-good"}">Diff <b>${d>0?"+":""}${d}</b></span></div>`;
 }
 function charts(labels,p,a){
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();

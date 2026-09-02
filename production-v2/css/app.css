@@ -496,7 +496,8 @@ input,select,textarea,.grid input,.grid select{
 .theme-toggle-btn:hover{background:rgba(255,255,255,.16)}
 
 /* DASHBOARD — prominent status banner, above the small KPI grid */
-.dash-status-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-radius:14px;padding:18px 24px;margin:16px 0;box-shadow:var(--shadow)}
+.dash-status-row{display:flex;gap:14px;align-items:stretch;margin:16px 0;flex-wrap:wrap}
+.dash-status-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-radius:14px;padding:18px 24px;box-shadow:var(--shadow);flex:2 1 320px}
 .dash-status-banner:empty{display:none}
 .dash-status-icon{font-size:28px;line-height:1}
 .dash-status-text{font-size:26px;font-weight:800;letter-spacing:.02em}
@@ -505,4 +506,10 @@ input,select,textarea,.grid input,.grid select{
 .dash-status-banner.kpi-bad-bg{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
 [data-theme="dark"] .dash-status-banner.kpi-good-bg{background:#0f2417;color:#4ade80;border-color:#166534}
 [data-theme="dark"] .dash-status-banner.kpi-bad-bg{background:#2a1414;color:#f87171;border-color:#7f1d1d}
+.dash-this-block{flex:1 1 220px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;box-shadow:var(--shadow);display:none}
+.dash-this-block-label{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.dash-this-block-nums{display:flex;gap:16px;flex-wrap:wrap}
+.dash-this-block-nums span{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--muted)}
+.dash-this-block-nums b{font-size:20px;color:var(--heading)}
+.dash-this-block-diff b{font-size:20px}
 @media(max-width:720px){.dash-status-banner{flex-direction:column;align-items:flex-start}.dash-status-sub{margin-left:0}}
