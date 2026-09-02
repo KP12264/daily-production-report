@@ -6,6 +6,44 @@ function note(t,c=""){$("dashMessage").textContent=t;$("dashMessage").className=
 async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
 const k=(m,d)=>`${m}|||${d}`;
 function splitKey(x){let p=String(x).split("|||");return {model:p[0]||"",door:p[1]||""}}
+function mins(t){let [h,m]=String(t||"00:00").split(":").map(Number);return (h||0)*60+(m||0)}
+function nowMinutes(){let d=new Date();return d.getHours()*60+d.getMinutes()}
+// Blocks are given as local HH:MM with no date, and a Night shift can cross
+// midnight — so times must be "unwrapped" into a monotonically increasing
+// timeline (each block's start/end pushed +1440 past the previous block's end
+// whenever it looks like the clock rolled over) before they can be compared to
+// "now" or to each other.
+function unwrapBlockTimes(bs){
+ let out=[],prevEnd=null;
+ bs.forEach(b=>{
+  let s=mins(b.start||b.startTime),e=mins(b.end||b.endTime);
+  if(prevEnd!=null)while(s<prevEnd)s+=1440;
+  if(e<=s)e+=1440;
+  out.push({startU:s,endU:e});prevEnd=e;
+ });
+ return out;
+}
+// Plan the shift is expected to have produced by "now" — full Adjusted Plan for
+// a past date, 0 for a future date, and for today: completed blocks count in
+// full, the in-progress block is prorated by elapsed time, future blocks count
+// as 0. This is what STATUS should compare Actual against, per Section 33 — not
+// the full-shift Adjusted Plan, which overstates how far behind an early shift
+// looks (e.g. 08:00–10:00 actual compared against a whole day's 3,150 plan).
+function expectedByNow(pb,bs,viewDate){
+ let today=localDate();
+ if(viewDate<today)return pb.reduce((a,b)=>a+b,0);
+ if(viewDate>today)return 0;
+ if(!bs.length)return pb.reduce((a,b)=>a+b,0);
+ let u=unwrapBlockTimes(bs),now=nowMinutes();
+ if(now<u[0].startU)now+=1440;
+ let sum=0;
+ for(let i=0;i<pb.length;i++){
+  let blk=u[i];if(!blk)break;
+  if(now>=blk.endU)sum+=pb[i];
+  else if(now>blk.startU)sum+=pb[i]*(now-blk.startU)/(blk.endU-blk.startU);
+ }
+ return sum;
+}
 function blocks(){
  // Canonical schema written by plan.js snap(): S.plan.blocks[] — each block has
  // {start,end,cells:[{model,door,plan,originalPlan}],total,originalTotal,...}
@@ -43,8 +81,9 @@ function render(){
  let bs=blocks();for(let i=0;i<n;i++)labels.push(bs[i]?(bs[i].label||`${bs[i].start||bs[i].startTime||""}–${bs[i].end||bs[i].endTime||""}`):`Block ${i+1}`);
  let pb=Array(n).fill(0),ab=Array(n).fill(0);use.forEach(x=>{for(let i=0;i<n;i++){pb[i]+=Number(P[x]?.[i]||0);ab[i]+=Number(A[x]?.[i]||0)}});
  let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gap=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().reduce((s,x)=>s+Number(x.minutes||0),0);
- let status=plan&&actual>=plan?"ON TARGET":"BEHIND PLAN";
- $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi"><small>STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b></div>`;
+ let expected=expectedByNow(pb,bs,$("dashDate").value);
+ let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
+ $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi"><small>STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
 function charts(labels,p,a){
