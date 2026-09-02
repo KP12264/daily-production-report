@@ -173,16 +173,38 @@ function charts(labels,p,a){
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
  S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,pointRadius:2},{label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:actualColor,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
 }
+function statusEmoji(ach){return ach>=100?"🟢":ach>=90?"🟡":"🔴"}
 function performance(P,A,keys){
  if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
  // Worst-Achievement-first — so the thing most in need of attention is always
  // at the top, instead of a fixed Model order the reader has to scan through.
  let rows=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
  rows.sort((r1,r2)=>r1.z-r2.z);
- let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th></tr></thead><tbody>';
- rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td>${r.z.toFixed(1)}%</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+ let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td>${r.z.toFixed(1)}%</td><td>${r.p?statusEmoji(r.z):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
-function lossView(){let rows=lossRows(),t={};rows.forEach(x=>{let c=x.category||"Other";t[c]=(t[c]||0)+Number(x.minutes||0)});let arr=Object.entries(t).sort((a,b)=>b[1]-a[1]);$("lossAnalysis").innerHTML=arr.length?'<div class="loss-category-summary">'+arr.map(([c,m])=>`<div class="loss-cat"><span>${esc(c)}</span><b>${m} min</b></div>`).join("")+'</div>':'<div class="empty-state">ไม่มี Loss</div>'}
+function lossView(){
+ let rows=lossRows(),t={};
+ rows.forEach(x=>{let c=x.category||"Other";(t[c]??=[]).push(x)});
+ let groups=Object.entries(t).map(([c,items])=>({c,items,total:items.reduce((s,x)=>s+Number(x.minutes||0),0)}));
+ groups.sort((a,b)=>b.total-a.total);
+ if(!groups.length){$("lossAnalysis").innerHTML='<div class="empty-state">ไม่มี Loss</div>';return}
+ let h='<div class="loss-category-summary">';
+ groups.forEach((g,gi)=>h+=`<div class="loss-cat loss-cat-toggle" data-idx="${gi}"><span>${esc(g.c)} <small>▾ ดูช่วงเวลา</small></span><b>${g.total} min</b></div>`);
+ h+='</div>';
+ groups.forEach((g,gi)=>{
+  let items=[...g.items].sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));
+  h+=`<div class="loss-cat-detail" id="lossCatDetail${gi}" style="display:none">`;
+  items.forEach(x=>h+=`<div class="loss-detail-row"><span>${esc(x.start||"")}–${esc(x.end||"")}</span><b>${x.minutes} min</b>${x.remark?`<small>${esc(x.remark)}</small>`:""}</div>`);
+  h+=`</div>`;
+ });
+ $("lossAnalysis").innerHTML=h;
+ groups.forEach((g,gi)=>{
+  let chip=document.querySelector(`.loss-cat-toggle[data-idx="${gi}"]`),detail=$(`lossCatDetail${gi}`);
+  if(!chip||!detail)return;
+  chip.onclick=()=>{let open=detail.style.display!=="none";detail.style.display=open?"none":"block";chip.classList.toggle("open",!open)};
+ });
+}
 async function load(){
  let d=$("dashDate").value,l=$("dashLine").value.toUpperCase(),sh=$("dashShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});stat("Loading...");
  try{

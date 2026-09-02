@@ -521,3 +521,20 @@ input,select,textarea,.grid input,.grid select{
 .dash-hour-block{margin-bottom:22px}
 .dash-hour-block:last-child{margin-bottom:0}
 .dash-hour-block-title{font-size:13px;font-weight:800;color:var(--heading);margin-bottom:6px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+
+/* DASHBOARD — Loss category drill-down (click a chip to see when it happened) */
+.loss-cat-toggle{cursor:pointer;user-select:none}
+.loss-cat-toggle span{display:flex;flex-direction:column;gap:2px}
+.loss-cat-toggle small{color:var(--blue);font-weight:700;font-size:10px}
+.loss-cat-toggle.open small{color:var(--blue-deep)}
+.loss-cat-detail{margin:2px 0 12px;padding:8px 12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px}
+.loss-detail-row{display:flex;align-items:center;gap:12px;padding:5px 0;border-bottom:1px solid var(--line2);font-size:12px}
+.loss-detail-row:last-child{border-bottom:0}
+.loss-detail-row span{min-width:110px;color:var(--muted);font-variant-numeric:tabular-nums}
+.loss-detail-row b{min-width:60px;color:var(--heading)}
+.loss-detail-row small{color:var(--muted)}
+
+/* DASHBOARD — layout v2: full-width stacked charts, Performance 60% / Loss 40% */
+.chart-box-lg{height:400px}
+.dash-grid-6040{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px}
+@media(max-width:1000px){.dash-grid-6040{grid-template-columns:1fr}.chart-box-lg{height:320px}}
