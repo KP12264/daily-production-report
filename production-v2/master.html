@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Master Setup · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260902-fix24">
+  <link rel="stylesheet" href="css/app.css?v=20260902-fix26">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -41,7 +41,7 @@
     <div class="notice info-notice">Line Master ของ V2 บันทึกเฉพาะ <b>prodV2_lines</b> และไม่มีคำสั่ง write ไปยัง productionLogs เดิม</div>
     <div class="section-card">
       <div class="pagehead"><div><h2>Line Master</h2><div class="sub">เพิ่ม / ปิดใช้งาน / จัดลำดับ Line โดยไม่ hard-code A/B/C</div></div><button id="addLine" class="primary">+ Add Line</button></div>
-      <table class="grid"><thead><tr><th>Line ID</th><th>Line Name</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="lineRows"></tbody></table>
+      <table class="grid"><thead><tr><th>Line ID</th><th>Line Name</th><th>Order</th><th>Max Pallets</th><th>Status</th><th></th></tr></thead><tbody id="lineRows"></tbody></table>
     </div>
   </section>
 
@@ -61,10 +61,10 @@
     <div class="section-card">
       <div class="pagehead">
         <div><h2>Pallet / Jig Layout</h2><div class="sub">Line C confirmed: 24 physical pallets / 50 pcs per full round</div></div>
-        <div class="toolbar"><button id="initABLayout">Initialize Line A Draft</button><button id="initLineBLayout" class="primary">Initialize Line B Layout</button><button id="initLineCLayout" class="primary">Initialize Line C Layout</button><label>Line <select id="layoutLineFilter"></select></label></div>
+        <div class="toolbar"><button id="addPallet" class="primary">+ Add Pallet</button><button id="initABLayout">Initialize Line A Draft</button><button id="initLineBLayout">Initialize Line B Layout</button><button id="initLineCLayout">Initialize Line C Layout</button><label>Line <select id="layoutLineFilter"></select></label></div>
       </div>
       <div id="layoutSummary" class="notice info-notice">เลือก Line เพื่อดู Physical Pallet Composition</div>
-      <table class="grid"><thead><tr><th>Pallet</th><th>Composition</th><th>pcs / round</th><th>Status</th></tr></thead><tbody id="layoutRows"></tbody></table>
+      <table class="grid"><thead><tr><th>Pallet</th><th>Composition (Model | Door | Qty ต่อบรรทัด)</th><th>pcs / round</th><th>Status</th><th></th></tr></thead><tbody id="layoutRows"></tbody></table>
     </div>
   </section>
 
@@ -92,7 +92,7 @@
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script>
 <script src="js/auth-v2.js?v=20260902-fix7"></script>
-<script src="js/master.js?v=20260902-fix13"></script>
+<script src="js/master.js?v=20260902-fix26"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>

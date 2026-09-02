@@ -17,21 +17,22 @@ document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click
 
 /* Lines */
 function lineRowHtml(x={},docId='',isNew=false){
-  const id=x.lineId||'',name=x.lineName||'',order=Number(x.order||0);
+  const id=x.lineId||'',name=x.lineName||'',order=Number(x.order||0),maxPallets=x.maxActivePallets??'';
   return `<tr>
     <td><input value="${esc(id)}" placeholder="A" data-k="lineId" ${isNew?'':'readonly'}></td>
     <td><input value="${esc(name)}" placeholder="Line A" data-k="lineName"></td>
     <td><input type="number" min="1" value="${order||''}" data-k="order"></td>
+    <td><input type="number" min="1" value="${esc(maxPallets)}" placeholder="24" data-k="maxActivePallets" title="จำนวน Pallet สูงสุดที่เครื่องรองรับพร้อมกัน — Daily Plan จะบล็อกไม่ให้ Active เกินจำนวนนี้"></td>
     <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
     <td class="right"><button ${isNew?'data-save-line-new':`data-save-line="${esc(docId)}"`}>Save</button></td>
   </tr>`;
 }
 async function loadLines(){
-  lineBody.innerHTML='<tr><td colspan="5" class="empty">Loading…</td></tr>';
+  lineBody.innerHTML='<tr><td colspan="6" class="empty">Loading…</td></tr>';
   try{
     const snap=await ProdV2DB.collection(LINE_COLLECTION).orderBy('order').get();
     if(snap.empty){
-      lineBody.innerHTML='<tr><td colspan="5" class="empty">ยังไม่มี Line ใน V2 — กด Add Line เพื่อเริ่มสร้าง Master</td></tr>';
+      lineBody.innerHTML='<tr><td colspan="6" class="empty">ยังไม่มี Line ใน V2 — กด Add Line เพื่อเริ่มสร้าง Master</td></tr>';
       modelLineFilter.innerHTML='<option value="">No active lines</option>';
       return;
     }
@@ -43,7 +44,7 @@ async function loadLines(){
     if(lines.some(x=>x.lineId===current&&x.active!==false)) modelLineFilter.value=current;
   }catch(e){
     setStatus(e.message,'err');
-    lineBody.innerHTML='<tr><td colspan="5" class="empty">โหลดไม่ได้ — ตรวจ Firestore Rules/Internet</td></tr>';
+    lineBody.innerHTML='<tr><td colspan="6" class="empty">โหลดไม่ได้ — ตรวจ Firestore Rules/Internet</td></tr>';
   }
 }
 document.getElementById('addLine').addEventListener('click',()=>{
@@ -59,7 +60,7 @@ lineBody.addEventListener('click',async e=>{
   const tr=btn.closest('tr'),get=k=>tr.querySelector(`[data-k="${k}"]`).value;
   const lineId=get('lineId').trim().toUpperCase();
   if(!lineId)return alert('กรุณาใส่ Line ID');
-  const data={lineId,lineName:get('lineName').trim()||('Line '+lineId),order:Number(get('order'))||0,active:get('active')==='true',updatedAt:Date.now()};
+  const data={lineId,lineName:get('lineName').trim()||('Line '+lineId),order:Number(get('order'))||0,maxActivePallets:Number(get('maxActivePallets'))||null,active:get('active')==='true',updatedAt:Date.now()};
   const id=btn.dataset.saveLine||('line_'+safeKey(lineId));
   try{setStatus('Saving…');btn.disabled=true;await ProdV2DB.set(LINE_COLLECTION,id,data,{merge:true});setStatus('✓ Saved','ok');await loadLines();}
   catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
@@ -259,15 +260,78 @@ async function loadLayouts(){
   const rows=all.filter(x=>x.lineId===lineId).sort((a,b)=>(a.palletNo||0)-(b.palletNo||0));
   const body=document.getElementById('layoutRows');
   const sum=document.getElementById('layoutSummary');
+  
   if(!rows.length){
-    body.innerHTML=`<tr><td colspan="4">ยังไม่มี Physical Pallet Layout สำหรับ Line ${esc(lineId)}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="5">ยังไม่มี Physical Pallet Layout สำหรับ Line ${esc(lineId)} — กด + Add Pallet เพื่อเริ่มสร้าง</td></tr>`;
     sum.textContent=`Line ${lineId}: ยังไม่มี Layout`;
     return;
   }
   const pcs=rows.filter(x=>x.active!==false).reduce((s,x)=>s+Number(x.pcsPerRound||0),0);
   sum.textContent=`Line ${lineId}: ${rows.length} physical pallets • ${pcs} pcs / full round`;
-  body.innerHTML=rows.map(r=>`<tr><td>${esc(r.palletName)}</td><td>${esc(layoutCompositionText(r))}</td><td>${r.pcsPerRound}</td><td>${r.active===false?'Inactive':'Active'}</td></tr>`).join('');
+  body.innerHTML=rows.map(r=>palletRowHtml(r,`layout_${lineId}_P${String(r.palletNo).padStart(2,'0')}`,false)).join('');
 }
+function positionsToText(row){return (row.positions||[]).map(p=>`${p.modelName} | ${p.doorCode} | ${p.qty}`).join('\n')}
+function parsePositionsText(text){
+  return String(text||'').split('\n').map(line=>{
+    let parts=line.split('|').map(s=>s.trim());
+    if(parts.length<2||!parts[0])return null;
+    return {modelName:parts[0],doorCode:parts[1]||'',qty:Number(parts[2])||1};
+  }).filter(Boolean);
+}
+function palletRowHtml(x={},docId='',isNew=false){
+  const name=x.palletName||'',positionsText=positionsToText(x),pcs=x.pcsPerRound||0;
+  return `<tr data-pallet-id="${esc(docId)}">
+    <td><input value="${esc(name)}" placeholder="C-P25" data-k="palletName"></td>
+    <td><textarea rows="3" placeholder="BM | RR | 1" data-k="positions">${esc(positionsText)}</textarea></td>
+    <td class="pallet-pcs">${pcs}</td>
+    <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
+    <td class="right"><button ${isNew?'data-save-pallet-new':`data-save-pallet="${esc(docId)}"`}>Save</button> ${isNew?'':`<button data-delete-pallet="${esc(docId)}" class="danger">Delete</button>`}</td>
+  </tr>`;
+}
+document.getElementById('addPallet')?.addEventListener('click',()=>{
+  const body=document.getElementById('layoutRows');
+  const lineId=document.getElementById('layoutLineFilter').value;
+  if(!lineId)return alert('เลือก Line ก่อน');
+  body.querySelector('td[colspan]')?.closest('tr')?.remove();
+  body.insertAdjacentHTML('beforeend',palletRowHtml({active:true},'',true));
+  body.lastElementChild.querySelector('[data-k="palletName"]').focus();
+  setStatus('New pallet ready — กรอกแล้วกด Save');
+});
+document.getElementById('layoutRows')?.addEventListener('click',async e=>{
+  const saveBtn=e.target.closest('[data-save-pallet],[data-save-pallet-new]');
+  const delBtn=e.target.closest('[data-delete-pallet]');
+  if(saveBtn){
+    const tr=saveBtn.closest('tr');
+    const lineId=document.getElementById('layoutLineFilter').value;
+    const name=tr.querySelector('[data-k="palletName"]').value.trim();
+    if(!name)return alert('กรุณาใส่ชื่อ Pallet');
+    const positions=parsePositionsText(tr.querySelector('[data-k="positions"]').value);
+    if(!positions.length)return alert('กรุณาใส่ Composition อย่างน้อย 1 บรรทัด (Model | Door | Qty)');
+    const active=tr.querySelector('[data-k="active"]').value==='true';
+    const pcsPerRound=positions.reduce((s,p)=>s+Number(p.qty||0),0);
+    let docId=saveBtn.dataset.savePallet;
+    let palletNo;
+    if(docId){
+      const m=docId.match(/_P(\d+)$/); palletNo=m?Number(m[1]):Date.now()%100000;
+    }else{
+      // New pallet — assign the next free palletNo for this line so the doc ID stays unique.
+      const all=await v2ReadAll(LAYOUT_COLLECTION);
+      const nums=all.filter(x=>x.lineId===lineId).map(x=>Number(x.palletNo)||0);
+      palletNo=(nums.length?Math.max(...nums):0)+1;
+      docId=`layout_${lineId}_P${String(palletNo).padStart(2,'0')}`;
+    }
+    const data={lineId,palletNo,palletName:name,positions,pcsPerRound,active,source:'manual-edit',updatedAt:Date.now()};
+    try{saveBtn.disabled=true;setStatus('Saving…');await ProdV2DB.set(LAYOUT_COLLECTION,docId,data,{merge:false});setStatus('✓ Pallet saved','ok');await loadLayouts();}
+    catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');saveBtn.disabled=false;}
+    return;
+  }
+  if(delBtn){
+    const docId=delBtn.dataset.deletePallet;
+    if(!confirm(`ลบ Pallet ${docId} ทิ้ง?\n\nถ้า Pallet นี้ถูกใช้อยู่ใน Daily Plan ที่ Save ไว้แล้ว จะไม่กระทบ Plan เดิม (เป็น Snapshot แช่แข็ง) แต่ Daily Plan วันถัดไปจะไม่เห็น Pallet นี้อีก`))return;
+    try{setStatus('Deleting…');await ProdV2DB.delete(LAYOUT_COLLECTION,docId);setStatus('✓ Pallet deleted','ok');await loadLayouts();}
+    catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+  }
+});
 
 document.getElementById('initLineCLayout')?.addEventListener('click',async()=>{
   if(!confirm('Initialize confirmed Line C physical layout?\\n24 pallets / 50 pcs per full round\\n\\nExisting C-P01…C-P24 records will be merged, not duplicated.')) return;

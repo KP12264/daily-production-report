@@ -463,8 +463,10 @@ input,select,textarea,.grid input,.grid select{
 #appMain.readonly-mode #modelRows input,
 #appMain.readonly-mode #modelRows select,
 #appMain.readonly-mode #modelRows button,
+#appMain.readonly-mode #addPallet,
 #appMain.readonly-mode #layoutRows input,
 #appMain.readonly-mode #layoutRows select,
+#appMain.readonly-mode #layoutRows textarea,
 #appMain.readonly-mode #layoutRows button,
 #appMain.readonly-mode #shiftRows input,
 #appMain.readonly-mode #shiftRows select,
@@ -558,3 +560,9 @@ input,select,textarea,.grid input,.grid select{
 .loss-pareto-fill{height:100%;border-radius:6px;background:var(--blue)}
 .loss-pareto-value{font-size:12px;font-weight:700;color:var(--heading);text-align:right}
 .loss-pareto-row:hover .loss-pareto-fill{background:var(--blue-deep)}
+
+/* MASTER SETUP — Pallet/Jig Layout row editing */
+#layoutRows td textarea{width:100%;min-width:220px;font-family:ui-monospace,monospace;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--card);color:var(--text);resize:vertical}
+#layoutRows td input{width:100%;min-width:90px}
+.grid button.danger{border:1px solid #fecaca;background:var(--card);color:#dc2626;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:12px}
+.grid button.danger:hover{background:#fff1f2}

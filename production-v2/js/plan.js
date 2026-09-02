@@ -183,7 +183,19 @@ async function load(){
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
 function snap(){return{date:$("planDate").value,lineId:$("planLine").value.toUpperCase(),shift:$("planShift").value,masterSnapshot:{shiftMasterId:S.shift?.id||null,shiftStatus:S.shift?.verificationStatus||null,palletOrder:[...S.palletOrder],activePalletIds:[...S.baseActive],palletChanges:S.events,palletChangeLosses:S.losses,activePallets:S.pallets.filter(p=>S.baseActive.has(p.id)||S.events.some(e=>e.palletId===p.id||e.replacementPalletId===p.id)).map(p=>({id:p.id,palletCode:p.palletName||p.palletCode||p.palletNo||p.name||p.id,positions:posOf(p)}))},blocks:S.matrix,originalPlan:S.matrix.reduce((s,x)=>s+x.originalTotal,0),adjustedPlan:S.matrix.reduce((s,x)=>s+x.total,0),totalPlan:S.matrix.reduce((s,x)=>s+x.total,0),lossMinutes:S.matrix.reduce((s,x)=>s+x.lossMinutes,0),scheduledRounds:S.matrix.reduce((s,x)=>s+x.scheduledRounds,0),plannedRounds:S.matrix.reduce((s,x)=>s+x.rounds,0),updatedAt:firebase.firestore.FieldValue.serverTimestamp(),planningLogic:'POSITION_COMPOSITION_WITH_CHANGE_LOSS',version:3}}
-async function save(){if(!S.loaded||!S.matrix.length){note("Load Master ที่มี WORK Time Block ก่อน","plan-warn");return}let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;try{stat("Saving...");await ProdV2DB.set("prodV2_dailyPlans",id,snap(),true);$("snapshotBadge").textContent="SAVED";note(`บันทึก Daily Plan แล้ว • ${d} • Line ${l} • ${sh}`,"plan-ok");stat("Saved","ok")}catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Save failed","err")}}
+async function save(){
+ if(!S.loaded||!S.matrix.length){note("Load Master ที่มี WORK Time Block ก่อน","plan-warn");return}
+ let l=$("planLine").value.toUpperCase();
+ let lineDoc=S.lines.find(x=>(x.lineId||x.code||x.id)===l);
+ let maxPallets=lineDoc?.maxActivePallets;
+ let activeCount=S.baseActive.size;
+ if(maxPallets&&activeCount>maxPallets){
+  note(`บันทึกไม่ได้: เลือก Pallet Active ${activeCount} ใบ เกินขีดจำกัดเครื่อง Line ${l} (สูงสุด ${maxPallets} ใบ) — ลด Position ที่ติ๊ก Active ลงก่อน`,"plan-warn");
+  stat("Too many active pallets","err");
+  return;
+ }
+ let d=$("planDate").value,sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;try{stat("Saving...");await ProdV2DB.set("prodV2_dailyPlans",id,snap(),true);$("snapshotBadge").textContent="SAVED";note(`บันทึก Daily Plan แล้ว • ${d} • Line ${l} • ${sh}`,"plan-ok");stat("Saved","ok")}catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Save failed","err")}
+}
 
 async function deleteSavedPlan(){
  let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;
