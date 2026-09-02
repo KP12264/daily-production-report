@@ -1,12 +1,12 @@
-<!doctype html><html lang="th"><head>
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix11">
+<link rel="stylesheet" href="css/app.css?v=20260902-fix14">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head><body><div class="site-wrap">
-<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a class="active" href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a class="active" href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
 <section class="hero"><div><div class="eyebrow">STEP 8 · LIVE PRODUCTION OVERVIEW</div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div></section>
 <main class="content">
 <section class="filter-card dash-filters">
@@ -28,7 +28,7 @@
 <div class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
 </section>
 </main></div>
-<script src="js/firebase-v2.js?v=20260902-fix2"></script>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
 <script src="js/dashboard.js?v=20260902-fix6"></script>
 </body></html>

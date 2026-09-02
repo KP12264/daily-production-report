@@ -1,12 +1,12 @@
-<!doctype html><html lang="th"><head>
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Loss / Downtime · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix11">
+<link rel="stylesheet" href="css/app.css?v=20260902-fix14">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head><body><div class="site-wrap">
-<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html" class="active">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html" class="active">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
 <section class="hero"><div><div class="eyebrow">STEP 7 · LOSS / DOWNTIME</div><h1>Loss & Downtime</h1><p>บันทึกเวลาสูญเสียจริงแยกจาก Scheduled Break</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="lossStatus" class="hero-status">Ready</div></div></section>
 <div id="authGateHost"></div>
 <main class="content" id="appMain">
@@ -25,6 +25,6 @@
 </div></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Loss by Category</h2><p>รวมเวลาสูญเสียตามประเภท · รวม Pallet Change จาก Daily Plan</p></div></div><div id="categorySummary" class="loss-category-summary"></div></section><section class="section-card"><div class="section-title-row"><div><h2>Loss Records</h2><p>รายการจาก Daily Plan และรายการที่กรอกเพิ่ม</p></div><span id="lossBadge" class="soft-badge">NOT LOADED</span></div><div id="lossList" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
 </main></div>
-<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/context-v2.js?v=20260901-step7-2-2-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/loss.js?v=20260902-fix5"></script>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-2-2-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/loss.js?v=20260902-fix5"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body></html>
