@@ -86,7 +86,24 @@ function render(){
  statusBanner(status,actual,expected);
  thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
  $("dashKpis").innerHTML=`<div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`;
- charts(labels,pb,ab); performance(P,A,use); lossView(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+ charts(labels,pb,ab); performance(P,A,use); lossView(); hourlySummary(labels,bs,P,A,use); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+}
+function hourlySummary(labels,bs,P,A,use){
+ let host=$("dashHourly");
+ if(!host)return;
+ let n=labels.length,h="";
+ for(let i=0;i<n;i++){
+  if(bs[i]?.type==="BREAK")continue;
+  let rows=(use||[]).map(x=>{let pv=Number(P[x]?.[i]||0),av=Number(A[x]?.[i]||0);return {x,p:pv,a:av,d:av-pv}}).filter(r=>r.p||r.a);
+  if(!rows.length)continue;
+  rows.sort((r1,r2)=>r1.d-r2.d);
+  let tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),td=ta-tp;
+  h+=`<div class="dash-hour-block"><div class="dash-hour-block-title">${esc(labels[i]||"")}</div><div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
+  rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
+  h+=`<tr class="dash-this-block-total"><td colspan="2">Total</td><td>${tp}</td><td><b>${ta}</b></td><td class="${td<0?"kpi-bad":"kpi-good"}">${td>0?"+":""}${td}</td></tr>`;
+  h+=`</tbody></table></div></div>`;
+ }
+ host.innerHTML=h||'<div class="empty-state">ไม่มีข้อมูล</div>';
 }
 function statusBanner(status,actual,expected){
  let ok=status==="ON TARGET";
@@ -140,7 +157,7 @@ function charts(labels,p,a){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
  const planColor="#64748b",actualColor="#b45309";
- S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{anchor:"end",align:"top",font:{size:10,weight:"bold"},formatter:v=>v?v.toLocaleString():""}}}});
+ S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
  S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,pointRadius:2},{label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:actualColor,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
 }
@@ -168,6 +185,11 @@ async function load(){
 }
 async function init(){
  $("dashDate").value=localDate();$("dashLoadBtn").onclick=load;$("dashModel").onchange=render;$("dashDoor").onchange=render;
+ $("dashHourlyToggle")?.addEventListener("click",()=>{
+  let open=$("dashHourly").style.display!=="none";
+  $("dashHourly").style.display=open?"none":"block";
+  $("dashHourlyToggle").textContent=open?"ดูสรุปรายชั่วโมง":"ซ่อนสรุปรายชั่วโมง";
+ });
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn")}
 }
 addEventListener("DOMContentLoaded",init)})();

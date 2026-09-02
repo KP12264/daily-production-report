@@ -516,3 +516,8 @@ input,select,textarea,.grid input,.grid select{
 
 /* DASHBOARD — This Block per-Model/Door breakdown table */
 .dash-this-block-total td{font-weight:800;background:var(--bg-soft);border-top:2px solid var(--line)}
+
+/* DASHBOARD — Hourly Summary (per-block Model/Door tables) */
+.dash-hour-block{margin-bottom:22px}
+.dash-hour-block:last-child{margin-bottom:0}
+.dash-hour-block-title{font-size:13px;font-weight:800;color:var(--heading);margin-bottom:6px;padding-bottom:6px;border-bottom:2px solid var(--line)}
