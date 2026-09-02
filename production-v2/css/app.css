@@ -2,8 +2,9 @@
 :root{
   --navy:#16324f;
   --navy-deep:#102a43;
-  --blue:#2563eb;
-  --blue-soft:#eff6ff;
+  --blue:#1e40af;
+  --blue-deep:#1e3a8a;
+  --blue-soft:#eef2fb;
   --green:#16a34a;
   --green-soft:#f0fdf4;
   --orange:#f59e0b;
@@ -41,7 +42,7 @@ button,input,select,textarea{font:inherit}
   display:flex;align-items:center;justify-content:space-between;gap:24px;
   box-shadow:var(--shadow)
 }
-.eyebrow{font-size:11px;letter-spacing:.10em;color:#2563eb;font-weight:700;margin-bottom:9px}
+.eyebrow{font-size:11px;letter-spacing:.10em;color:var(--blue);font-weight:700;margin-bottom:9px}
 .hero h1{margin:0 0 8px;font-size:28px;line-height:1.12;color:#172033;font-weight:700;letter-spacing:-.02em}
 .hero p{margin:0;color:#64748b;font-size:13px;line-height:1.55}
 .hero-right{display:flex;align-items:flex-end;flex-direction:column;gap:10px}
@@ -84,7 +85,7 @@ input,select,textarea,.grid input,.grid select{
   border:1px solid #cfd9e3;background:#fff;color:var(--text);
   border-radius:8px;padding:8px 10px;outline:none
 }
-input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,109,244,.10)}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(30,64,175,.14)}
 .grid{width:100%;border-collapse:collapse;margin-top:8px}
 .grid th{
   background:#f8fafc;color:#475569;font-size:12px;font-weight:600;text-align:left;
@@ -223,7 +224,7 @@ input,select,textarea,.grid input,.grid select{
 .change-controls{display:grid;grid-template-columns:2fr 1.2fr 1.2fr auto;gap:9px;width:100%}
 .change-list{width:100%;margin-top:12px;display:flex;flex-direction:column;gap:7px}
 .change-item{display:grid;grid-template-columns:90px 1fr 34px;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155}
-.change-item b{color:#2563eb}.change-item button{padding:3px 7px;color:#dc2626;background:#fff}.change-empty{color:#8090a3;font-size:12px}
+.change-item b{color:var(--blue)}.change-item button{padding:3px 7px;color:#dc2626;background:#fff}.change-empty{color:#8090a3;font-size:12px}
 @media(max-width:800px){.change-controls{grid-template-columns:1fr}.change-item{grid-template-columns:75px 1fr 34px}}
 
 /* Step 5.2 — replacement pallet */
@@ -249,7 +250,7 @@ input,select,textarea,.grid input,.grid select{
 /* Step 5.4 Daily Pallet Order */
 .pallet-order-note{grid-column:1/-1;padding:9px 11px;margin-bottom:10px;border-radius:8px;background:#f3f8ff;color:#4f6f8e;font-size:11px}
 .order-card{display:grid;grid-template-columns:auto 1fr auto;align-items:start}.pallet-body{min-width:0}.pallet-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
-.pallet-top b{margin:0;color:#1d4ed8}.physical-id{font-size:10px!important;color:#7b8ca1!important}
+.pallet-top b{margin:0;color:var(--blue-deep)}.physical-id{font-size:10px!important;color:#7b8ca1!important}
 .order-tools{display:grid;grid-template-columns:30px 30px 48px;gap:4px}.order-tools button{padding:4px 6px;min-width:0;background:#fff;color:#315b85;border:1px solid #d5e0eb}
 .order-tools input{width:48px;padding:4px;text-align:center;border:1px solid #d5e0eb;border-radius:6px;font-size:11px}
 
@@ -269,7 +270,7 @@ input,select,textarea,.grid input,.grid select{
 .actual-grid .actual-sticky{position:sticky;left:0;z-index:4;background:#fff;box-shadow:4px 0 8px rgba(15,39,71,.06)}
 .actual-grid tr.entry-active-row td{background:#f8fbff}
 .actual-grid tr.entry-active-row .actual-sticky{background:#eef6ff}
-.actual-input:focus{outline:3px solid rgba(59,130,246,.22);border-color:#2563eb;background:#fff;box-shadow:0 0 0 1px #2563eb}
+.actual-input:focus{outline:3px solid rgba(30,64,175,.25);border-color:var(--blue);background:#fff;box-shadow:0 0 0 1px var(--blue)}
 .actual-grid .sum-col{position:sticky;background:#fff;z-index:3;border-left:1px solid #e5edf5}
 .actual-grid thead .sum-col{z-index:7;background:#f8fafc}
 .actual-grid .sum-ach{right:0;min-width:86px}
@@ -357,17 +358,17 @@ input,select,textarea,.grid input,.grid select{
 .entry-modal{display:none;position:fixed;inset:0;background:rgba(15,39,71,.35);z-index:999;align-items:center;justify-content:center;padding:20px}.entry-modal.open{display:flex}
 .entry-modal-card{width:min(520px,96vw);max-height:82vh;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,39,71,.25);display:flex;flex-direction:column;overflow:hidden}
 .entry-modal-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid #e5edf5}.entry-modal-head h3{margin:0;color:#0f2747}.entry-modal-head p{margin:5px 0 0;color:#64748b;font-size:12px}.modal-x{border:0;background:#f1f5f9;border-radius:9px;width:34px;height:34px;font-size:20px;cursor:pointer}
-.model-order-list{overflow:auto;padding:10px 16px}.order-row{display:grid;grid-template-columns:34px 1fr 36px 36px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid #edf2f7}.order-no{font-weight:800;color:#2563eb;text-align:center}.order-name{display:flex;flex-direction:column}.order-name small{color:#64748b}.order-row button{height:32px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-weight:800;cursor:pointer}
+.model-order-list{overflow:auto;padding:10px 16px}.order-row{display:grid;grid-template-columns:34px 1fr 36px 36px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid #edf2f7}.order-no{font-weight:800;color:var(--blue);text-align:center}.order-name{display:flex;flex-direction:column}.order-name small{color:#64748b}.order-row button{height:32px;border:1px solid #cbd5e1;background:#fff;border-radius:8px;font-weight:800;cursor:pointer}
 .entry-modal-foot{padding:14px 20px;border-top:1px solid #e5edf5;display:flex;justify-content:flex-end}
 
 /* STEP 7 — Loss / Downtime */
 .loss-filters label,.loss-form label{display:flex;flex-direction:column;gap:6px}.loss-filters label span,.loss-form label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:#64748b}
-.loss-form{display:grid;grid-template-columns:180px 140px 140px 1fr 130px;gap:12px;align-items:end;margin-top:14px}.loss-form input,.loss-form select{height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:0 11px;background:#fff;color:#0f2747}.loss-table td,.loss-table th{text-align:center}.source-auto{display:inline-block;padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#2563eb;font-size:10px;font-weight:800}.loss-delete{border:1px solid #fecaca;background:#fff;color:#dc2626;border-radius:8px;padding:6px 9px;cursor:pointer}
+.loss-form{display:grid;grid-template-columns:180px 140px 140px 1fr 130px;gap:12px;align-items:end;margin-top:14px}.loss-form input,.loss-form select{height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:0 11px;background:#fff;color:#0f2747}.loss-table td,.loss-table th{text-align:center}.source-auto{display:inline-block;padding:4px 8px;border-radius:999px;background:#eaf2ff;color:var(--blue);font-size:10px;font-weight:800}.loss-delete{border:1px solid #fecaca;background:#fff;color:#dc2626;border-radius:8px;padding:6px 9px;cursor:pointer}
 @media(max-width:900px){.loss-form{grid-template-columns:1fr 1fr}.loss-remark{grid-column:1/-1}}
 
 /* STEP 7.2 — Loss Management */
 .loss-actions{display:flex;gap:8px;align-items:center}.loss-actions .secondary{height:42px;border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:10px;padding:0 16px;cursor:pointer}
-.loss-category-summary{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.loss-cat{min-width:155px;display:flex;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc;color:#334155}.loss-cat b{color:#0f2747}.source-manual{display:inline-block;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800}.loss-edit{border:1px solid #bfdbfe;background:#fff;color:#2563eb;border-radius:8px;padding:6px 9px;cursor:pointer}.muted{color:#94a3b8;font-size:11px}.empty-inline{color:#94a3b8}
+.loss-category-summary{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.loss-cat{min-width:155px;display:flex;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid #dbe4f0;border-radius:12px;background:#f8fafc;color:#334155}.loss-cat b{color:#0f2747}.source-manual{display:inline-block;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800}.loss-edit{border:1px solid #bfdbfe;background:#fff;color:var(--blue);border-radius:8px;padding:6px 9px;cursor:pointer}.muted{color:#94a3b8;font-size:11px}.empty-inline{color:#94a3b8}
 
 .danger-plan{border:1px solid #fecaca;background:#fff;color:#dc2626;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 .danger-plan:hover{background:#fff1f2}
@@ -446,3 +447,24 @@ input,select,textarea,.grid input,.grid select{
 #appMain.readonly-mode #shiftRows input,
 #appMain.readonly-mode #shiftRows select,
 #appMain.readonly-mode #shiftRows button{pointer-events:none;opacity:.5;background:#f1f5f9}
+
+/* EXECUTIVE SUMMARY page */
+.exec-filters{display:flex;gap:12px;align-items:end}
+.exec-hero{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:28px 32px;display:flex;justify-content:space-between;align-items:center;gap:24px;margin:16px 0;flex-wrap:wrap}
+.exec-hero-main{display:flex;flex-direction:column;gap:4px}
+.exec-hero-label{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.exec-hero-num{font-size:64px;font-weight:800;line-height:1.05}
+.exec-hero-status{font-size:16px;font-weight:800;letter-spacing:.04em}
+.exec-hero-side{display:flex;gap:28px;flex-wrap:wrap}
+.exec-hero-side div{display:flex;flex-direction:column;gap:4px}
+.exec-hero-side small{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.exec-hero-side b{font-size:22px;color:#0f2747}
+.exec-line-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.exec-line-card{border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center;background:#fbfcfe}
+.exec-line-name{font-weight:700;color:#0f2747;margin-bottom:8px}
+.exec-line-ach{font-size:30px;font-weight:800}
+.exec-line-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.exec-trend-toggle{display:flex;gap:8px}
+.exec-toggle-btn{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.exec-toggle-btn.active{background:var(--blue);border-color:var(--blue);color:#fff}
+@media(max-width:900px){.exec-hero{flex-direction:column;align-items:flex-start}.exec-hero-num{font-size:48px}}

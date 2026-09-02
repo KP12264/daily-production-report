@@ -1,0 +1,47 @@
+<!doctype html><html lang="th"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Executive Summary · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260902-fix11">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a href="index.html">Dashboard</a><a class="active" href="exec.html">Executive</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="master.html">Master Setup</a></nav><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<section class="hero"><div><div class="eyebrow">EXECUTIVE SUMMARY</div><h1>ภาพรวมสำหรับผู้บริหาร</h1><p>ทุก Line ทุกกะรวมกันในหน้าเดียว · อ่านได้ใน 5 วินาที</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="execStatus" class="hero-status">Ready</div></div></section>
+<main class="content">
+<section class="filter-card exec-filters">
+<label><span>DATE</span><input id="execDate" type="date"></label>
+<button id="execLoadBtn" class="primary">Load</button>
+</section>
+<div id="execMessage" class="notice info-notice">เลือกวันที่แล้วกด Load</div>
+
+<section id="execHero" class="exec-hero"></section>
+
+<section class="section-card">
+<div class="section-title-row"><div><h2>เทียบทุก Line</h2><p>Achievement % ของแต่ละ Line ในวันเดียวกัน</p></div></div>
+<div id="execLineCards" class="exec-line-cards"></div>
+</section>
+
+<section class="section-card">
+<div class="section-title-row"><div><h2>เทรนด์ Achievement %</h2><p id="trendMsg">รวมทุก Line/กะ</p></div>
+<div class="exec-trend-toggle"><button id="trend7Btn" class="exec-toggle-btn active">7 วัน</button><button id="trend30Btn" class="exec-toggle-btn">30 วัน</button></div>
+</div>
+<div class="chart-box"><canvas id="trendChart"></canvas></div>
+</section>
+
+<section class="section-card">
+<div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss ทุก Line รวมกัน</p></div></div>
+<div id="execLoss" class="empty-state">ยังไม่ได้โหลดข้อมูล</div>
+</section>
+
+<section class="section-card">
+<div class="section-title-row"><div><h2>รายละเอียด Model / Door</h2><p>ซ่อนไว้เป็นค่าเริ่มต้น — กดเพื่อดูราย Model/Door ทุก Line รวมกัน</p></div>
+<button id="detailToggle" class="exec-toggle-btn">ดูรายละเอียด Model/Door</button>
+</div>
+<div id="execDetail" class="empty-state" style="display:none">ยังไม่ได้โหลดข้อมูล</div>
+</section>
+
+</main></div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script>
+<script src="js/exec.js?v=20260902-fix1"></script>
+</body></html>

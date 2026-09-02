@@ -287,7 +287,7 @@ document.getElementById('initLineCLayout')?.addEventListener('click',async()=>{
 });
 
 document.getElementById('initLineBLayout')?.addEventListener('click',async()=>{
-  if(!confirm('Initialize confirmed Line B physical layout?\\n24 pallets / 32 pcs per full round\\n\\nExisting B-P01…B-P24 records will be merged, not duplicated.')) return;
+  if(!confirm('Initialize confirmed Line B physical layout?\\n24 pallets / 32 pcs per full round\\n\\nExisting B-P01…B-P24 records will be merged, not duplicated.\\nAny old B-D01…B-D06 draft pallets will be removed (superseded by this confirmed data).')) return;
   const btn=document.getElementById('initLineBLayout');
   try{
     btn.disabled=true; setStatus('Initializing Line B Layout…');
@@ -295,10 +295,17 @@ document.getElementById('initLineBLayout')?.addEventListener('click',async()=>{
       const id=`layout_B_P${String(row.palletNo).padStart(2,'0')}`;
       await ProdV2DB.set(LAYOUT_COLLECTION,id,row,{merge:true});
     }
+    // Remove the old Line B DRAFT pallets (from the earlier "Initialize A/B
+    // Draft" version, before Line B had confirmed counts) — otherwise they sit
+    // alongside B-P01…B-P24 and double-count the physical pallet total.
+    for(let i=1;i<=6;i++){
+      const id=`layout_B_D${String(i).padStart(2,'0')}`;
+      try{await ProdV2DB.delete(LAYOUT_COLLECTION,id)}catch(e){/* fine if it never existed */}
+    }
     setStatus('✓ Line B Layout initialized','ok');
     const sel=document.getElementById('layoutLineFilter'); if(sel) sel.value='B';
     await loadLayouts();
-    alert('Line B Layout สำเร็จ\\n24 physical pallets / 32 pcs per full round\\n\\nหมายเหตุ: ถ้าเคยกด "Initialize Line A/B Draft" มาก่อนหน้านี้ ให้ไปลบ document layout_B_D01–layout_B_D06 ใน Firestore ทิ้งด้วยตนเอง (เดิมเป็นข้อมูล PENDING ที่ถูกแทนที่ด้วยจำนวนจริงชุดนี้แล้ว)');
+    alert('Line B Layout สำเร็จ\\n24 physical pallets / 32 pcs per full round\\n\\nPallet Draft เก่า (B-D01–B-D06) ถูกลบออกให้แล้ว');
   }catch(err){ setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err'); alert('Initialize ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message)); }
   finally{btn.disabled=false;}
 });
@@ -371,12 +378,23 @@ const C_DAY_BLOCKS=[
   ['19:00','19:50','WORK',50,10,5]
 ];
 
-/* Night shift: only confirmed break windows are seeded.
-   Other time windows stay pending until exact shift start/end is verified. */
+/* Night shift: fully confirmed 2026-09-02. 19:50–08:00 (next day), cycle 10 min/round.
+   630 work min / 63 rounds + 100 break min — totals match Day shift exactly. */
 const C_NIGHT_BLOCKS=[
+  ['19:50','21:00','WORK',70,10,7],
+  ['21:00','22:00','WORK',60,10,6],
+  ['22:00','23:10','WORK',70,10,7],
   ['23:10','00:00','BREAK',50,null,0],
+  ['00:00','01:00','WORK',60,10,6],
+  ['01:00','02:00','WORK',60,10,6],
+  ['02:00','02:30','WORK',30,10,3],
   ['02:30','03:00','BREAK',30,null,0],
-  ['05:10','05:30','BREAK',20,null,0]
+  ['03:00','04:00','WORK',60,10,6],
+  ['04:00','05:10','WORK',70,10,7],
+  ['05:10','05:30','BREAK',20,null,0],
+  ['05:30','06:00','WORK',30,10,3],
+  ['06:00','07:00','WORK',60,10,6],
+  ['07:00','08:00','WORK',60,10,6]
 ];
 
 function shiftRecord(lineId,shift,blocks,status,cycleMin){
@@ -394,7 +412,7 @@ async function saveShift(id,data){ await ProdV2DB.set(SHIFT_COLLECTION,id,data,{
 
 async function initLineCShift(){
   await saveShift('shift_C_DAY',shiftRecord('C','DAY',C_DAY_BLOCKS,'CONFIRMED',10));
-  await saveShift('shift_C_NIGHT',shiftRecord('C','NIGHT',C_NIGHT_BLOCKS,'PENDING',10));
+  await saveShift('shift_C_NIGHT',shiftRecord('C','NIGHT',C_NIGHT_BLOCKS,'CONFIRMED',10));
 }
 async function initABShiftDraft(){
   /* Provisional 12 min/round = 5 rounds/hour. No fabricated time blocks. */
@@ -444,7 +462,7 @@ async function loadShiftMaster(){
 }
 
 document.getElementById('initShiftC')?.addEventListener('click',async()=>{
-  if(!confirm('Initialize Line C Shift Master?\n\nDAY = confirmed 63 rounds / 630 work min\nNIGHT = break windows only, Pending Verification'))return;
+  if(!confirm('Initialize Line C Shift Master?\n\nDAY = confirmed 63 rounds / 630 work min\nNIGHT = confirmed 63 rounds / 630 work min (19:50–08:00)'))return;
   const btn=document.getElementById('initShiftC');
   try{
     btn.disabled=true;setStatus('Initializing Line C Shift…');
