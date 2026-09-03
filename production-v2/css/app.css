@@ -457,6 +457,9 @@ input,select,textarea,.grid input,.grid select{
 #appMain.readonly-mode #initModelMaster,
 #appMain.readonly-mode #initShiftC,
 #appMain.readonly-mode #initShiftDraft,
+#appMain.readonly-mode #abCycleInput,
+#appMain.readonly-mode #shiftCycleInput,
+#appMain.readonly-mode #recalcRoundsBtn,
 #appMain.readonly-mode #lineRows input,
 #appMain.readonly-mode #lineRows select,
 #appMain.readonly-mode #lineRows button,
@@ -656,3 +659,25 @@ input,select,textarea,.grid input,.grid select{
   .chart-box-lg{height:280px}
   .chart-box{height:260px}
 }
+
+/* PRODUCTION ENTRY — mobile one-block-at-a-time carousel (renderMobileMatrix
+   in entry.js). This existed in the JS already but had NO matching CSS at
+   all, so the prev/label/next row fell back to plain stacked block elements
+   instead of a proper horizontal nav bar — that's the "ช่องเปลี่ยนช่วงเวลา"
+   layout that wasn't OK. */
+.mobile-entry{display:flex;flex-direction:column;gap:14px}
+.mobile-block-nav{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;box-shadow:var(--shadow)}
+.mobile-block-nav button{flex:0 0 auto;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg-soft);color:var(--heading);font-size:20px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mobile-block-nav button:disabled{opacity:.35;cursor:not-allowed}
+.mobile-block-nav button:not(:disabled):active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.mobile-block-label{flex:1;text-align:center;min-width:0}
+.mobile-block-label b{display:block;font-size:16px;color:var(--heading)}
+.mobile-block-label small{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mobile-entry-rows{display:flex;flex-direction:column;gap:8px}
+.mobile-entry-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.mobile-entry-label{min-width:0;flex:1 1 40%}
+.mobile-entry-label b{display:block;font-size:14px;color:var(--heading)}
+.mobile-entry-label small{display:block;font-size:11px;color:var(--muted)}
+.mobile-entry-plan{flex:0 0 auto;font-size:11px;color:var(--muted);white-space:nowrap}
+.mobile-entry-input{flex:0 0 auto;width:76px;height:44px;font-size:17px;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--bg-soft);color:var(--heading)}
+.mobile-entry-input:focus{outline:2px solid var(--blue);border-color:var(--blue);background:var(--card)}

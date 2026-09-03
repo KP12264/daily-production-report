@@ -529,18 +529,18 @@ async function initLineCShift(){
   await saveShift('shift_C_DAY',shiftRecord('C','DAY',C_DAY_BLOCKS,'CONFIRMED',10));
   await saveShift('shift_C_NIGHT',shiftRecord('C','NIGHT',C_NIGHT_BLOCKS,'CONFIRMED',10));
 }
-async function initABShiftDraft(){
+async function initABShiftDraft(cycleMin=12){
   /* Work hours & break windows are now confirmed the SAME across every line
      (per user, 2026-09-02) — so A and B reuse Line C's time blocks exactly.
-     Cycle time is confirmed unchanged at 12 min/round for both A and B (per
-     user, 2026-09-03) — plannedRounds is computed via carryForwardRounds so
-     the shift totals correctly equal floor(630/12)=52, not the old
-     per-block-floor result of 49. verificationStatus stays PENDING since
-     the cycle rate itself is still provisional, even though it's unchanged
-     from before. */
+     Cycle time is editable from Master Setup (Shift & Time tab, "Cycle
+     (min/round)" field next to this button) instead of being hardcoded —
+     plannedRounds is computed via carryForwardRounds so the shift totals
+     correctly round UP to the nearest whole round (e.g. 630÷12=52.5 → 53),
+     not the old per-block-floor result of 49. verificationStatus stays
+     PENDING since the cycle rate itself is still provisional. */
   for(const lineId of ['A','B']){
-    await saveShift(`shift_${lineId}_DAY`,shiftRecord(lineId,'DAY',C_DAY_BLOCKS,'PENDING',12));
-    await saveShift(`shift_${lineId}_NIGHT`,shiftRecord(lineId,'NIGHT',C_NIGHT_BLOCKS,'PENDING',12));
+    await saveShift(`shift_${lineId}_DAY`,shiftRecord(lineId,'DAY',C_DAY_BLOCKS,'PENDING',cycleMin));
+    await saveShift(`shift_${lineId}_NIGHT`,shiftRecord(lineId,'NIGHT',C_NIGHT_BLOCKS,'PENDING',cycleMin));
   }
 }
 async function loadShiftMaster(){
@@ -568,6 +568,9 @@ async function loadShiftMaster(){
   const rounds=blocks.reduce((s,b)=>s+Number(b.plannedRounds||0),0);
   const state=rec.verificationStatus||'PENDING';
   sum.textContent=`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds} planned rounds • ${state}`;
+  const cycleInput=document.getElementById('shiftCycleInput');
+  if(cycleInput)cycleInput.value=rec.standardCycleMinPerRound||'';
+  window.currentShiftBlockMeta=blocks.map(b=>({start:b.start,end:b.end,type:b.type})); // start/end/type aren't editable — Recalculate reads them from here, not from the DOM
   if(!blocks.length){
     body.innerHTML=`<tr><td colspan="7">Draft only — provisional ${rec.provisionalRoundsPerHour||'-'} rounds/hour. Time blocks Pending Verification.</td></tr>`;
     return;
@@ -581,6 +584,36 @@ async function loadShiftMaster(){
     <td class="right"><button data-save-block="${i}">Save</button></td>
   </tr>`).join('');
 }
+document.getElementById('recalcRoundsBtn')?.addEventListener('click',async()=>{
+  const lineId=document.getElementById('shiftLineFilter').value,shift=document.getElementById('shiftTypeFilter').value;
+  const id=`shift_${lineId}_${shift}`;
+  const cycleMin=Number(document.getElementById('shiftCycleInput')?.value)||0;
+  const meta=window.currentShiftBlockMeta||[];
+  if(!cycleMin)return alert('กรอก Cycle Time (min/round) ก่อน');
+  if(!meta.length)return alert('ยังไม่มี Time Block ให้คำนวณ — เลือก Line/Shift ที่มีข้อมูลก่อน');
+  // Read whatever Minutes are currently showing in each row's input (so any
+  // manual edits made before clicking Recalculate are respected), pair them
+  // back up with each row's fixed start/end/type, then run the exact same
+  // carry-forward + round-up algorithm used everywhere else in the app —
+  // single source of truth, no separate calculation invented for this button.
+  const rows=[...document.querySelectorAll('#shiftRows tr[data-block-index]')];
+  const tuples=meta.map((m,i)=>{
+    const row=rows.find(r=>Number(r.dataset.blockIndex)===i);
+    const minutesInput=row?.querySelector('[data-k="minutes"]');
+    const minutes=m.type==='WORK'?(Number(minutesInput?.value)||0):Number(minutesInput?.value)||0;
+    return [m.start,m.end,m.type,minutes];
+  });
+  const computed=carryForwardRounds(tuples,cycleMin);
+  const blocks=computed.map((b,i)=>({order:i+1,...b}));
+  const btn=document.getElementById('recalcRoundsBtn');
+  try{
+    btn.disabled=true;setStatus('Recalculating & saving…');
+    await ProdV2DB.set(SHIFT_COLLECTION,id,{blocks,standardCycleMinPerRound:cycleMin},{merge:true});
+    setStatus('✓ Recalculated & saved','ok');
+    await loadShiftMaster();
+  }catch(e){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,'err');}
+  finally{btn.disabled=false;}
+});
 document.getElementById('shiftRows')?.addEventListener('click',async e=>{
   const btn=e.target.closest('[data-save-block]');
   if(!btn)return;
@@ -613,11 +646,12 @@ document.getElementById('initShiftC')?.addEventListener('click',async()=>{
   }catch(e){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message),'err');alert(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message)}finally{btn.disabled=false}
 });
 document.getElementById('initShiftDraft')?.addEventListener('click',async()=>{
-  if(!confirm('Initialize A/B Shift Draft?\n\nWork hours/breaks = same as Line C (confirmed).\nCycle = still provisional 12 min/round — plannedRounds is an estimate, not verified.'))return;
+  const cycleMin=Number(document.getElementById('abCycleInput')?.value)||12;
+  if(!confirm(`Initialize A/B Shift Draft?\n\nWork hours/breaks = same as Line C (confirmed).\nCycle = ${cycleMin} min/round — plannedRounds is an estimate, not verified.`))return;
   const btn=document.getElementById('initShiftDraft');
   try{
-    btn.disabled=true;setStatus('Initializing A/B Shift Draft…');
-    await initABShiftDraft();setStatus('✓ A/B Shift Draft initialized','ok');
+    btn.disabled=true;setStatus(`Initializing A/B Shift Draft at ${cycleMin} min/round…`);
+    await initABShiftDraft(cycleMin);setStatus(`✓ A/B Shift Draft initialized at ${cycleMin} min/round`,'ok');
     document.getElementById('shiftLineFilter').value='A';
     document.getElementById('shiftTypeFilter').value='DAY';
     await loadShiftMaster();

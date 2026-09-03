@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Master Setup · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260902-fix33">
+  <link rel="stylesheet" href="css/app.css?v=20260902-fix40">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -90,12 +90,17 @@
         <div><h2>Shift & Time Master</h2><div class="sub">WORK / BREAK / Cycle / Planned Rounds by time block</div></div>
         <div class="toolbar">
           <button id="initShiftDraft">Initialize A/B Draft</button>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">Cycle (min/round) <input id="abCycleInput" type="number" min="1" value="12" style="width:64px"></label>
           <button id="initShiftC" class="primary">Initialize Line C</button>
           <label>Line <select id="shiftLineFilter"></select></label>
           <label>Shift <select id="shiftTypeFilter"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
         </div>
       </div>
       <div id="shiftSummary" class="notice info-notice">เลือก Line / Shift เพื่อดู Time Blocks</div>
+      <div class="toolbar" style="gap:10px">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">Cycle Time ทั้งกะ (min/round) <input id="shiftCycleInput" type="number" min="1" style="width:70px"></label>
+        <button id="recalcRoundsBtn" class="primary">Recalculate &amp; Save Rounds</button>
+      </div>
       <table class="grid">
         <thead><tr><th>Time</th><th>Type</th><th>Minutes</th><th>Cycle</th><th>Planned Rounds</th><th>Status</th><th></th></tr></thead>
         <tbody id="shiftRows"></tbody>
@@ -107,7 +112,7 @@
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script>
 <script src="js/auth-v2.js?v=20260902-fix7"></script>
-<script src="js/master.js?v=20260902-fix36"></script>
+<script src="js/master.js?v=20260902-fix38"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>
