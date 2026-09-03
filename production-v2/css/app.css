@@ -598,3 +598,21 @@ input,select,textarea,.grid input,.grid select{
   .actual-input{width:64px;height:42px;font-size:15px}
   .production-matrix-viewport{max-height:60vh}
 }
+
+/* MOBILE — card-style tables (opt-in via .mobile-cards) instead of horizontal
+   scroll, for the Model/Door Performance and Hourly Summary tables that were
+   hard to read on phones (had to scroll sideways and lost track of which
+   row was which). Table stays a normal scrollable table on desktop/tablet;
+   only phones get the stacked-card treatment. */
+@media(max-width:640px){
+  .grid.mobile-cards{white-space:normal}
+  .grid.mobile-cards thead{display:none}
+  .grid.mobile-cards,.grid.mobile-cards tbody{display:block}
+  .grid.mobile-cards tr{display:block;margin-bottom:10px;border:1px solid var(--line);border-radius:10px;padding:4px 12px;background:var(--card)}
+  .grid.mobile-cards tr.dash-this-block-total{background:var(--bg-soft);border-width:2px}
+  .grid.mobile-cards td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0;border:0;border-bottom:1px solid var(--line2);min-width:0;text-align:right}
+  .grid.mobile-cards td:last-child{border-bottom:0}
+  .grid.mobile-cards td[data-label]:before{content:attr(data-label);font-weight:700;color:var(--muted);font-size:11px;text-align:left}
+  .grid.mobile-cards td[data-label=""]:before{content:none}
+  .grid.mobile-cards td[colspan]{font-weight:800;color:var(--heading)}
+}

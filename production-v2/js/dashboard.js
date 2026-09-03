@@ -120,9 +120,9 @@ function hourlySummary(){
   if(!rows.length)continue;
   rows.sort((r1,r2)=>r1.d-r2.d);
   let tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),td=ta-tp;
-  h+=`<div class="dash-hour-block"><div class="dash-hour-block-title">${esc(labels[i]||"")}</div><div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
-  rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
-  h+=`<tr class="dash-this-block-total"><td colspan="2">Total</td><td>${tp}</td><td><b>${ta}</b></td><td class="${td<0?"kpi-bad":"kpi-good"}">${td>0?"+":""}${td}</td></tr>`;
+  h+=`<div class="dash-hour-block"><div class="dash-hour-block-title">${esc(labels[i]||"")}</div><div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
+  rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Diff" class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
+  h+=`<tr class="dash-this-block-total"><td colspan="2" data-label="">Total</td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Diff" class="${td<0?"kpi-bad":"kpi-good"}">${td>0?"+":""}${td}</td></tr>`;
   h+=`</tbody></table></div></div>`;
  }
  host.innerHTML=h||'<div class="empty-state">ไม่มีข้อมูล</div>';
@@ -164,9 +164,9 @@ function thisBlockCard(labels,pb,ab,bs,viewDate,P,A,use){
  }).filter(r=>r.p||r.a);
  if(!rows.length){tableHost.innerHTML="";tableHost.style.display="none";return}
  rows.sort((r1,r2)=>r1.d-r2.d);
- let h=`<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
- rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
- h+=`<tr class="dash-this-block-total"><td colspan="2">Total</td><td>${p}</td><td><b>${a}</b></td><td class="${d<0?"kpi-bad":"kpi-good"}">${d>0?"+":""}${d}</td></tr>`;
+ let h=`<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Diff" class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
+ h+=`<tr class="dash-this-block-total"><td colspan="2" data-label="">Total</td><td data-label="Plan">${p}</td><td data-label="Actual"><b>${a}</b></td><td data-label="Diff" class="${d<0?"kpi-bad":"kpi-good"}">${d>0?"+":""}${d}</td></tr>`;
  h+=`</tbody></table></div>`;
  tableHost.style.display="block";
  tableHost.innerHTML=h;
@@ -190,8 +190,8 @@ function performance(P,A,keys){
  // at the top, instead of a fixed Model order the reader has to scan through.
  let rows=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
  rows.sort((r1,r2)=>r1.z-r2.z);
- let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
- rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td>${esc(q.model)}</td><td>${esc(q.door)}</td><td>${r.p}</td><td><b>${r.a}</b></td><td class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td>${r.z.toFixed(1)}%</td><td>${r.p?statusEmoji(r.g):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+ let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach.">${r.z.toFixed(1)}%</td><td data-label="Status">${r.p?statusEmoji(r.g):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
 function lossView(){
  let rows=lossRows(),t={};
