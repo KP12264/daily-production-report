@@ -179,11 +179,26 @@ function charts(labels,p,a){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
  const planColor="#64748b",actualColor="#b45309";
- S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
+ S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false},tooltip:{mode:"index",intersect:false,callbacks:{
+  title:items=>items.length?labels[items[0].dataIndex]:"",
+  filter:()=>false,
+  afterBody:items=>{
+   if(!items.length)return[];
+   let i=items[0].dataIndex,pv=Number(p[i]||0),av=Number(a[i]||0),gap=av-pv;
+   return [`Plan: ${pv.toLocaleString()}`,`Actual: ${av.toLocaleString()}`,`Gap: ${gap>0?"+":""}${gap.toLocaleString()}`];
+  }
+ }}}}});
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
  S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,pointRadius:2},{label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:actualColor,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
 }
-function statusEmoji(gap){return gap>=0?"🟢":gap>=-20?"🟡":"🔴"}
+function statusBadge(gap){
+ // Same thresholds as before (gap>=0 / gap>=-20 / gap<-20) — only the
+ // presentation changed, from an emoji dot to a labeled subtle badge.
+ if(gap>=0)return '<span class="status-badge status-good">ON TARGET</span>';
+ if(gap>=-20)return '<span class="status-badge status-watch">WATCH</span>';
+ return '<span class="status-badge status-bad">BEHIND PLAN</span>';
+}
+function achClass(z){return z>=100?"kpi-good":z>=95?"kpi-watch":"kpi-bad"}
 function performance(P,A,keys){
  if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
  // Worst-Achievement-first — so the thing most in need of attention is always
@@ -191,7 +206,7 @@ function performance(P,A,keys){
  let rows=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
  rows.sort((r1,r2)=>r1.z-r2.z);
  let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
- rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach.">${r.z.toFixed(1)}%</td><td data-label="Status">${r.p?statusEmoji(r.g):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.z.toFixed(1)}%</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`});h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
 function lossView(){
  let rows=lossRows(),t={};

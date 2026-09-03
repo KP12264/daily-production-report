@@ -396,7 +396,7 @@ input,select,textarea,.grid input,.grid select{
 .danger-plan:hover{background:#fff1f2}
 
 /* STEP 8 — Dashboard */
-.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}
+.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}.kpi-watch{color:#b45309!important}
 @media(max-width:1100px){.dash-filters{grid-template-columns:repeat(3,1fr)}.dash-kpis{grid-template-columns:repeat(3,1fr)}.dash-grid{grid-template-columns:1fr}}
 
 /* AUTH — Production V2 slim read-only banner (page content stays visible/usable
@@ -621,4 +621,38 @@ input,select,textarea,.grid input,.grid select{
   .grid.mobile-cards td[data-label]:before{content:attr(data-label);font-weight:700;color:var(--muted);font-size:11px;text-align:left}
   .grid.mobile-cards td[data-label=""]:before{content:none}
   .grid.mobile-cards td[colspan]{font-weight:800;color:var(--heading)}
+}
+
+/* STATUS BADGE — subtle labeled badge replacing the emoji dot in Model/Door
+   Performance (ON TARGET / WATCH / BEHIND PLAN). Text-based per spec, not
+   color-only, and never fills the whole row — just this one cell. */
+.status-badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.03em;white-space:nowrap}
+.status-badge.status-good{background:var(--green-soft);color:#15803d}
+.status-badge.status-watch{background:#fef3e2;color:#b45309}
+.status-badge.status-bad{background:#fef2f2;color:#dc2626}
+[data-theme="dark"] .status-badge.status-good{background:#0f2417;color:#4ade80}
+[data-theme="dark"] .status-badge.status-watch{background:#3a2a12;color:#fbbf24}
+[data-theme="dark"] .status-badge.status-bad{background:#2a1414;color:#f87171}
+
+/* LAPTOP HEIGHT PASS — factory laptops are commonly 1366×768. This targets
+   viewport HEIGHT specifically (not width, which the phone/tablet breakpoints
+   above already cover), tightening vertical spacing only — font-size is left
+   alone per spec ("ลด whitespace ก่อน ไม่ใช่ลด font"). */
+@media(max-height:800px){
+  body{padding:10px 0 20px}
+  .app-nav{min-height:44px;padding:6px 14px}
+  .hero{margin-top:10px;padding:16px 22px;min-height:0}
+  .hero h1{font-size:22px;margin-bottom:4px}
+  .hero p{font-size:12px}
+  .content{padding-top:12px}
+  .section-card,.card{padding:13px 16px;margin-bottom:12px}
+  .dash-status-row{margin:10px 0}
+  .dash-status-banner{padding:12px 18px}
+  .dash-status-text{font-size:20px}
+  .dash-status-icon{font-size:22px}
+  .dash-kpis{margin:10px 0}
+  .entry-kpi{padding:10px}
+  .entry-kpi b{font-size:20px;margin-top:3px}
+  .chart-box-lg{height:280px}
+  .chart-box{height:260px}
 }
