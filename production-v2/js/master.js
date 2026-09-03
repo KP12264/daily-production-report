@@ -654,24 +654,21 @@ document.getElementById('mergeConfirmBtn')?.addEventListener('click',async()=>{
   btn.disabled=true;resultEl.textContent='กำลัง Merge…';
   try{
     for(const doc of mergeState.actualDocs){
-      // Build the update as explicit dot-path set/delete pairs — a plain
-      // {merge:true} write here would ADD the renamed key but leave the old
-      // key sitting alongside it (Firestore's map-merge never removes
-      // fields absent from the write), silently double-counting Actual.
-      const update={};
-      const collisions={};
+      // Rebuild the WHOLE actualByCell map client-side (renamed keys summed
+      // with any existing colliding key, everything else passed through
+      // unchanged), then write it with mergeFields — which fully REPLACES
+      // just this one field instead of deep-merging it, so old renamed-away
+      // keys are actually dropped. (An earlier version of this tool used
+      // update() with dot-path field names, but Firestore field paths
+      // reject '/' — which Model names like "TM19/21" contain — so that
+      // approach failed outright; this version never uses dot-paths at all.)
+      const newCells={};
       Object.entries(doc.cells).forEach(([k,v])=>{
         const p=k.split('|||');
-        if(p[1]!==mergeState.oldModel)return;
-        const newKey=[p[0],mergeState.newModel,p[2]].join('|||');
-        const existing=Number(doc.cells[newKey]||0);
-        const already=collisions[newKey]??existing;
-        const merged=already+Number(v||0);
-        collisions[newKey]=merged;
-        update[`actualByCell.${newKey}`]=merged;
-        update[`actualByCell.${k}`]=firebase.firestore.FieldValue.delete();
+        const newKey=p[1]===mergeState.oldModel?[p[0],mergeState.newModel,p[2]].join('|||'):k;
+        newCells[newKey]=(Number(newCells[newKey])||0)+Number(v||0);
       });
-      if(Object.keys(update).length)await ProdV2DB.update(ACTUAL_COLLECTION,doc.id,update);
+      await ProdV2DB.set(ACTUAL_COLLECTION,doc.id,{actualByCell:newCells},{mergeFields:['actualByCell']});
     }
     for(const doc of mergeState.planDocs){
       const snap=await ProdV2DB.collection(PLAN_COLLECTION).doc(doc.id).get();
