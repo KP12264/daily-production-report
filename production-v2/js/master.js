@@ -141,12 +141,12 @@ function modelRowHtml(x={},docId='',isNew=false){
   const model=x.modelName||'',door=x.doorCode||'',display=x.displayName||'',order=Number(x.order||0);
   return `<tr>
     <td><input value="${esc(lineId)}" data-k="lineId" readonly></td>
-    <td><input value="${esc(model)}" placeholder="TM14" data-k="modelName" ${isNew?'':'readonly'}></td>
-    <td><input value="${esc(door)}" placeholder="F" data-k="doorCode" ${isNew?'':'readonly'}></td>
+    <td><input value="${esc(model)}" placeholder="TM14" data-k="modelName"></td>
+    <td><input value="${esc(door)}" placeholder="F" data-k="doorCode"></td>
     <td><input value="${esc(display)}" placeholder="TM14 / F" data-k="displayName"></td>
     <td><input type="number" min="1" value="${order||''}" data-k="order"></td>
     <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
-    <td class="right"><button ${isNew?'data-save-model-new':`data-save-model="${esc(docId)}"`}>Save</button></td>
+    <td class="right"><button ${isNew?'data-save-model-new':`data-save-model="${esc(docId)}"`}>Save</button> ${isNew?'':`<button data-delete-model="${esc(docId)}" class="danger">Delete</button>`}</td>
   </tr>`;
 }
 async function loadModels(){
@@ -173,6 +173,14 @@ document.getElementById('addModelDoor').addEventListener('click',()=>{
   setStatus('New Model / Door ready');
 });
 modelBody.addEventListener('click',async e=>{
+  const delBtn=e.target.closest('[data-delete-model]');
+  if(delBtn){
+    const docId=delBtn.dataset.deleteModel;
+    if(!confirm(`ลบ Model/Door นี้ทิ้ง?\n\nถ้ามี Pallet ที่ยังอ้างอิงชื่อ Model นี้อยู่ใน Pallet/Jig Layout จะไม่ถูกลบตาม ต้องไปแก้ Pallet เองแยกต่างหาก`))return;
+    try{setStatus('Deleting…');await ProdV2DB.delete(MODEL_COLLECTION,docId);setStatus('✓ Model/Door deleted','ok');await loadModels();}
+    catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+    return;
+  }
   const btn=e.target.closest('button');
   if(!btn||(!btn.hasAttribute('data-save-model')&&!btn.hasAttribute('data-save-model-new')))return;
   const tr=btn.closest('tr'),get=k=>tr.querySelector(`[data-k="${k}"]`).value;
@@ -260,6 +268,12 @@ async function loadLayouts(){
   const rows=all.filter(x=>x.lineId===lineId).sort((a,b)=>(a.palletNo||0)-(b.palletNo||0));
   const body=document.getElementById('layoutRows');
   const sum=document.getElementById('layoutSummary');
+  const hint=document.getElementById('layoutModelHint');
+  if(hint){
+    const models=await v2ReadAll(MODEL_COLLECTION).then(all2=>[...new Set(all2.filter(x=>x.lineId===lineId).map(x=>x.modelName))].sort());
+    if(models.length){hint.style.display='';hint.textContent=`Model ที่ลงทะเบียนไว้แล้วสำหรับ Line ${lineId} (พิมพ์ให้ตรงเป๊ะ กันแยกเป็นคนละ Model โดยไม่ตั้งใจ): ${models.join(', ')}`;}
+    else hint.style.display='none';
+  }
   
   if(!rows.length){
     body.innerHTML=`<tr><td colspan="5">ยังไม่มี Physical Pallet Layout สำหรับ Line ${esc(lineId)} — กด + Add Pallet เพื่อเริ่มสร้าง</td></tr>`;
@@ -308,6 +322,17 @@ document.getElementById('layoutRows')?.addEventListener('click',async e=>{
     const positions=parsePositionsText(tr.querySelector('[data-k="positions"]').value);
     if(!positions.length)return alert('กรุณาใส่ Composition อย่างน้อย 1 บรรทัด (Model | Door | Qty)');
     const active=tr.querySelector('[data-k="active"]').value==='true';
+    // Catch typo'd Model names (e.g. "TM19/21" vs the registered "TM19") before
+    // they get saved — a mismatch here means Entry/Dashboard will treat it as
+    // a totally different Model, silently splitting Plan and Actual apart.
+    const knownModels=await v2ReadAll(MODEL_COLLECTION).then(all=>new Set(all.filter(x=>x.lineId===lineId).map(x=>x.modelName)));
+    if(knownModels.size){
+      const unknown=[...new Set(positions.map(p=>p.modelName).filter(m=>!knownModels.has(m)))];
+      if(unknown.length){
+        const list=[...knownModels].sort().join(', ');
+        if(!confirm(`⚠️ Model นี้ไม่ตรงกับที่ลงทะเบียนไว้ใน Model Master ของ Line ${lineId}:\n${unknown.join(', ')}\n\nModel ที่มีอยู่แล้ว: ${list}\n\nถ้าพิมพ์ผิด ให้กด Cancel แล้วแก้ให้ตรง — ถ้าตั้งใจเพิ่ม Model ใหม่จริงๆ กด OK เพื่อบันทึกต่อ`))return;
+      }
+    }
     const pcsPerRound=positions.reduce((s,p)=>s+Number(p.qty||0),0);
     let docId=saveBtn.dataset.savePallet;
     let palletNo;
