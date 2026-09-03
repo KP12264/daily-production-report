@@ -169,7 +169,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .filter-card{grid-template-columns:1fr}
   .pagehead,.section-title-row{align-items:flex-start;flex-direction:column}
-  .grid{display:block;overflow-x:auto;white-space:nowrap}
+  .grid:not(.actual-grid){display:block;overflow-x:auto;white-space:nowrap}
 }
 
 
@@ -586,4 +586,15 @@ input,select,textarea,.grid input,.grid select{
 @media(max-width:380px){
   .dash-kpis{grid-template-columns:1fr!important}
   .exec-line-cards{grid-template-columns:1fr}
+}
+
+/* MOBILE — Production Entry matrix: bigger touch targets, tighter columns so
+   more of the next Time Block peeks into view without losing the sticky
+   Model/Door column (see the .grid:not(.actual-grid) fix above — the matrix
+   was losing its sticky columns entirely on phones before this). */
+@media(max-width:560px){
+  .actual-grid th,.actual-grid td{min-width:96px}
+  .actual-grid th:first-child,.actual-grid td:first-child{min-width:112px}
+  .actual-input{width:64px;height:42px;font-size:15px}
+  .production-matrix-viewport{max-height:60vh}
 }

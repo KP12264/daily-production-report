@@ -64,9 +64,18 @@ function updateRowSummary(model,door){
  if(diffCell)diffCell.textContent=`${diff>0?"+":""}${diff}`;
  if(achCell)achCell.textContent=`${ach.toFixed(1)}%`;
 }
+function isMobileView(){return window.matchMedia("(max-width:640px)").matches}
+function wireActualInput(el){
+ el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;let parts=el.dataset.key.split("|||");updateRowSummary(parts[1],parts[2]);renderKpis();$("saveBadge").textContent="SAVING...";scheduleSave()});
+}
 function render(){
  if(!S.plan){$("entryTableArea").innerHTML='<div class="empty-state">ไม่พบ Daily Plan</div>';return}
- let ps=planKeys(),blocks=S.plan.blocks||[],h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
+ let ps=planKeys(),blocks=S.plan.blocks||[];
+ if(isMobileView())renderMobileMatrix(ps,blocks);else renderDesktopMatrix(ps,blocks);
+ renderKpis()
+}
+function renderDesktopMatrix(ps,blocks){
+ let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
  blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>Plan ${Number(b.total||0)}</small></th>`);
  h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
  ps.forEach(p=>{
@@ -81,11 +90,35 @@ function render(){
    h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
  });
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
- document.querySelectorAll(".actual-input").forEach((el,i,arr)=>{
-   el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;let parts=el.dataset.key.split("|||");updateRowSummary(parts[1],parts[2]);renderKpis();$("saveBadge").textContent="SAVING...";scheduleSave()});
+ document.querySelectorAll(".actual-input").forEach(el=>{
+   wireActualInput(el);
    el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
- renderKpis()
+}
+// Mobile: one Time Block at a time instead of a wide horizontal table — no
+// horizontal scrolling, Model/Door always visible, big tap targets.
+function renderMobileMatrix(ps,blocks){
+ if(!blocks.length){$("entryTableArea").innerHTML='<div class="empty-state">ไม่มี Time Block</div>';return}
+ if(S.mobileBlock==null)S.mobileBlock=0;
+ S.mobileBlock=Math.max(0,Math.min(blocks.length-1,S.mobileBlock));
+ let bi=S.mobileBlock,b=blocks[bi];
+ let h=`<div class="mobile-entry"><div class="mobile-block-nav">
+  <button id="mbPrev" ${bi===0?"disabled":""}>‹</button>
+  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · Plan ${Number(b.total||0)}</small></div>
+  <button id="mbNext" ${bi===blocks.length-1?"disabled":""}>›</button>
+ </div><div class="mobile-entry-rows">`;
+ ps.forEach((p,ri)=>{
+  let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
+  h+=`<div class="mobile-entry-row"><div class="mobile-entry-label"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div><div class="mobile-entry-plan">Plan ${pl}</div><input class="actual-input mobile-entry-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ri}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0"></div>`;
+ });
+ h+='</div></div>';
+ $("entryTableArea").innerHTML=h;
+ $("mbPrev").onclick=()=>{S.mobileBlock--;render()};
+ $("mbNext").onclick=()=>{S.mobileBlock++;render()};
+ document.querySelectorAll(".mobile-entry-input").forEach(el=>{
+  wireActualInput(el);
+  el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let ri=Number(el.dataset.rowIndex),next=document.querySelector(`.mobile-entry-input[data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}else el.blur()}});
+ });
 }
 function scheduleSave(){
  clearTimeout(S.saveTimer);
