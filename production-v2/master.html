@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Master Setup · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260902-fix31">
+  <link rel="stylesheet" href="css/app.css?v=20260902-fix32">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -54,6 +54,19 @@
       </div>
       <table class="grid"><thead><tr><th>Line</th><th>Model</th><th>Door</th><th>Display Name</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="modelRows"></tbody></table>
     </div>
+    <div class="section-card">
+      <div class="pagehead"><div><h2>Merge Model (ซ่อมชื่อ Model ไม่ตรงกัน)</h2><div class="sub">ใช้เมื่อ Actual/Plan เก่าค้างชื่อ Model ผิด (เช่น "TM19" vs "TM19/21") ให้รวมกลับเป็น Model เดียว — ไม่กระทบ productionLogs เดิม</div></div></div>
+      <div class="notice info-notice">แก้ Master ให้ถูกก่อน แล้วค่อยใช้เครื่องมือนี้รวมข้อมูลเก่าที่ยังค้างชื่อผิดอยู่ (Plan snapshot ที่ยังไม่ได้ Save ซ้ำ + Actual ที่เคยกรอกไปแล้ว) กด Preview ก่อนเสมอเพื่อดูว่าจะกระทบกี่วัน ก่อนกด Merge จริง</div>
+      <div class="toolbar" style="flex-wrap:wrap;gap:10px">
+        <label>Line <select id="mergeLine"></select></label>
+        <label>Model เดิม (ผิด) <input id="mergeOld" placeholder="TM19"></label>
+        <label>Model ใหม่ (ถูก) <input id="mergeNew" placeholder="TM19/21"></label>
+        <label>Date (เว้นว่าง = ทุกวัน) <input id="mergeDate" type="date"></label>
+        <button id="mergePreviewBtn">Preview</button>
+        <button id="mergeConfirmBtn" class="primary" disabled>Merge ตามที่ Preview</button>
+      </div>
+      <div id="mergeResult" class="notice info-notice" style="display:none"></div>
+    </div>
   </section>
 
   <section class="tabpane" data-pane="pallets">
@@ -93,7 +106,7 @@
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script>
 <script src="js/auth-v2.js?v=20260902-fix7"></script>
-<script src="js/master.js?v=20260902-fix30"></script>
+<script src="js/master.js?v=20260902-fix31"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>

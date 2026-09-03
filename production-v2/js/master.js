@@ -40,8 +40,11 @@ async function loadLines(){
     const lines=[];
     snap.forEach(d=>{const x=d.data(); lines.push(x); lineBody.insertAdjacentHTML('beforeend',lineRowHtml(x,d.id,false));});
     const current=modelLineFilter.value;
-    modelLineFilter.innerHTML=lines.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.lineId)}">${esc(x.lineName||x.lineId)}</option>`).join('');
+    const opts=lines.filter(x=>x.active!==false).map(x=>`<option value="${esc(x.lineId)}">${esc(x.lineName||x.lineId)}</option>`).join('');
+    modelLineFilter.innerHTML=opts;
     if(lines.some(x=>x.lineId===current&&x.active!==false)) modelLineFilter.value=current;
+    const mergeLineSel=document.getElementById('mergeLine');
+    if(mergeLineSel){const cur2=mergeLineSel.value;mergeLineSel.innerHTML=opts;if(lines.some(x=>x.lineId===cur2&&x.active!==false))mergeLineSel.value=cur2;}
   }catch(e){
     setStatus(e.message,'err');
     lineBody.innerHTML='<tr><td colspan="6" class="empty">โหลดไม่ได้ — ตรวจ Firestore Rules/Internet</td></tr>';
@@ -583,3 +586,102 @@ document.getElementById('initShiftDraft')?.addEventListener('click',async()=>{
   }catch(e){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message),'err');alert(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message)}finally{btn.disabled=false}
 });
 document.querySelector('[data-tab="shifts"]')?.addEventListener('click',()=>loadShiftMaster().catch(e=>setStatus(e.message,'err')));
+
+/* ===== Merge Model — repair Actual/Plan data that got saved under a
+   mistyped/inconsistent Model name (e.g. "TM19" vs "TM19/21") before the
+   Model Master was corrected. Fixing the Model Master alone does NOT
+   retroactively rename already-saved Plan snapshots or Actual entries —
+   this tool does that safely, on request, with a mandatory preview step. ===== */
+const ACTUAL_COLLECTION='prodV2_actualLogs';
+const PLAN_COLLECTION='prodV2_dailyPlans';
+let mergeState=null;
+
+async function scanMerge(){
+  const lineId=document.getElementById('mergeLine').value;
+  const oldModel=document.getElementById('mergeOld').value.trim();
+  const newModel=document.getElementById('mergeNew').value.trim();
+  const date=document.getElementById('mergeDate').value; // '' = every date for this line
+  if(!lineId||!oldModel||!newModel)return {error:'กรอก Line, Model เดิม และ Model ใหม่ ให้ครบ'};
+  if(oldModel===newModel)return {error:'Model เดิมกับ Model ใหม่ต้องไม่เหมือนกัน'};
+
+  const actualSnap=await ProdV2DB.collection(ACTUAL_COLLECTION).where('lineId','==',lineId).get();
+  const actualDocs=[];
+  actualSnap.forEach(d=>{
+    const data=d.data();
+    if(date&&data.date!==date)return;
+    const cells=data.actualByCell||{};
+    const matched=Object.keys(cells).filter(k=>k.split('|||')[1]===oldModel);
+    if(matched.length)actualDocs.push({id:d.id,date:data.date,shift:data.shift,matched,cells});
+  });
+
+  const planSnap=await ProdV2DB.collection(PLAN_COLLECTION).where('lineId','==',lineId).get();
+  const planDocs=[];
+  planSnap.forEach(d=>{
+    const data=d.data();
+    if(date&&data.date!==date)return;
+    let count=0;
+    (data.blocks||[]).forEach(b=>(b.cells||[]).forEach(c=>{if(c.model===oldModel)count++}));
+    if(count)planDocs.push({id:d.id,date:data.date,shift:data.shift,count});
+  });
+
+  return {lineId,oldModel,newModel,date,actualDocs,planDocs};
+}
+
+document.getElementById('mergePreviewBtn')?.addEventListener('click',async()=>{
+  const resultEl=document.getElementById('mergeResult'),confirmBtn=document.getElementById('mergeConfirmBtn');
+  confirmBtn.disabled=true;mergeState=null;
+  resultEl.style.display='';resultEl.className='notice info-notice';resultEl.textContent='กำลังค้นหา…';
+  try{
+    const res=await scanMerge();
+    if(res.error){resultEl.className='notice plan-warn';resultEl.textContent=res.error;return}
+    if(!res.actualDocs.length&&!res.planDocs.length){
+      resultEl.className='notice plan-warn';
+      resultEl.textContent=`ไม่พบข้อมูลที่ใช้ชื่อ "${res.oldModel}" เลยสำหรับ Line ${res.lineId}${res.date?' วันที่ '+res.date:''}`;
+      return;
+    }
+    const totalCells=res.actualDocs.reduce((s,d)=>s+d.matched.length,0);
+    const dates=[...new Set([...res.planDocs.map(d=>d.date),...res.actualDocs.map(d=>d.date)])].sort();
+    resultEl.innerHTML=`พบ <b>${res.planDocs.length}</b> Daily Plan และ <b>${res.actualDocs.length}</b> Actual Log (${totalCells} ช่อง) ที่ยังใช้ชื่อ "${esc(res.oldModel)}"<br>วันที่ที่กระทบ: ${dates.map(esc).join(', ')}<br>กด "Merge ตามที่ Preview" เพื่อเปลี่ยนเป็น "${esc(res.newModel)}" จริง`;
+    mergeState=res;
+    confirmBtn.disabled=false;
+  }catch(e){resultEl.className='notice plan-warn';resultEl.textContent='ค้นหาไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);}
+});
+
+document.getElementById('mergeConfirmBtn')?.addEventListener('click',async()=>{
+  if(!mergeState)return;
+  if(!confirm(`ยืนยันรวม Model "${mergeState.oldModel}" → "${mergeState.newModel}" ?\n\nจะแก้ ${mergeState.planDocs.length} Daily Plan และ ${mergeState.actualDocs.length} Actual Log\n\nการกระทำนี้ย้อนกลับไม่ได้ (ไม่กระทบ productionLogs เดิม)`))return;
+  const resultEl=document.getElementById('mergeResult'),btn=document.getElementById('mergeConfirmBtn');
+  btn.disabled=true;resultEl.textContent='กำลัง Merge…';
+  try{
+    for(const doc of mergeState.actualDocs){
+      // Build the update as explicit dot-path set/delete pairs — a plain
+      // {merge:true} write here would ADD the renamed key but leave the old
+      // key sitting alongside it (Firestore's map-merge never removes
+      // fields absent from the write), silently double-counting Actual.
+      const update={};
+      const collisions={};
+      Object.entries(doc.cells).forEach(([k,v])=>{
+        const p=k.split('|||');
+        if(p[1]!==mergeState.oldModel)return;
+        const newKey=[p[0],mergeState.newModel,p[2]].join('|||');
+        const existing=Number(doc.cells[newKey]||0);
+        const already=collisions[newKey]??existing;
+        const merged=already+Number(v||0);
+        collisions[newKey]=merged;
+        update[`actualByCell.${newKey}`]=merged;
+        update[`actualByCell.${k}`]=firebase.firestore.FieldValue.delete();
+      });
+      if(Object.keys(update).length)await ProdV2DB.update(ACTUAL_COLLECTION,doc.id,update);
+    }
+    for(const doc of mergeState.planDocs){
+      const snap=await ProdV2DB.collection(PLAN_COLLECTION).doc(doc.id).get();
+      const data=snap.data();
+      const blocks=(data.blocks||[]).map(b=>({...b,cells:(b.cells||[]).map(c=>c.model===mergeState.oldModel?{...c,model:mergeState.newModel}:c)}));
+      await ProdV2DB.set(PLAN_COLLECTION,doc.id,{blocks},{merge:true});
+    }
+    resultEl.className='notice plan-ok';
+    resultEl.textContent=`✓ Merge สำเร็จ — รวม "${mergeState.oldModel}" เข้ากับ "${mergeState.newModel}" แล้ว (${mergeState.planDocs.length} Plan / ${mergeState.actualDocs.length} Actual Log) ลองเปิด Dashboard ดูใหม่ได้เลย`;
+    mergeState=null;
+  }catch(e){resultEl.className='notice plan-warn';resultEl.textContent='Merge ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);}
+  finally{btn.disabled=true;}
+});
