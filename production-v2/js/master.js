@@ -489,12 +489,35 @@ const C_NIGHT_BLOCKS=[
   ['07:00','08:00','WORK',60,10,6]
 ];
 
+function carryForwardRounds(blocks,cycleMin){
+  // Computes each WORK block's rounds from a RUNNING cumulative total of
+  // worked minutes, not by flooring each block in isolation (see the long
+  // comment history in git — per-block flooring silently drops fractional
+  // rounds whenever a block's length isn't a clean multiple of the cycle
+  // time, under-counting the whole shift). The shift TOTAL is rounded UP
+  // (ceiling) rather than down — e.g. 630÷12=52.5 becomes 53, not 52 — with
+  // the single leftover fractional round absorbed into the LAST WORK block
+  // only; every other block keeps the same floor-based distribution.
+  const totalWorkMin=blocks.filter(([,,type])=>type==='WORK').reduce((s,[,,,minutes])=>s+minutes,0);
+  const targetTotal=Math.ceil(totalWorkMin/cycleMin);
+  let cumMin=0,cumRounds=0;
+  return blocks.map(([start,end,type,minutes],i)=>{
+    if(type!=='WORK')return {start,end,type,minutes,cycleMin:null,plannedRounds:0};
+    cumMin+=minutes;
+    const isLastWork=!blocks.slice(i+1).some(([,,t])=>t==='WORK');
+    const newCumRounds=isLastWork?targetTotal:Math.floor(cumMin/cycleMin);
+    const rounds=newCumRounds-cumRounds;
+    cumRounds=newCumRounds;
+    return {start,end,type,minutes,cycleMin,plannedRounds:rounds};
+  });
+}
 function shiftRecord(lineId,shift,blocks,status,cycleMin){
+  // blocks: array of [start,end,type,minutes] tuples (any trailing
+  // cycleMin/plannedRounds elements some older tuples still carry are
+  // ignored — this function is now the single source of truth for rounds).
+  const computed=carryForwardRounds(blocks,cycleMin);
   return {
-    lineId,shift,blocks:blocks.map((b,i)=>({
-      order:i+1,start:b[0],end:b[1],type:b[2],minutes:b[3],
-      cycleMin:b[4],plannedRounds:b[5]
-    })),
+    lineId,shift,blocks:computed.map((b,i)=>({order:i+1,...b})),
     standardCycleMinPerRound:cycleMin,
     verificationStatus:status,
     active:true,updatedAt:Date.now()
@@ -506,26 +529,18 @@ async function initLineCShift(){
   await saveShift('shift_C_DAY',shiftRecord('C','DAY',C_DAY_BLOCKS,'CONFIRMED',10));
   await saveShift('shift_C_NIGHT',shiftRecord('C','NIGHT',C_NIGHT_BLOCKS,'CONFIRMED',10));
 }
-function withCycle(blocks,cycleMin){
-  // Reuses Line C's confirmed start/end/type/minutes for each block, but
-  // recomputes plannedRounds at a different cycle time (for A/B's still-
-  // provisional cycle). BREAK blocks are untouched (no cycle/rounds).
-  return blocks.map(([start,end,type,minutes])=>
-    type==='WORK' ? [start,end,type,minutes,cycleMin,Math.floor(minutes/cycleMin)]
-                  : [start,end,type,minutes,null,0]
-  );
-}
 async function initABShiftDraft(){
   /* Work hours & break windows are now confirmed the SAME across every line
      (per user, 2026-09-02) — so A and B reuse Line C's time blocks exactly.
-     What's still provisional for A/B is the cycle time itself (rounds/hour),
-     so plannedRounds here is only an estimate at 12 min/round, and
-     verificationStatus stays PENDING until that cycle rate is verified. */
-  const dayBlocks=withCycle(C_DAY_BLOCKS,12);
-  const nightBlocks=withCycle(C_NIGHT_BLOCKS,12);
+     Cycle time is confirmed unchanged at 12 min/round for both A and B (per
+     user, 2026-09-03) — plannedRounds is computed via carryForwardRounds so
+     the shift totals correctly equal floor(630/12)=52, not the old
+     per-block-floor result of 49. verificationStatus stays PENDING since
+     the cycle rate itself is still provisional, even though it's unchanged
+     from before. */
   for(const lineId of ['A','B']){
-    await saveShift(`shift_${lineId}_DAY`,shiftRecord(lineId,'DAY',dayBlocks,'PENDING',12));
-    await saveShift(`shift_${lineId}_NIGHT`,shiftRecord(lineId,'NIGHT',nightBlocks,'PENDING',12));
+    await saveShift(`shift_${lineId}_DAY`,shiftRecord(lineId,'DAY',C_DAY_BLOCKS,'PENDING',12));
+    await saveShift(`shift_${lineId}_NIGHT`,shiftRecord(lineId,'NIGHT',C_NIGHT_BLOCKS,'PENDING',12));
   }
 }
 async function loadShiftMaster(){
@@ -546,7 +561,7 @@ async function loadShiftMaster(){
   const body=document.getElementById('shiftRows'), sum=document.getElementById('shiftSummary');
   if(!rec){
     sum.textContent=`Line ${lineSel.value} / ${shiftSel.value}: ยังไม่มี Shift Master`;
-    body.innerHTML='<tr><td colspan="6">ยังไม่มีข้อมูล</td></tr>'; return;
+    body.innerHTML='<tr><td colspan="7">ยังไม่มีข้อมูล</td></tr>'; return;
   }
   const blocks=rec.blocks||[];
   const workMin=blocks.filter(b=>b.type==='WORK').reduce((s,b)=>s+Number(b.minutes||0),0);
@@ -554,14 +569,37 @@ async function loadShiftMaster(){
   const state=rec.verificationStatus||'PENDING';
   sum.textContent=`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds} planned rounds • ${state}`;
   if(!blocks.length){
-    body.innerHTML=`<tr><td colspan="6">Draft only — provisional ${rec.provisionalRoundsPerHour||'-'} rounds/hour. Time blocks Pending Verification.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="7">Draft only — provisional ${rec.provisionalRoundsPerHour||'-'} rounds/hour. Time blocks Pending Verification.</td></tr>`;
     return;
   }
-  body.innerHTML=blocks.map(b=>`<tr>
-    <td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.type)}</td><td>${b.minutes}</td>
-    <td>${b.cycleMin??'-'}</td><td>${b.plannedRounds??0}</td><td>${state}</td>
+  body.innerHTML=blocks.map((b,i)=>`<tr data-block-index="${i}">
+    <td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.type)}</td>
+    <td><input type="number" min="0" value="${b.minutes}" data-k="minutes" ${b.type!=="WORK"?"disabled":""}></td>
+    <td>${b.cycleMin??'-'}</td>
+    <td><input type="number" min="0" value="${b.plannedRounds??0}" data-k="plannedRounds" ${b.type!=="WORK"?"disabled":""}></td>
+    <td>${state}</td>
+    <td class="right"><button data-save-block="${i}">Save</button></td>
   </tr>`).join('');
 }
+document.getElementById('shiftRows')?.addEventListener('click',async e=>{
+  const btn=e.target.closest('[data-save-block]');
+  if(!btn)return;
+  const lineId=document.getElementById('shiftLineFilter').value,shift=document.getElementById('shiftTypeFilter').value;
+  const id=`shift_${lineId}_${shift}`;
+  const idx=Number(btn.dataset.saveBlock);
+  const tr=btn.closest('tr');
+  const newMinutes=Number(tr.querySelector('[data-k="minutes"]').value)||0;
+  const newRounds=Number(tr.querySelector('[data-k="plannedRounds"]').value)||0;
+  try{
+    setStatus('Saving…');btn.disabled=true;
+    const snap=await ProdV2DB.collection(SHIFT_COLLECTION).doc(id).get();
+    const data=snap.data();
+    const blocks=(data.blocks||[]).map((b,i)=>i===idx?{...b,minutes:newMinutes,plannedRounds:newRounds}:b);
+    await ProdV2DB.set(SHIFT_COLLECTION,id,{blocks},{merge:true});
+    setStatus('✓ Block saved — ปรับ Rounds เองแล้ว (Shift Master ไม่คำนวณสูตรทับให้อีกจนกว่าจะกด Initialize ใหม่)','ok');
+    await loadShiftMaster();
+  }catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');btn.disabled=false;}
+});
 
 document.getElementById('initShiftC')?.addEventListener('click',async()=>{
   if(!confirm('Initialize Line C Shift Master?\n\nDAY = confirmed 63 rounds / 630 work min\nNIGHT = confirmed 63 rounds / 630 work min (19:50–08:00)'))return;
