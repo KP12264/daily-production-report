@@ -42,7 +42,7 @@ function lossAtInterval(st,en){
   return (S.losses||[]).reduce((sum,l)=>{let a=mins(l.start),b=mins(l.end);if(b<a)b+=1440;if(a<sm)a+=1440;if(b<=sm||a>=em)return sum;return sum+Math.max(0,Math.min(em,b)-Math.max(sm,a))},0)
 }
 function splitBlocks(){
-  let blocks=(S.shift?.blocks||[]).filter(b=>val(b.type).toUpperCase()==="WORK"),out=[];
+  let blocks=(S.shift?.blocks||[]).filter(b=>val(b.type).toUpperCase()==="WORK"),raw=[];
   blocks.forEach(b=>{
     let cuts=[b.start,b.end];
     (S.events||[]).forEach(e=>{[e.actualTime,e.effectiveFrom].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
@@ -51,9 +51,38 @@ function splitBlocks(){
     for(let i=0;i<cuts.length-1;i++){
       let st=cuts[i],en=cuts[i+1],duration=mins(en)-mins(st);if(duration<0)duration+=1440;
       let lossMinutes=lossAtInterval(st,en),productiveMinutes=Math.max(0,duration-lossMinutes);
-      out.push({start:st,end:en,minutes:duration,cycle,scheduledRounds:Math.floor(duration/cycle),lossMinutes,productiveMinutes,rounds:Math.floor(productiveMinutes/cycle)})
+      raw.push({start:st,end:en,minutes:duration,cycle,lossMinutes,productiveMinutes})
     }
-  });return out
+  });
+  return carryForwardPlanRounds(raw);
+}
+function carryForwardPlanRounds(raw){
+  // Same fix as Master Setup's carryForwardRounds — flooring each interval's
+  // rounds in isolation silently drops fractional rounds whenever an
+  // interval's minutes aren't a clean multiple of the cycle time, and the
+  // shift TOTAL should round UP, not down. Runs across every WORK interval
+  // for the whole shift continuously (Pallet Change cuts don't reset it),
+  // matching exactly how Master Setup now computes plannedRounds — so a
+  // Daily Plan built from the same Master data always agrees with it.
+  // scheduledRounds (Original Plan, no loss deducted) and rounds (Adjusted
+  // Plan, loss deducted) are carried forward independently since they track
+  // two different minute totals (raw duration vs productive minutes).
+  if(!raw.length)return raw;
+  const cycle=raw[0].cycle||10;
+  const totalSched=raw.reduce((s,r)=>s+r.minutes,0);
+  const totalProd=raw.reduce((s,r)=>s+r.productiveMinutes,0);
+  const targetSched=Math.ceil(totalSched/cycle);
+  const targetProd=Math.ceil(totalProd/cycle);
+  let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0;
+  return raw.map((r,i)=>{
+    cumSchedMin+=r.minutes;cumProdMin+=r.productiveMinutes;
+    const isLast=i===raw.length-1;
+    const newSchedRounds=isLast?targetSched:Math.floor(cumSchedMin/r.cycle);
+    const newProdRounds=isLast?targetProd:Math.floor(cumProdMin/r.cycle);
+    const scheduledRounds=newSchedRounds-cumSchedRounds,rounds=newProdRounds-cumProdRounds;
+    cumSchedRounds=newSchedRounds;cumProdRounds=newProdRounds;
+    return {...r,scheduledRounds,rounds};
+  });
 }
 function build(){
   let blocks=splitBlocks(),allKeys=new Map;
@@ -139,13 +168,13 @@ function table(){
  if(!S.matrix.length){$("planTableArea").innerHTML='<div class="empty-state">ไม่มี WORK Time Block</div>';return}
  let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));
  let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
- let h='<div class="table-scroll"><table class="grid plan-grid"><thead><tr><th>Time Block</th><th>Sched. Rounds</th><th>Loss</th><th>Adj. Rounds</th>';
+ let h='<div class="table-scroll plan-grid-viewport"><table class="grid plan-grid"><thead><tr><th class="plan-sticky-left">Time Block</th><th>Sched. Rounds</th><th>Loss</th><th>Adj. Rounds</th>';
  ps.forEach(p=>h+=`<th>${p.model}<br><small>${p.door||"-"}</small></th>`);
- h+='<th>Original Plan</th><th>Adjusted Plan</th></tr></thead><tbody>';
- S.matrix.forEach(x=>{h+=`<tr><td><b>${x.start}–${x.end}</b></td><td>${x.scheduledRounds}</td><td>${x.lossMinutes?`<b>${x.lossMinutes} min</b>`:"-"}</td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td>${x.originalTotal}</td><td><b>${x.total}</b></td></tr>`});
- h+=`<tr class="total-row"><td>TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.scheduledRounds,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.lossMinutes,0)} min</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;
+ h+='<th class="plan-sticky-right plan-sticky-right-1">Original Plan</th><th class="plan-sticky-right plan-sticky-right-2">Adjusted Plan</th></tr></thead><tbody>';
+ S.matrix.forEach(x=>{h+=`<tr><td class="plan-sticky-left"><b>${x.start}–${x.end}</b></td><td>${x.scheduledRounds}</td><td>${x.lossMinutes?`<b>${x.lossMinutes} min</b>`:"-"}</td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td class="plan-sticky-right plan-sticky-right-1">${x.originalTotal}</td><td class="plan-sticky-right plan-sticky-right-2"><b>${x.total}</b></td></tr>`});
+ h+=`<tr class="total-row"><td class="plan-sticky-left">TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.scheduledRounds,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.lossMinutes,0)} min</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;
  ps.forEach((p,i)=>h+=`<td>${S.matrix.reduce((s,x)=>s+(x.cells[i]?.plan||0),0)}</td>`);
- h+=`<td>${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;
+ h+=`<td class="plan-sticky-right plan-sticky-right-1">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="plan-sticky-right plan-sticky-right-2">${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
 async function load(){

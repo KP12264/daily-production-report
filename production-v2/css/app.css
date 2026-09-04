@@ -239,6 +239,8 @@ input,select,textarea,.grid input,.grid select{
 .pallet-card:hover{border-color:#9bb7d2;background:var(--bg-soft)}.pallet-card.selected{border-color:#6aa4df;background:#f3f8ff}.pallet-card input{margin-top:3px}
 .pallet-card b{display:block;font-size:12px;color:var(--heading);margin-bottom:5px}.pallet-card span{display:block;font-size:11px;color:var(--muted);line-height:1.45}
 .table-scroll{overflow:auto;margin-top:14px}.plan-grid{min-width:900px}.plan-grid th{text-align:center;vertical-align:bottom}.plan-grid td{text-align:center}.plan-grid small{font-size:9px;color:var(--muted);font-weight:500}
+.plan-grid th,.plan-grid td{padding:6px 8px}
+.plan-grid th:not(.plan-sticky-left):not(.plan-sticky-right),.plan-grid td:not(.plan-sticky-left):not(.plan-sticky-right){min-width:52px;max-width:64px}
 .plan-grid .total-row td{font-weight:700;background:var(--bg-soft);border-top:2px solid var(--line)}
 @media(max-width:900px){.plan-kpis{grid-template-columns:repeat(2,1fr)}.pallet-grid{grid-template-columns:1fr}.plan-actions{justify-content:flex-start}}
 
@@ -681,3 +683,18 @@ input,select,textarea,.grid input,.grid select{
 .mobile-entry-plan{flex:0 0 auto;font-size:11px;color:var(--muted);white-space:nowrap}
 .mobile-entry-input{flex:0 0 auto;width:76px;height:44px;font-size:17px;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--bg-soft);color:var(--heading)}
 .mobile-entry-input:focus{outline:2px solid var(--blue);border-color:var(--blue);background:var(--card)}
+
+/* DAILY PLAN — Plan by Time Block: sticky Time Block column (left) + sticky
+   Original/Adjusted Plan columns (right), so context stays visible while
+   scrolling through many Model columns instead of losing track of which
+   row/total you're looking at. */
+.plan-grid-viewport{max-height:70vh}
+.plan-grid th,.plan-grid td{min-width:70px;text-align:center}
+.plan-grid th.plan-sticky-left,.plan-grid td.plan-sticky-left{min-width:110px;text-align:left}
+.plan-grid .plan-sticky-left{position:sticky;left:0;z-index:2;background:var(--card);box-shadow:2px 0 6px rgba(15,39,71,.06)}
+.plan-grid thead .plan-sticky-left{z-index:5;background:var(--bg-soft)}
+.plan-grid .plan-sticky-right{position:sticky;z-index:2;background:var(--card);border-left:1px solid var(--line);min-width:90px}
+.plan-grid .plan-sticky-right-1{right:90px}
+.plan-grid .plan-sticky-right-2{right:0;box-shadow:-2px 0 6px rgba(15,39,71,.06)}
+.plan-grid thead .plan-sticky-right{z-index:5;background:var(--bg-soft)}
+.plan-grid tr.total-row .plan-sticky-left,.plan-grid tr.total-row .plan-sticky-right{background:var(--bg-soft);font-weight:800}
