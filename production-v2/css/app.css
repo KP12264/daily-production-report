@@ -135,6 +135,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
 .kpi-card.accent-green:before{background:var(--green)}
 .kpi-card.accent-blue:before{background:var(--blue)}
 .kpi-card.accent-orange:before{background:var(--orange)}
+.kpi-card.accent-purple:before{background:#7c3aed}
 .kpi-label{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
 .kpi-value{font-size:34px;font-weight:700;margin-top:12px;line-height:1;color:var(--heading)}
 .kpi-unit{font-size:12px;color:var(--muted);margin-top:7px}
@@ -169,7 +170,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .filter-card{grid-template-columns:1fr}
   .pagehead,.section-title-row{align-items:flex-start;flex-direction:column}
-  .grid:not(.actual-grid){display:block;overflow-x:auto;white-space:nowrap}
+  .grid:not(.actual-grid):not(.plan-grid){display:block;overflow-x:auto;white-space:nowrap}
 }
 
 
@@ -698,3 +699,18 @@ input,select,textarea,.grid input,.grid select{
 .plan-grid .plan-sticky-right-2{right:0;box-shadow:-2px 0 6px rgba(15,39,71,.06)}
 .plan-grid thead .plan-sticky-right{z-index:5;background:var(--bg-soft)}
 .plan-grid tr.total-row .plan-sticky-left,.plan-grid tr.total-row .plan-sticky-right{background:var(--bg-soft);font-weight:800}
+
+/* MOBILE — Plan by Time Block matrix: same sticky-column treatment as the
+   Production Entry matrix, just tighter for phones since Line A alone can
+   have 20+ Model columns. */
+@media(max-width:560px){
+  .plan-grid th,.plan-grid td{min-width:46px;padding:5px 6px;font-size:11px}
+  .plan-grid th.plan-sticky-left,.plan-grid td.plan-sticky-left{min-width:76px}
+  .plan-grid-viewport{max-height:55vh}
+}
+
+/* DAILY PLAN — tracked Break rows (11:40-12:20, 23:10-00:00) shown in the
+   Plan by Time Block table, muted so they read as "0 Plan" context, not a
+   real production block, while still being fully visible/scrollable. */
+.plan-break-row{background:var(--bg-soft)}
+.plan-break-row .plan-sticky-left small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.04em;vertical-align:middle}

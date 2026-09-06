@@ -41,17 +41,27 @@ function lossAtInterval(st,en){
   let sm=mins(st),em=mins(en);if(em<sm)em+=1440;
   return (S.losses||[]).reduce((sum,l)=>{let a=mins(l.start),b=mins(l.end);if(b<a)b+=1440;if(a<sm)a+=1440;if(b<=sm||a>=em)return sum;return sum+Math.max(0,Math.min(em,b)-Math.max(sm,a))},0)
 }
+// Break windows where Actual can still be entered (e.g. staggered/rotating
+// breaks mean not everyone stops at once, so some output is possible) even
+// though Plan always stays 0 there. Requested explicitly for just these two
+// windows — not every Break, and not configurable from the UI (yet).
+const TRACKED_BREAK_WINDOWS=[["11:40","12:20"],["23:10","00:00"]];
 function splitBlocks(){
-  let blocks=(S.shift?.blocks||[]).filter(b=>val(b.type).toUpperCase()==="WORK"),raw=[];
-  blocks.forEach(b=>{
-    let cuts=[b.start,b.end];
-    (S.events||[]).forEach(e=>{[e.actualTime,e.effectiveFrom].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
-    (S.losses||[]).forEach(l=>{[l.start,l.end].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
-    cuts=[...new Set(cuts)].sort();let cycle=Number(b.cycle||S.shift?.standardCycleMinPerRound||10);
-    for(let i=0;i<cuts.length-1;i++){
-      let st=cuts[i],en=cuts[i+1],duration=mins(en)-mins(st);if(duration<0)duration+=1440;
-      let lossMinutes=lossAtInterval(st,en),productiveMinutes=Math.max(0,duration-lossMinutes);
-      raw.push({start:st,end:en,minutes:duration,cycle,lossMinutes,productiveMinutes})
+  let raw=[];
+  (S.shift?.blocks||[]).forEach(b=>{
+    let type=val(b.type).toUpperCase();
+    if(type==="WORK"){
+      let cuts=[b.start,b.end];
+      (S.events||[]).forEach(e=>{[e.actualTime,e.effectiveFrom].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
+      (S.losses||[]).forEach(l=>{[l.start,l.end].forEach(t=>{if(t&&t>b.start&&t<b.end)cuts.push(t)})});
+      cuts=[...new Set(cuts)].sort();let cycle=Number(b.cycle||S.shift?.standardCycleMinPerRound||10);
+      for(let i=0;i<cuts.length-1;i++){
+        let st=cuts[i],en=cuts[i+1],duration=mins(en)-mins(st);if(duration<0)duration+=1440;
+        let lossMinutes=lossAtInterval(st,en),productiveMinutes=Math.max(0,duration-lossMinutes);
+        raw.push({start:st,end:en,minutes:duration,cycle,lossMinutes,productiveMinutes,type:"WORK"})
+      }
+    }else if(type==="BREAK"&&TRACKED_BREAK_WINDOWS.some(([s,e])=>b.start===s&&b.end===e)){
+      raw.push({start:b.start,end:b.end,minutes:Number(b.minutes)||0,cycle:null,lossMinutes:0,productiveMinutes:0,type:"BREAK"});
     }
   });
   return carryForwardPlanRounds(raw);
@@ -61,22 +71,26 @@ function carryForwardPlanRounds(raw){
   // rounds in isolation silently drops fractional rounds whenever an
   // interval's minutes aren't a clean multiple of the cycle time, and the
   // shift TOTAL should round UP, not down. Runs across every WORK interval
-  // for the whole shift continuously (Pallet Change cuts don't reset it),
-  // matching exactly how Master Setup now computes plannedRounds — so a
-  // Daily Plan built from the same Master data always agrees with it.
-  // scheduledRounds (Original Plan, no loss deducted) and rounds (Adjusted
-  // Plan, loss deducted) are carried forward independently since they track
-  // two different minute totals (raw duration vs productive minutes).
-  if(!raw.length)return raw;
-  const cycle=raw[0].cycle||10;
-  const totalSched=raw.reduce((s,r)=>s+r.minutes,0);
-  const totalProd=raw.reduce((s,r)=>s+r.productiveMinutes,0);
+  // for the whole shift continuously (Pallet Change cuts don't reset it,
+  // and the tracked BREAK entries interleaved in `raw` are skipped here —
+  // they always get 0 rounds regardless of position), matching exactly how
+  // Master Setup now computes plannedRounds — so a Daily Plan built from the
+  // same Master data always agrees with it. scheduledRounds (Original Plan,
+  // no loss deducted) and rounds (Adjusted Plan, loss deducted) are carried
+  // forward independently since they track two different minute totals.
+  const work=raw.filter(r=>r.type==="WORK");
+  if(!work.length)return raw.map(r=>({...r,scheduledRounds:0,rounds:0}));
+  const cycle=work[0].cycle||10;
+  const totalSched=work.reduce((s,r)=>s+r.minutes,0);
+  const totalProd=work.reduce((s,r)=>s+r.productiveMinutes,0);
   const targetSched=Math.ceil(totalSched/cycle);
   const targetProd=Math.ceil(totalProd/cycle);
-  let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0;
-  return raw.map((r,i)=>{
+  let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0,workSeen=0;
+  return raw.map(r=>{
+    if(r.type!=="WORK")return {...r,scheduledRounds:0,rounds:0};
+    workSeen++;
     cumSchedMin+=r.minutes;cumProdMin+=r.productiveMinutes;
-    const isLast=i===raw.length-1;
+    const isLast=workSeen===work.length;
     const newSchedRounds=isLast?targetSched:Math.floor(cumSchedMin/r.cycle);
     const newProdRounds=isLast?targetProd:Math.floor(cumProdMin/r.cycle);
     const scheduledRounds=newSchedRounds-cumSchedRounds,rounds=newProdRounds-cumProdRounds;
@@ -86,9 +100,17 @@ function carryForwardPlanRounds(raw){
 }
 function build(){
   let blocks=splitBlocks(),allKeys=new Map;
-  blocks.forEach(b=>mapForSlots(slotStateAt(b.start)).forEach(p=>allKeys.set(p.model+"|||"+p.door,{model:p.model,door:p.door})));
+  blocks.filter(b=>b.type==="WORK").forEach(b=>mapForSlots(slotStateAt(b.start)).forEach(p=>allKeys.set(p.model+"|||"+p.door,{model:p.model,door:p.door})));
   let cols=[...allKeys.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
   S.matrix=blocks.map(b=>{
+    if(b.type==="BREAK"){
+      // Plan is always 0 for a tracked Break — Actual can still be typed at
+      // Production Entry (staggered breaks), and it counts toward the day's
+      // Total/Achievement like any other cell, since that's just a normal
+      // sum over actualByCell regardless of which block it came from.
+      let cells=cols.map(c=>({...c,qty:0,originalPlan:0,plan:0}));
+      return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:0,lossMinutes:0,productiveMinutes:0,rounds:0,activePositions:0,slotSnapshot:[],cells,originalTotal:0,total:0,type:"BREAK"};
+    }
     let slots=slotStateAt(b.start),pm=new Map(mapForSlots(slots).map(p=>[p.model+"|||"+p.door,p]));
     let cells=cols.map(c=>{let p=pm.get(c.model+"|||"+c.door),qty=p?.qty||0;return{...c,qty,originalPlan:b.scheduledRounds*qty,plan:b.rounds*qty}});
     return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,cells,originalTotal:cells.reduce((s,c)=>s+c.originalPlan,0),total:cells.reduce((s,c)=>s+c.plan,0)}
@@ -156,10 +178,13 @@ function pallets(){
  events();
 }
 function kpis(){
-  let p=mapForSet(S.baseActive||S.active).reduce((s,x)=>s+x.qty,0);
+  let posEntries=mapForSet(S.baseActive||S.active);
+  let p=posEntries.reduce((s,x)=>s+x.qty,0);
+  let jig=posEntries.length; // count of jig/position slots, ignoring qty per slot — different from p (which weights by qty)
   let r=S.matrix.reduce((s,x)=>s+x.rounds,0);
   let t=S.matrix.reduce((s,x)=>s+x.total,0);
   $("kpiPallets").textContent=S.active.size;
+  $("kpiJig").textContent=jig;
   $("kpiPositions").textContent=p;
   $("kpiRounds").textContent=r;
   $("kpiPlan").textContent=t.toLocaleString();
@@ -171,7 +196,7 @@ function table(){
  let h='<div class="table-scroll plan-grid-viewport"><table class="grid plan-grid"><thead><tr><th class="plan-sticky-left">Time Block</th><th>Sched. Rounds</th><th>Loss</th><th>Adj. Rounds</th>';
  ps.forEach(p=>h+=`<th>${p.model}<br><small>${p.door||"-"}</small></th>`);
  h+='<th class="plan-sticky-right plan-sticky-right-1">Original Plan</th><th class="plan-sticky-right plan-sticky-right-2">Adjusted Plan</th></tr></thead><tbody>';
- S.matrix.forEach(x=>{h+=`<tr><td class="plan-sticky-left"><b>${x.start}–${x.end}</b></td><td>${x.scheduledRounds}</td><td>${x.lossMinutes?`<b>${x.lossMinutes} min</b>`:"-"}</td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td class="plan-sticky-right plan-sticky-right-1">${x.originalTotal}</td><td class="plan-sticky-right plan-sticky-right-2"><b>${x.total}</b></td></tr>`});
+ S.matrix.forEach(x=>{h+=`<tr class="${x.type==="BREAK"?"plan-break-row":""}"><td class="plan-sticky-left"><b>${x.start}–${x.end}</b>${x.type==="BREAK"?' <small>BREAK</small>':""}</td><td>${x.scheduledRounds}</td><td>${x.lossMinutes?`<b>${x.lossMinutes} min</b>`:"-"}</td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td class="plan-sticky-right plan-sticky-right-1">${x.originalTotal}</td><td class="plan-sticky-right plan-sticky-right-2"><b>${x.total}</b></td></tr>`});
  h+=`<tr class="total-row"><td class="plan-sticky-left">TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.scheduledRounds,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.lossMinutes,0)} min</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;
  ps.forEach((p,i)=>h+=`<td>${S.matrix.reduce((s,x)=>s+(x.cells[i]?.plan||0),0)}</td>`);
  h+=`<td class="plan-sticky-right plan-sticky-right-1">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="plan-sticky-right plan-sticky-right-2">${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;

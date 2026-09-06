@@ -1,0 +1,22 @@
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cabinet Assembly · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260902-fix44">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a class="active" href="assembly.html">Assembly</a><a href="master.html">Master Setup</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<section class="hero"><div><div class="eyebrow">CABINET ASSEMBLY · READ ONLY</div><h1>จำนวนตู้ที่ประกอบได้</h1><p>คำนวณจากยอด Actual ที่ฉีดได้จริงของแต่ละ Door เทียบกับสูตรประกอบตู้ · รวมทุก Line</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="asmStatus" class="hero-status">Ready</div></div></section>
+<main class="content">
+<section class="filter-card">
+<label><span>DATE</span><input id="asmDate" type="date"></label>
+<label><span>SHIFT</span><select id="asmShift"><option value="">All Shifts</option><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+<button id="asmLoadBtn" class="primary">Load</button>
+</section>
+<div id="asmMessage" class="notice info-notice">เลือกวันที่แล้วกด Load — ค่าที่ได้คือ "ประกอบได้สูงสุดถ้า Model นี้ได้ชิ้นส่วนร่วมไปทั้งหมดคนเดียว" ไม่ใช่ยอดที่หักลบกับ Model อื่นแล้ว</div>
+<section id="asmResults"></section>
+</main>
+</div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-1"></script>
+<script src="js/assembly.js?v=20260902-fix1"></script>
+</body></html>

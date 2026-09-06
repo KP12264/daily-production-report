@@ -76,7 +76,7 @@ function render(){
 }
 function renderDesktopMatrix(ps,blocks){
  let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
- blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>Plan ${Number(b.total||0)}</small></th>`);
+ blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}</small></th>`);
  h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
  ps.forEach(p=>{
    let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div></td>`;
@@ -84,7 +84,7 @@ function renderDesktopMatrix(ps,blocks){
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
      let disabled=pl===0?"":"";
-     h+=`<td class="actual-cell"><div class="cell-plan">P ${pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
+     h+=`<td class="actual-cell"><div class="cell-plan">${b.type==="BREAK"?"BREAK":"P "+pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
    });
    let diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
    h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
@@ -104,12 +104,12 @@ function renderMobileMatrix(ps,blocks){
  let bi=S.mobileBlock,b=blocks[bi];
  let h=`<div class="mobile-entry"><div class="mobile-block-nav">
   <button id="mbPrev" ${bi===0?"disabled":""}>‹</button>
-  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · Plan ${Number(b.total||0)}</small></div>
+  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · ${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}</small></div>
   <button id="mbNext" ${bi===blocks.length-1?"disabled":""}>›</button>
  </div><div class="mobile-entry-rows">`;
  ps.forEach((p,ri)=>{
   let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
-  h+=`<div class="mobile-entry-row"><div class="mobile-entry-label"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div><div class="mobile-entry-plan">Plan ${pl}</div><input class="actual-input mobile-entry-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ri}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0"></div>`;
+  h+=`<div class="mobile-entry-row"><div class="mobile-entry-label"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div><div class="mobile-entry-plan">${b.type==="BREAK"?"BREAK":"Plan "+pl}</div><input class="actual-input mobile-entry-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ri}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0"></div>`;
  });
  h+='</div></div>';
  $("entryTableArea").innerHTML=h;
