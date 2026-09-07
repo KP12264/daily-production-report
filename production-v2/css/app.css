@@ -55,7 +55,7 @@ button,input,select,textarea{font:inherit}
   color:#bfdbfe;text-decoration:none;padding:8px 13px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap
 }
 .app-links a:hover,.legacy-link:hover{background:rgba(255,255,255,.09)}
-.app-links a.active{background:var(--blue);color:var(--card)}
+.app-links a.active{background:rgba(255,255,255,.12);color:#fff;box-shadow:inset 0 -2px 0 var(--blue)}
 .legacy-link{margin-left:2px;color:#cbd5e1}
 
 .hero{
@@ -510,8 +510,8 @@ input,select,textarea,.grid input,.grid select{
 @media(max-width:900px){.exec-hero{flex-direction:column;align-items:flex-start}.exec-hero-num{font-size:48px}}
 
 /* THEME — Light/Dark toggle button in the header */
-.theme-toggle-btn{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:6px}
-.theme-toggle-btn:hover{background:rgba(255,255,255,.16)}
+.theme-toggle-btn{border:0;border-left:1px solid rgba(255,255,255,.15);background:none;color:#bfdbfe;border-radius:0;padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:8px;font-family:inherit}
+.theme-toggle-btn:hover{background:rgba(255,255,255,.1);color:#fff}
 
 /* DASHBOARD — prominent status banner, above the small KPI grid */
 .dash-status-row{display:flex;gap:14px;align-items:stretch;margin:16px 0;flex-wrap:wrap}
@@ -725,7 +725,7 @@ input,select,textarea,.grid input,.grid select{
 .nav-group{position:relative}
 .nav-group-btn{background:none;border:0;color:#bfdbfe;padding:8px 13px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
 .nav-group-btn:hover{background:rgba(255,255,255,.1);color:#fff}
-.nav-group-btn.current{background:var(--blue);color:#fff}
+.nav-group-btn.current{background:rgba(255,255,255,.12);color:#fff;box-shadow:inset 0 -2px 0 var(--blue)}
 .nav-dropdown{display:none;position:absolute;top:100%;left:0;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:190px;padding:6px;z-index:80;margin-top:6px}
 .nav-dropdown.open{display:block}
 .nav-dropdown a{display:block;padding:9px 12px;border-radius:8px;color:var(--text);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap}
