@@ -56,9 +56,10 @@ const BOM=[
    {name:"FUF14",parts:{R:"fuf14_r"}},
    {name:"FUF18/22",parts:{R:"fuf1822_r"}},
  ]},
- {group:"TM14 / TM19-21",cabinets:[
+ {group:"TM14 / TM19-21 / TM10-12",cabinets:[
    {name:"TM14",parts:{F:"tm14_f",R:"tm14_r"}},
    {name:"TM19/21",parts:{F:"tm1921_f",R:"tm1921_r"}},
+   {name:"TM10/12",parts:{F:"tm1012_f",R:"tm1012_r"}},
  ]},
  {group:"EHRT",cabinets:[
    {name:"EHRT 2070 NL",parts:{F:"ehrt_f_common",R:"ehrt2070_r"}},
@@ -83,8 +84,7 @@ const BOM=[
  {group:"T-Door US (ไม่ Common กับใคร)",cabinets:[
    {name:"T-Door US",parts:{RR:"tdus_rr",RL:"tdus_rl",FR:"tdus_fr",FL:"tdus_fl"}},
  ]},
- {group:"TM10/12, G3",cabinets:[
-   {name:"TM10/12",parts:{F:"tm1012_f",R:"tm1012_r"}},
+ {group:"G3",cabinets:[
    {name:"G3 320",parts:{F:"g3320_f",R:"g3320_r"}},
    {name:"G3 350",parts:{F:"g3350_f",R:"g3350_r"}},
  ]},

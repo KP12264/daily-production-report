@@ -150,6 +150,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
   display:grid;grid-template-columns:180px 180px 180px 1fr;gap:12px;
   background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:16px
 }
+.filter-card label{min-width:0}
+.filter-card label input,.filter-card label select{width:100%;max-width:100%}
 .fake-filter{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--bg-soft)}
 .fake-filter span{display:block;font-size:9px;letter-spacing:.12em;color:var(--muted);font-weight:900}
 .fake-filter b{display:block;font-size:12px;margin-top:5px;color:#1e3b58}
