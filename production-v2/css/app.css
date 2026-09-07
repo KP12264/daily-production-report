@@ -284,7 +284,11 @@ input,select,textarea,.grid input,.grid select{
 
 /* STEP 6 — Production Entry */
 .entry-filters label{display:flex;flex-direction:column;gap:6px;min-width:160px}.entry-filters label span{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.06em}.entry-filters input,.entry-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 12px;background:var(--card);color:var(--heading)}
-.entry-kpis{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:12px;margin:14px 0}.entry-kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 3px 12px rgba(15,39,71,.04)}.entry-kpi small{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em}.entry-kpi b{display:block;color:var(--heading);font-size:24px;margin-top:5px}
+.entry-kpis{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:12px;margin:14px 0}.entry-kpi{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 3px 12px rgba(15,39,71,.04)}.entry-kpi:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--line)}.entry-kpi small{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em}.entry-kpi b{display:block;color:var(--heading);font-size:24px;margin-top:5px}
+.entry-kpi.kpi-primary:before{background:var(--blue)}
+.entry-kpi.kpi-primary b{font-size:30px;font-weight:800}
+.entry-kpi.kpi-secondary b{font-size:19px;color:var(--muted);font-weight:600}
+.entry-kpi.kpi-secondary small{opacity:.8}
 .actual-grid th,.actual-grid td{text-align:center;min-width:118px}.actual-grid th:first-child,.actual-grid td:first-child{min-width:150px}.actual-sticky{position:sticky;left:0;background:var(--card);z-index:2;text-align:left!important}.actual-cell{padding:7px!important}.cell-plan{font-size:10px;color:var(--muted);margin-bottom:4px}.actual-input{width:78px;height:34px;border:1px solid var(--line);border-radius:8px;text-align:center;font-weight:700;color:var(--heading);background:var(--card)}.actual-input:focus{outline:2px solid #93c5fd;border-color:#3b82f6}
 @media(max-width:900px){.entry-kpis{grid-template-columns:repeat(2,1fr)}}
 
