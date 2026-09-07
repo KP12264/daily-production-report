@@ -193,32 +193,37 @@ function table(){
  if(!S.matrix.length){$("planTableArea").innerHTML='<div class="empty-state">ไม่มี WORK Time Block</div>';return}
  let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));
  let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
- // Model/Door as ROWS, Time Block as COLUMNS — same orientation as the
- // Production Entry matrix. Time Blocks (11-14) are a much smaller number
- // than Models (20+ on Line A), so this needs far less horizontal scrolling
- // than the old orientation did.
- let h='<div class="table-scroll plan-grid-viewport"><table class="grid plan-grid plan-grid-transposed"><thead><tr><th class="plan-sticky-left">Model / Door</th>';
- S.matrix.forEach(x=>h+=`<th>${x.start}–${x.end}${x.type==="BREAK"?' <small>BREAK</small>':""}<br><small>Plan ${x.total}</small></th>`);
- h+='<th class="plan-sticky-right plan-sticky-right-1">Original Plan</th><th class="plan-sticky-right plan-sticky-right-2">Adjusted Plan</th></tr></thead><tbody>';
- h+='<tr class="plan-meta-row"><td class="plan-sticky-left">Sched. Rounds</td>';
- S.matrix.forEach(x=>h+=`<td>${x.scheduledRounds}</td>`);
- h+='<td class="plan-sticky-right plan-sticky-right-1">–</td><td class="plan-sticky-right plan-sticky-right-2">–</td></tr>';
- h+='<tr class="plan-meta-row"><td class="plan-sticky-left">Loss</td>';
- S.matrix.forEach(x=>h+=`<td>${x.lossMinutes?x.lossMinutes+" min":"-"}</td>`);
- h+='<td class="plan-sticky-right plan-sticky-right-1">–</td><td class="plan-sticky-right plan-sticky-right-2">–</td></tr>';
- h+='<tr class="plan-meta-row"><td class="plan-sticky-left">Adj. Rounds</td>';
- S.matrix.forEach(x=>h+=`<td>${x.rounds}</td>`);
- h+='<td class="plan-sticky-right plan-sticky-right-1">–</td><td class="plan-sticky-right plan-sticky-right-2">–</td></tr>';
- ps.forEach((p,i)=>{
-  h+=`<tr><td class="plan-sticky-left"><b>${p.model}</b><small>${p.door||"-"}</small></td>`;
-  S.matrix.forEach(x=>h+=`<td>${x.cells[i]?.plan||0}</td>`);
-  let origTotal=S.matrix.reduce((s,x)=>s+(x.cells[i]?.originalPlan||0),0);
-  let adjTotal=S.matrix.reduce((s,x)=>s+(x.cells[i]?.plan||0),0);
-  h+=`<td class="plan-sticky-right plan-sticky-right-1">${origTotal}</td><td class="plan-sticky-right plan-sticky-right-2"><b>${adjTotal}</b></td></tr>`;
+ // Reuses the exact same classes as Production Entry's matrix
+ // (production-matrix-viewport / actual-grid / model-col / actual-cell /
+ // cell-plan / sum-col) so this looks pixel-consistent with it — same
+ // spacing, same "P 7" cell label style, same sticky-left Model/Door
+ // column. No <input> here since this table is a read-only Plan reference,
+ // not where Actual gets typed (that's still only Production Entry).
+ let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
+ S.matrix.forEach(x=>h+=`<th>${x.start}–${x.end}<br><small>${x.type==="BREAK"?"BREAK":"Plan "+x.total}</small></th>`);
+ h+='<th class="sum-col sum-plan">Original</th><th class="sum-col sum-actual">Adjusted</th></tr></thead><tbody>';
+ h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Sched. Rounds</b></div></td>';
+ S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.scheduledRounds}</div></td>`);
+ h+='<td class="sum-col sum-plan">–</td><td class="sum-col sum-actual">–</td></tr>';
+ h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Loss</b></div></td>';
+ S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.lossMinutes?x.lossMinutes+" min":"-"}</div></td>`);
+ h+='<td class="sum-col sum-plan">–</td><td class="sum-col sum-actual">–</td></tr>';
+ h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Adj. Rounds</b></div></td>';
+ S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.rounds}</div></td>`);
+ h+='<td class="sum-col sum-plan">–</td><td class="sum-col sum-actual">–</td></tr>';
+ ps.forEach(p=>{
+  h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${p.model}</b><small>${p.door||"-"}</small></div></td>`;
+  let origTotal=0,adjTotal=0;
+  S.matrix.forEach(x=>{
+   let c=x.cells.find(cc=>cc.model===p.model&&cc.door===p.door),pl=Number(c?.plan||0);
+   origTotal+=Number(c?.originalPlan||0);adjTotal+=pl;
+   h+=`<td class="actual-cell"><div class="cell-plan"><b>${pl}</b></div></td>`;
+  });
+  h+=`<td class="sum-col sum-plan">${origTotal}</td><td class="sum-col sum-actual"><b>${adjTotal}</b></td></tr>`;
  });
- h+='<tr class="total-row"><td class="plan-sticky-left">TOTAL</td>';
- S.matrix.forEach(x=>h+=`<td>${x.total}</td>`);
- h+=`<td class="plan-sticky-right plan-sticky-right-1">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="plan-sticky-right plan-sticky-right-2">${S.matrix.reduce((s,x)=>s+x.total,0)}</td></tr></tbody></table></div>`;
+ h+='<tr class="total-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>TOTAL</b></div></td>';
+ S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan"><b>${x.total}</b></div></td>`);
+ h+=`<td class="sum-col sum-plan">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="sum-col sum-actual"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
 async function load(){

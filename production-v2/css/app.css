@@ -172,7 +172,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .filter-card{grid-template-columns:1fr}
   .pagehead,.section-title-row{align-items:flex-start;flex-direction:column}
-  .grid:not(.actual-grid):not(.plan-grid){display:block;overflow-x:auto;white-space:nowrap}
+  .grid:not(.actual-grid){display:block;overflow-x:auto;white-space:nowrap}
 }
 
 
@@ -241,9 +241,7 @@ input,select,textarea,.grid input,.grid select{
 .pallet-card{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card);cursor:pointer;color:var(--text)}
 .pallet-card:hover{border-color:#9bb7d2;background:var(--bg-soft)}.pallet-card.selected{border-color:#6aa4df;background:#f3f8ff}.pallet-card input{margin-top:3px}
 .pallet-card b{display:block;font-size:12px;color:var(--heading);margin-bottom:5px}.pallet-card span{display:block;font-size:11px;color:var(--muted);line-height:1.45}
-.table-scroll{overflow:auto;margin-top:14px}.plan-grid{min-width:900px}.plan-grid th{text-align:center;vertical-align:bottom}.plan-grid td{text-align:center}.plan-grid small{font-size:9px;color:var(--muted);font-weight:500}
-.plan-grid th,.plan-grid td{padding:6px 8px}
-.plan-grid .total-row td{font-weight:700;background:var(--bg-soft);border-top:2px solid var(--line)}
+.table-scroll{overflow:auto;margin-top:14px}
 @media(max-width:900px){.plan-kpis{grid-template-columns:repeat(2,1fr)}.pallet-grid{grid-template-columns:1fr}.plan-actions{justify-content:flex-start}}
 
 /* Step 5.1 — effective-from pallet changes */
@@ -691,40 +689,13 @@ input,select,textarea,.grid input,.grid select{
 .mobile-entry-input{flex:0 0 auto;width:76px;height:44px;font-size:17px;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--bg-soft);color:var(--heading)}
 .mobile-entry-input:focus{outline:2px solid var(--blue);border-color:var(--blue);background:var(--card)}
 
-/* DAILY PLAN — Plan by Time Block: sticky Time Block column (left) + sticky
-   Original/Adjusted Plan columns (right), so context stays visible while
-   scrolling through many Model columns instead of losing track of which
-   row/total you're looking at. */
-.plan-grid-viewport{max-height:70vh}
-.plan-grid.plan-grid-transposed th,.plan-grid.plan-grid-transposed td{min-width:74px;max-width:none;text-align:center;padding:6px 8px}
-.plan-grid.plan-grid-transposed thead th{white-space:nowrap;font-weight:700}
-.plan-grid.plan-grid-transposed thead th small{display:block;font-weight:500;margin-top:2px}
-.plan-grid.plan-grid-transposed td.plan-sticky-left{min-width:150px;max-width:none;text-align:left}
-.plan-grid.plan-grid-transposed td.plan-sticky-left small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-.plan-grid.plan-grid-transposed tr.plan-meta-row td{background:var(--bg-soft);color:var(--muted);font-size:11px}
-.plan-grid.plan-grid-transposed tr.plan-meta-row td.plan-sticky-left{font-weight:700;color:var(--heading)}
-.plan-grid th.plan-sticky-left,.plan-grid td.plan-sticky-left{min-width:110px;max-width:none;text-align:left}
-.plan-grid .plan-sticky-left{position:sticky;left:0;z-index:2;background:var(--card);box-shadow:2px 0 6px rgba(15,39,71,.06)}
-.plan-grid thead .plan-sticky-left{z-index:5;background:var(--bg-soft)}
-.plan-grid .plan-sticky-right{position:sticky;z-index:2;background:var(--card);border-left:1px solid var(--line);min-width:90px}
-.plan-grid .plan-sticky-right-1{right:90px}
-.plan-grid .plan-sticky-right-2{right:0;box-shadow:-2px 0 6px rgba(15,39,71,.06)}
-.plan-grid thead .plan-sticky-right{z-index:5;background:var(--bg-soft)}
-.plan-grid tr.total-row .plan-sticky-left,.plan-grid tr.total-row .plan-sticky-right{background:var(--bg-soft);font-weight:800}
-
-/* MOBILE — Plan by Time Block matrix: same sticky-column treatment as the
-   Production Entry matrix, just tighter for phones since Line A alone can
-   have 20+ Model columns. */
-@media(max-width:560px){
-  .plan-grid th.plan-sticky-left,.plan-grid td.plan-sticky-left{min-width:76px}
-  .plan-grid-viewport{max-height:55vh}
-}
-
-/* DAILY PLAN — tracked Break rows (11:40-12:20, 23:10-00:00) shown in the
-   Plan by Time Block table, muted so they read as "0 Plan" context, not a
-   real production block, while still being fully visible/scrollable. */
-.plan-break-row{background:var(--bg-soft)}
-.plan-break-row .plan-sticky-left small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.04em;vertical-align:middle}
+/* DAILY PLAN — Plan by Time Block now reuses the exact same .actual-grid
+   markup/CSS as Production Entry (sticky Model/Door column, same cell
+   spacing) for a pixel-consistent look between the two pages. Only two
+   extra row types are specific to this page: */
+.actual-grid tr.plan-meta-row td{background:var(--bg-soft);color:var(--muted);font-size:11px}
+.actual-grid tr.plan-meta-row td.model-col b{color:var(--heading)}
+.actual-grid tr.total-row td{background:var(--bg-soft);font-weight:800;border-top:2px solid var(--line)}
 
 /* NAV — grouped dropdown menu (ติดตาม / ทำงาน / ตั้งค่า) replacing the flat
    7-link list, which was starting to crowd the header and wrap awkwardly
