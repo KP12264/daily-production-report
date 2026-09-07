@@ -25,8 +25,9 @@ const POOLS={
   fuf14_r:[["FUF14","R"]], fuf1822_r:[["FUF18/22","R"]],
   tm14_f:[["TM14","F"]], tm14_r:[["TM14","R"]],
   tm1921_f:[["TM19/21","F"]], tm1921_r:[["TM19/21","R"]],
-  ehrt2070_f:[["EHRT 2070 NL","F"]], ehrt2070_r:[["EHRT 2070 NL","R"]],
-  ehrt2570_f:[["EHRT 2570 NL","F"]], ehrt2570_r:[["EHRT 2570 NL","R"]],
+  ehrt_f_common:[["EHRT 2070 NL","F"],["EHRT 2570 NL","F"]],
+  ehrt2070_r:[["EHRT 2070 NL","R"]],
+  ehrt2570_r:[["EHRT 2570 NL","R"]],
   door53c_r:[["Door 5.3 Cu.(159) C","R"]], door53f_r:[["Door 5.3 Cu.(159) F","R"]],
   door66c_r:[["Door 6.6 Cu.(199) C","R"]], door66f_r:[["Door 6.6 Cu.(199) F","R"]],
   f636:[["636","F"]],
@@ -60,8 +61,8 @@ const BOM=[
    {name:"TM19/21",parts:{F:"tm1921_f",R:"tm1921_r"}},
  ]},
  {group:"EHRT",cabinets:[
-   {name:"EHRT 2070 NL",parts:{F:"ehrt2070_f",R:"ehrt2070_r"}},
-   {name:"EHRT 2570 NL",parts:{F:"ehrt2570_f",R:"ehrt2570_r"}},
+   {name:"EHRT 2070 NL",parts:{F:"ehrt_f_common",R:"ehrt2070_r"}},
+   {name:"EHRT 2570 NL",parts:{F:"ehrt_f_common",R:"ehrt2570_r"}},
  ]},
  {group:"Door 5.3 / 6.6 Cu",cabinets:[
    {name:"Door 5.3 Cu.(159) C",parts:{R:"door53c_r"}},
@@ -111,9 +112,11 @@ async function load(){
 }
 function poolTotal(poolKey,totals){return (POOLS[poolKey]||[]).reduce((s,[m,d])=>s+Number(totals[m+"|||"+d]||0),0)}
 function render(totals,logCount){
+ window.currentAsmTotals=totals; // so the filter dropdown can re-render without reloading
  const host=$("asmResults");
+ const filterVal=$("asmGroupFilter")?.value||"";
  let h="";
- BOM.forEach(g=>{
+ BOM.filter(g=>!filterVal||g.group===filterVal).forEach(g=>{
   // Per-cabinet ceiling: if this cabinet alone got 100% of every pool it
   // needs, how many could it make? This is an upper bound, not a number
   // that's already netted against what other cabinets in the group want.
@@ -149,6 +152,11 @@ function render(totals,logCount){
 function init(){
  $("asmDate").value=localDate();
  $("asmLoadBtn").onclick=load;
+ const sel=$("asmGroupFilter");
+ if(sel){
+  sel.innerHTML='<option value="">ทุก Model</option>'+BOM.map(g=>`<option value="${esc(g.group)}">${esc(g.group)}</option>`).join("");
+  sel.addEventListener("change",()=>{if(window.currentAsmTotals)render(window.currentAsmTotals,0)});
+ }
 }
 if(document.readyState==="loading")addEventListener("DOMContentLoaded",init);else init();
 })();
