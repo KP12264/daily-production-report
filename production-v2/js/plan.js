@@ -194,7 +194,7 @@ function table(){
  let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));
  let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
  let h='<div class="table-scroll plan-grid-viewport"><table class="grid plan-grid"><thead><tr><th class="plan-sticky-left">Time Block</th><th>Sched. Rounds</th><th>Loss</th><th>Adj. Rounds</th>';
- ps.forEach(p=>h+=`<th>${p.model}<br><small>${p.door||"-"}</small></th>`);
+ ps.forEach(p=>h+=`<th><span>${p.model}</span><small>${p.door||"-"}</small></th>`);
  h+='<th class="plan-sticky-right plan-sticky-right-1">Original Plan</th><th class="plan-sticky-right plan-sticky-right-2">Adjusted Plan</th></tr></thead><tbody>';
  S.matrix.forEach(x=>{h+=`<tr class="${x.type==="BREAK"?"plan-break-row":""}"><td class="plan-sticky-left"><b>${x.start}–${x.end}</b>${x.type==="BREAK"?' <small>BREAK</small>':""}</td><td>${x.scheduledRounds}</td><td>${x.lossMinutes?`<b>${x.lossMinutes} min</b>`:"-"}</td><td>${x.rounds}</td>`;x.cells.forEach(c=>h+=`<td>${c.plan}</td>`);h+=`<td class="plan-sticky-right plan-sticky-right-1">${x.originalTotal}</td><td class="plan-sticky-right plan-sticky-right-2"><b>${x.total}</b></td></tr>`});
  h+=`<tr class="total-row"><td class="plan-sticky-left">TOTAL</td><td>${S.matrix.reduce((s,x)=>s+x.scheduledRounds,0)}</td><td>${S.matrix.reduce((s,x)=>s+x.lossMinutes,0)} min</td><td>${S.matrix.reduce((s,x)=>s+x.rounds,0)}</td>`;
