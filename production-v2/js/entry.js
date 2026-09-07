@@ -27,6 +27,11 @@ function setModelPosition(key,n){
 function saveModelOrder(){
  if(!S.docId)return;
  scheduleSave();
+ // Remember this order at the Line+Shift level too (separate from the
+ // per-day actualLog save above) so a NEW date starts from whatever order
+ // was last used, instead of resetting to alphabetical every time.
+ let l=$("entryLine").value.toUpperCase(),sh=$("entryShift").value;
+ if(l&&sh)ProdV2DB.set("prodV2_modelOrderPrefs",`pref_${l}_${sh}`,{lineId:l,shift:sh,order:[...S.modelOrder],updatedAt:Date.now()},{merge:true}).catch(()=>{});
 }
 function openModelOrder(){
  let ps=planKeys(),host=$("modelOrderList");if(!host)return;
@@ -142,7 +147,17 @@ async function load(){
  try{
   stat("Loading...");let [pd,ad]=await Promise.all([ProdV2DB.collection("prodV2_dailyPlans").doc(pid).get(),ProdV2DB.collection("prodV2_actualLogs").doc(aid).get()]);
   if(!pd.exists){S.plan=null;S.actual={};render();renderKpis();$("saveBadge").textContent="NO PLAN";note(`ไม่พบ Saved Daily Plan: ${d} · Line ${l} · ${sh} — ต้อง Save Daily Plan ก่อน`,"plan-warn");stat("Plan missing","err");return}
-  S.plan={id:pd.id,...pd.data()};S.docId=aid;S.actual=ad.exists?(ad.data().actualByCell||{}):{};S.modelOrder=ad.exists?(ad.data().modelOrder||[]):[];
+  S.plan={id:pd.id,...pd.data()};S.docId=aid;S.actual=ad.exists?(ad.data().actualByCell||{}):{};
+  let dayOrder=ad.exists?(ad.data().modelOrder||[]):[];
+  if(dayOrder.length){
+   S.modelOrder=dayOrder;
+  }else{
+   // No order saved for this specific day yet — reuse whatever order was
+   // last used for this Line+Shift, so people don't have to re-sort from
+   // scratch every single day.
+   try{let pref=await ProdV2DB.collection("prodV2_modelOrderPrefs").doc(`pref_${l}_${sh}`).get();S.modelOrder=pref.exists?(pref.data().order||[]):[];}
+   catch(e){S.modelOrder=[];}
+  }
   render();$("saveBadge").textContent=ad.exists?"LOADED":"READY TO ENTER";note(`โหลด Saved Plan สำเร็จ · ${d} · Line ${l} · ${sh}`,"plan-ok");stat("Plan loaded","ok")
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
