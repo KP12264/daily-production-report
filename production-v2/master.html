@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Master Setup · Production V2</title>
-  <link rel="stylesheet" href="css/app.css?v=20260902-fix54">
+  <link rel="stylesheet" href="css/app.css?v=20260902-fix55">
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -106,13 +106,22 @@
         <tbody id="shiftRows"></tbody>
       </table>
     </div>
+    <div class="section-card">
+      <div class="pagehead"><div><h2>Sync Future Daily Plans</h2><div class="sub">อัปเดต Plan ของ Daily Plan ที่ Save ไว้แล้ว ให้ตรงกับ Cycle Time ล่าสุดใน Shift Master — เฉพาะวันนี้เป็นต้นไปเท่านั้น วันที่ผ่านไปแล้วจะไม่ถูกแตะเลย</div></div></div>
+      <div class="notice info-notice">ใช้เมื่อเปลี่ยน Cycle Time ที่ Shift & Time ด้านบนแล้ว Daily Plan ที่เคย Save ไว้ยังไม่อัปเดตตาม — กด Preview ก่อนเสมอเพื่อดูว่าจะกระทบกี่วัน ก่อนกด Sync จริง (ไม่แตะ Pallet ที่เลือก Active ไว้ แก้แค่ตัวเลข Plan)</div>
+      <div class="toolbar">
+        <button id="syncPreviewBtn">Preview</button>
+        <button id="syncConfirmBtn" class="primary" disabled>Sync ตามที่ Preview</button>
+      </div>
+      <div id="syncResult" class="notice info-notice" style="display:none"></div>
+    </div>
   </section>
 
   </main>
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/auth-v2.js?v=20260902-fix7"></script>
-<script src="js/master.js?v=20260902-fix38"></script>
+<script src="js/master.js?v=20260902-fix39"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>

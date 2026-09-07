@@ -754,3 +754,85 @@ document.getElementById('mergeConfirmBtn')?.addEventListener('click',async()=>{
   }catch(e){resultEl.className='notice plan-warn';resultEl.textContent='Merge ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);}
   finally{btn.disabled=true;}
 });
+
+/* ===== Sync Future Daily Plans — when Cycle Time changes at Shift & Time,
+   already-saved Daily Plan documents don't auto-update (they're historical
+   snapshots by design). This tool recomputes Plan for TODAY-OR-LATER Daily
+   Plans only using the CURRENT Shift Master cycle — past dates are never
+   touched, preserving the "snapshot never changes" guarantee for history.
+   It reuses each Daily Plan's own stored block minutes/loss/qty — only the
+   rounds (and therefore each cell's Plan) get recalculated, so which
+   pallets were marked Active for that day is left completely alone. ===== */
+function localDateStr(d=new Date()){const z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
+function recomputeBlocksWithNewCycle(blocks,cycleMin){
+  const work=(blocks||[]).filter(b=>b.type!=='BREAK');
+  if(!work.length||!cycleMin)return blocks;
+  const totalSched=work.reduce((s,b)=>s+Number(b.minutes||0),0);
+  const totalProd=work.reduce((s,b)=>s+Number(b.productiveMinutes||0),0);
+  const targetSched=Math.ceil(totalSched/cycleMin);
+  const targetProd=Math.ceil(totalProd/cycleMin);
+  let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0,workSeen=0;
+  return blocks.map(b=>{
+    if(b.type==='BREAK')return b;
+    workSeen++;
+    cumSchedMin+=Number(b.minutes||0);cumProdMin+=Number(b.productiveMinutes||0);
+    const isLast=workSeen===work.length;
+    const newSchedRounds=isLast?targetSched:Math.floor(cumSchedMin/cycleMin);
+    const newProdRounds=isLast?targetProd:Math.floor(cumProdMin/cycleMin);
+    const scheduledRounds=newSchedRounds-cumSchedRounds,rounds=newProdRounds-cumProdRounds;
+    cumSchedRounds=newSchedRounds;cumProdRounds=newProdRounds;
+    const cells=(b.cells||[]).map(c=>({...c,originalPlan:scheduledRounds*Number(c.qty||0),plan:rounds*Number(c.qty||0)}));
+    const originalTotal=cells.reduce((s,c)=>s+c.originalPlan,0),total=cells.reduce((s,c)=>s+c.plan,0);
+    return {...b,scheduledRounds,rounds,cells,originalTotal,total};
+  });
+}
+let syncState=null;
+document.getElementById('syncPreviewBtn')?.addEventListener('click',async()=>{
+  const resultEl=document.getElementById('syncResult'),confirmBtn=document.getElementById('syncConfirmBtn');
+  confirmBtn.disabled=true;syncState=null;
+  resultEl.style.display='';resultEl.className='notice info-notice';resultEl.textContent='กำลังตรวจ…';
+  try{
+    const today=localDateStr();
+    const allPlans=await v2ReadAll(PLAN_COLLECTION);
+    const future=allPlans.filter(p=>p.date>=today);
+    const shiftCache={};
+    const changed=[];
+    for(const plan of future){
+      const cacheKey=`${plan.lineId}_${plan.shift}`;
+      if(!(cacheKey in shiftCache)){
+        const snap=await ProdV2DB.collection(SHIFT_COLLECTION).doc(`shift_${plan.lineId}_${plan.shift}`).get();
+        shiftCache[cacheKey]=snap.exists?snap.data():null;
+      }
+      const shiftDoc=shiftCache[cacheKey];
+      const newCycle=Number(shiftDoc?.standardCycleMinPerRound);
+      if(!newCycle)continue;
+      const oldTotal=(plan.blocks||[]).reduce((s,b)=>s+Number(b.total||0),0);
+      const newBlocks=recomputeBlocksWithNewCycle(plan.blocks||[],newCycle);
+      const newTotal=newBlocks.reduce((s,b)=>s+Number(b.total||0),0);
+      if(newTotal!==oldTotal)changed.push({id:plan.id,date:plan.date,lineId:plan.lineId,shift:plan.shift,oldTotal,newTotal,newBlocks});
+    }
+    if(!changed.length){
+      resultEl.className='notice plan-warn';
+      resultEl.textContent=`ไม่พบ Daily Plan ที่ต้องอัปเดต (เช็ค ${future.length} วันตั้งแต่ ${today} เป็นต้นไป — ตัวเลขตรงกับ Master อยู่แล้วทั้งหมด)`;
+      return;
+    }
+    resultEl.innerHTML=`พบ <b>${changed.length}</b> Daily Plan ที่ Plan รวมจะเปลี่ยน (จากทั้งหมด ${future.length} วันที่ ${today} เป็นต้นไป):<br>`+
+      changed.map(c=>`${esc(c.date)} · Line ${esc(c.lineId)} · ${esc(c.shift)} : ${c.oldTotal.toLocaleString()} → <b>${c.newTotal.toLocaleString()}</b>`).join('<br>')+
+      `<br>กด "Sync ตามที่ Preview" เพื่อบันทึกจริง — ไม่กระทบ Pallet ที่เลือก Active ไว้ แก้แค่ตัวเลข Plan`;
+    syncState=changed;
+    confirmBtn.disabled=false;
+  }catch(e){resultEl.className='notice plan-warn';resultEl.textContent='ตรวจไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);}
+});
+document.getElementById('syncConfirmBtn')?.addEventListener('click',async()=>{
+  if(!syncState)return;
+  if(!confirm(`ยืนยัน Sync Daily Plan ${syncState.length} วัน?\n\nจะอัปเดตเฉพาะตัวเลข Plan ให้ตรงกับ Cycle Time ปัจจุบัน ไม่กระทบวันที่ผ่านไปแล้ว และไม่แตะ Pallet ที่เลือก Active ไว้\n\nการกระทำนี้ย้อนกลับไม่ได้`))return;
+  const resultEl=document.getElementById('syncResult'),btn=document.getElementById('syncConfirmBtn');
+  btn.disabled=true;resultEl.textContent='กำลัง Sync…';
+  try{
+    for(const c of syncState)await ProdV2DB.set(PLAN_COLLECTION,c.id,{blocks:c.newBlocks},{merge:true});
+    resultEl.className='notice plan-ok';
+    resultEl.textContent=`✓ Sync สำเร็จ — อัปเดต ${syncState.length} Daily Plan แล้ว ลองเปิด Dashboard/Assembly ดูใหม่ได้เลย`;
+    syncState=null;
+  }catch(e){resultEl.className='notice plan-warn';resultEl.textContent='Sync ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);}
+  finally{btn.disabled=true;}
+});

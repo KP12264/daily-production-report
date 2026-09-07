@@ -201,16 +201,16 @@ function table(){
  // not where Actual gets typed (that's still only Production Entry).
  let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
  S.matrix.forEach(x=>h+=`<th>${x.start}–${x.end}<br><small>${x.type==="BREAK"?"BREAK":"Plan "+x.total}</small></th>`);
- h+='<th class="sum-col sum-plan">Original</th><th class="sum-col sum-actual">Adjusted</th></tr></thead><tbody>';
+ h+='<th class="sum-col sum-diff">Original</th><th class="sum-col sum-ach">Adjusted</th></tr></thead><tbody>';
  h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Sched. Rounds</b></div></td>';
  S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.scheduledRounds}</div></td>`);
- h+='<td class="sum-col sum-plan">–</td><td class="sum-col sum-actual">–</td></tr>';
+ h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
  h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Loss</b></div></td>';
  S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.lossMinutes?x.lossMinutes+" min":"-"}</div></td>`);
- h+='<td class="sum-col sum-plan">–</td><td class="sum-col sum-actual">–</td></tr>';
+ h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
  h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Adj. Rounds</b></div></td>';
  S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.rounds}</div></td>`);
- h+='<td class="sum-col sum-plan">–</td><td class="sum-col sum-actual">–</td></tr>';
+ h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
  ps.forEach(p=>{
   h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${p.model}</b><small>${p.door||"-"}</small></div></td>`;
   let origTotal=0,adjTotal=0;
@@ -219,11 +219,11 @@ function table(){
    origTotal+=Number(c?.originalPlan||0);adjTotal+=pl;
    h+=`<td class="actual-cell"><div class="cell-plan"><b>${pl}</b></div></td>`;
   });
-  h+=`<td class="sum-col sum-plan">${origTotal}</td><td class="sum-col sum-actual"><b>${adjTotal}</b></td></tr>`;
+  h+=`<td class="sum-col sum-diff">${origTotal}</td><td class="sum-col sum-ach"><b>${adjTotal}</b></td></tr>`;
  });
  h+='<tr class="total-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>TOTAL</b></div></td>';
  S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan"><b>${x.total}</b></div></td>`);
- h+=`<td class="sum-col sum-plan">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="sum-col sum-actual"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
+ h+=`<td class="sum-col sum-diff">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="sum-col sum-ach"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
 async function load(){

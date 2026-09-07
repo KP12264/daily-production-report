@@ -466,6 +466,8 @@ input,select,textarea,.grid input,.grid select{
 #appMain.readonly-mode #abCycleInput,
 #appMain.readonly-mode #shiftCycleInput,
 #appMain.readonly-mode #recalcRoundsBtn,
+#appMain.readonly-mode #syncPreviewBtn,
+#appMain.readonly-mode #syncConfirmBtn,
 #appMain.readonly-mode #lineRows input,
 #appMain.readonly-mode #lineRows select,
 #appMain.readonly-mode #lineRows button,
