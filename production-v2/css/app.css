@@ -1,10 +1,10 @@
 
 :root{
-  --navy:#1e293b;
-  --navy-deep:#0f172a;
-  --blue:#b45309;
-  --blue-deep:#92400e;
-  --blue-soft:#fef3e2;
+  --navy:#0f172a;
+  --navy-deep:#020617;
+  --blue:#2563eb;
+  --blue-deep:#1d4ed8;
+  --blue-soft:#eff6ff;
   --green:#16a34a;
   --green-soft:#f0fdf4;
   --orange:#f59e0b;
@@ -22,9 +22,9 @@
 [data-theme="dark"]{
   --navy:#0b1220;
   --navy-deep:#05080f;
-  --blue:#d97706;
-  --blue-deep:#f59e0b;
-  --blue-soft:#3a2a12;
+  --blue:#3b82f6;
+  --blue-deep:#60a5fa;
+  --blue-soft:#152238;
   --green:#22c55e;
   --green-soft:#0f2417;
   --orange:#f59e0b;
@@ -52,7 +52,7 @@ button,input,select,textarea{font:inherit}
 .app-name span{opacity:.75}
 .app-links{display:flex;gap:3px;align-items:center;margin-left:auto}
 .app-links a,.legacy-link{
-  color:#f5dcb4;text-decoration:none;padding:8px 13px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap
+  color:#bfdbfe;text-decoration:none;padding:8px 13px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap
 }
 .app-links a:hover,.legacy-link:hover{background:rgba(255,255,255,.09)}
 .app-links a.active{background:var(--blue);color:var(--card)}
@@ -379,7 +379,7 @@ input,select,textarea,.grid input,.grid select{
 
 /* STEP 6.4 — clean entry + separate model order */
 .model-cell-clean{display:flex;flex-direction:column;gap:3px;text-align:left;padding:3px 2px}.model-cell-clean b{font-size:14px}.model-cell-clean small{color:var(--muted)}
-.entry-actions{display:flex;align-items:center;gap:10px}.secondary-btn{border:1px solid #fcd9a8;background:var(--card);color:var(--blue-deep);border-radius:9px;padding:9px 13px;font-weight:700;cursor:pointer}
+.entry-actions{display:flex;align-items:center;gap:10px}.secondary-btn{border:1px solid #bfdbfe;background:var(--card);color:var(--blue-deep);border-radius:9px;padding:9px 13px;font-weight:700;cursor:pointer}
 .entry-modal{display:none;position:fixed;inset:0;background:rgba(15,39,71,.35);z-index:999;align-items:center;justify-content:center;padding:20px}.entry-modal.open{display:flex}
 .entry-modal-card{width:min(520px,96vw);max-height:82vh;background:var(--card);border-radius:18px;box-shadow:0 24px 70px rgba(15,39,71,.25);display:flex;flex-direction:column;overflow:hidden}
 .entry-modal-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}.entry-modal-head h3{margin:0;color:var(--heading)}.entry-modal-head p{margin:5px 0 0;color:var(--muted);font-size:12px}.modal-x{border:0;background:var(--bg-soft);border-radius:9px;width:34px;height:34px;font-size:20px;cursor:pointer}
@@ -393,7 +393,7 @@ input,select,textarea,.grid input,.grid select{
 
 /* STEP 7.2 — Loss Management */
 .loss-actions{display:flex;gap:8px;align-items:center}.loss-actions .secondary{height:42px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:0 16px;cursor:pointer}
-.loss-category-summary{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.loss-cat{min-width:155px;display:flex;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg-soft);color:var(--text)}.loss-cat b{color:var(--heading)}.source-manual{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--bg-soft);color:var(--muted);font-size:10px;font-weight:800}.loss-edit{border:1px solid #fcd9a8;background:var(--card);color:var(--blue);border-radius:8px;padding:6px 9px;cursor:pointer}.muted{color:var(--muted);font-size:11px}.empty-inline{color:var(--muted)}
+.loss-category-summary{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.loss-cat{min-width:155px;display:flex;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg-soft);color:var(--text)}.loss-cat b{color:var(--heading)}.source-manual{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--bg-soft);color:var(--muted);font-size:10px;font-weight:800}.loss-edit{border:1px solid #bfdbfe;background:var(--card);color:var(--blue);border-radius:8px;padding:6px 9px;cursor:pointer}.muted{color:var(--muted);font-size:11px}.empty-inline{color:var(--muted)}
 
 .danger-plan{border:1px solid #fecaca;background:var(--card);color:#dc2626;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
 .danger-plan:hover{background:#fff1f2}
@@ -410,8 +410,8 @@ input,select,textarea,.grid input,.grid select{
 .auth-banner input{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--card);color:var(--heading);font-size:13px;width:130px}
 .auth-banner button{height:34px;border:0;border-radius:8px;background:var(--blue);color:var(--card);font-weight:700;cursor:pointer;padding:0 14px;font-size:13px}
 .auth-banner-err{color:#dc2626;font-size:12px;flex-basis:100%}
-.auth-user{color:#f5dcb4;font-size:12px;font-weight:600;margin-right:2px}
-.link-btn{background:none;border:0;color:#f5dcb4;text-decoration:underline;font-size:12px;cursor:pointer;padding:0}
+.auth-user{color:#bfdbfe;font-size:12px;font-weight:600;margin-right:2px}
+.link-btn{background:none;border:0;color:#bfdbfe;text-decoration:underline;font-size:12px;cursor:pointer;padding:0}
 .link-btn:hover{color:var(--card)}
 #authBar{display:flex;align-items:center;gap:8px}
 
@@ -714,3 +714,22 @@ input,select,textarea,.grid input,.grid select{
    real production block, while still being fully visible/scrollable. */
 .plan-break-row{background:var(--bg-soft)}
 .plan-break-row .plan-sticky-left small{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:5px;background:var(--line);color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.04em;vertical-align:middle}
+
+/* NAV — grouped dropdown menu (ติดตาม / ทำงาน / ตั้งค่า) replacing the flat
+   7-link list, which was starting to crowd the header and wrap awkwardly
+   on phones. Click-to-toggle (not hover) so it works on touch too. */
+.nav-group{position:relative}
+.nav-group-btn{background:none;border:0;color:#bfdbfe;padding:8px 13px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.nav-group-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav-group-btn.current{background:var(--blue);color:#fff}
+.nav-dropdown{display:none;position:absolute;top:100%;left:0;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:190px;padding:6px;z-index:80;margin-top:6px}
+.nav-dropdown.open{display:block}
+.nav-dropdown a{display:block;padding:9px 12px;border-radius:8px;color:var(--text);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap}
+.nav-dropdown a:hover{background:var(--bg-soft)}
+.nav-dropdown a.active{background:var(--blue-soft);color:var(--blue-deep)}
+@media(max-width:1050px){
+  .nav-group-btn{display:none}
+  .nav-dropdown{display:flex!important;position:static;box-shadow:none;border:0;background:transparent;padding:0;margin:0;gap:2px}
+  .nav-dropdown a{padding:8px 10px;color:#bfdbfe}
+  .nav-dropdown a.active{background:var(--blue);color:#fff}
+}

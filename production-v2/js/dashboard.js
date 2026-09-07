@@ -178,7 +178,7 @@ function ensureDatalabels(){
 function charts(labels,p,a){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
- const planColor="#64748b",actualColor="#b45309";
+ const planColor="#64748b",actualColor="#2563eb";
  S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false},tooltip:{mode:"index",intersect:false,callbacks:{
   title:items=>items.length?labels[items[0].dataIndex]:"",
   filter:()=>false,
