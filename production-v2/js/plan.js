@@ -168,7 +168,7 @@ function kpis(){
   $("kpiPallets").textContent=S.active.size;
   $("kpiJig").textContent=jig;
   $("kpiPositions").textContent=p;
-  $("kpiRounds").textContent=r;
+  $("kpiRounds").textContent=r.toFixed(2);
   $("kpiPlan").textContent=t.toLocaleString();
 }
 function table(){
