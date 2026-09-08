@@ -80,23 +80,58 @@ function carryForwardPlanRounds(raw){
     return {...r,scheduledRounds:r.minutes/cycle,rounds:r.productiveMinutes/cycle};
   });
 }
+function distributeRounded(fractions,target){
+  // Spreads an already-decided INTEGER target back across the blocks that
+  // contributed to it, proportional to each block's own fractional share —
+  // using cumulative rounding (not floor/ceil) so the running sum always
+  // lands on the nearest whole number, with the very last block forced to
+  // land exactly on `target` (absorbing whatever fraction of a unit is
+  // left over). This is the same shape as the old per-shift carry-forward,
+  // just run per Model/Door column now instead of once for the whole shift.
+  let cum=0,cumRounded=0,out=[];
+  fractions.forEach((v,i)=>{
+    cum+=v;
+    const isLast=i===fractions.length-1;
+    const newCumRounded=isLast?target:Math.round(cum);
+    out.push(newCumRounded-cumRounded);
+    cumRounded=newCumRounded;
+  });
+  return out;
+}
 function build(){
   let blocks=splitBlocks(),allKeys=new Map;
   blocks.filter(b=>b.type==="WORK").forEach(b=>mapForSlots(slotStateAt(b.start)).forEach(p=>allKeys.set(p.model+"|||"+p.door,{model:p.model,door:p.door})));
   let cols=[...allKeys.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
-  S.matrix=blocks.map(b=>{
-    if(b.type==="BREAK"){
-      // Plan is always 0 for a tracked Break — Actual can still be typed at
-      // Production Entry (staggered breaks), and it counts toward the day's
-      // Total/Achievement like any other cell, since that's just a normal
-      // sum over actualByCell regardless of which block it came from.
-      let cells=cols.map(c=>({...c,qty:0,originalPlan:0,plan:0}));
-      return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:0,lossMinutes:0,productiveMinutes:0,rounds:0,activePositions:0,slotSnapshot:[],cells,originalTotal:0,total:0,type:"BREAK"};
-    }
+
+  // Pass 1 — raw per-block data, unrounded. Each block just records how
+  // much of each column's qty is active there (0 for BREAK blocks).
+  let raw=blocks.map(b=>{
+    if(b.type==="BREAK")return {start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:0,lossMinutes:0,productiveMinutes:0,rounds:0,activePositions:0,slotSnapshot:[],type:"BREAK",qtyByCol:cols.map(()=>0)};
     let slots=slotStateAt(b.start),pm=new Map(mapForSlots(slots).map(p=>[p.model+"|||"+p.door,p]));
-    let cells=cols.map(c=>{let p=pm.get(c.model+"|||"+c.door),qty=p?.qty||0;return{...c,qty,originalPlan:Math.round(b.scheduledRounds*qty),plan:Math.round(b.rounds*qty)}});
-    return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,cells,originalTotal:cells.reduce((s,c)=>s+c.originalPlan,0),total:cells.reduce((s,c)=>s+c.plan,0)}
-  })
+    let qtyByCol=cols.map(c=>pm.get(c.model+"|||"+c.door)?.qty||0);
+    return {start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,qtyByCol};
+  });
+
+  // Pass 2 — for each Model/Door column, the shift-level target is rounded
+  // ONCE from the exact total (not summed from independently-rounded
+  // blocks), then distributed back across that column's blocks. This is
+  // what makes Day and Night agree on Total Plan whenever their Active
+  // Positions and total shift minutes/cycle match, even though the two
+  // shifts split their time into different-length blocks.
+  let origByCol=cols.map((c,ci)=>{
+    let fr=raw.map(b=>(b.scheduledRounds||0)*(b.qtyByCol[ci]||0));
+    return distributeRounded(fr,Math.round(fr.reduce((a,x)=>a+x,0)));
+  });
+  let planByCol=cols.map((c,ci)=>{
+    let fr=raw.map(b=>(b.rounds||0)*(b.qtyByCol[ci]||0));
+    return distributeRounded(fr,Math.round(fr.reduce((a,x)=>a+x,0)));
+  });
+
+  S.matrix=raw.map((b,bi)=>{
+    let cells=cols.map((c,ci)=>({...c,qty:b.qtyByCol[ci],originalPlan:origByCol[ci][bi],plan:planByCol[ci][bi]}));
+    let originalTotal=cells.reduce((s,x)=>s+x.originalPlan,0),total=cells.reduce((s,x)=>s+x.plan,0);
+    return {start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:b.activePositions,slotSnapshot:b.slotSnapshot,cells,originalTotal,total,type:b.type};
+  });
 }
 function normalize24h(v){
   let s=String(v||"").trim().replace(".",":");
