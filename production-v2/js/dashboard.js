@@ -74,19 +74,19 @@ function filters(keys){
 }
 function selected(keys){let m=$("dashModel").value,d=$("dashDoor").value;return keys.filter(x=>(!m||splitKey(x).model===m)&&(!d||splitKey(x).door===d))}
 function autoLoss(){return S.plan?.masterSnapshot?.palletChangeLosses||[]}
-function lossRows(){return [...autoLoss().map(x=>({...x,category:x.category||"Pallet Change"})),...S.manual].filter(x=>x.category!=="Material")}
+function lossRows(){return [...autoLoss().map(x=>({...x,category:x.category||"Pallet Change"})),...S.manual]}
 function render(){
  let P=rowsFromPlan();let A=actualRows();let keys=[...new Set([...Object.keys(P),...Object.keys(A)])];S.keys=keys;filters(keys);let use=selected(keys);
  let n=Math.max(0,...use.flatMap(x=>[(P[x]||[]).length,(A[x]||[]).length])), labels=[];
  let bs=blocks();for(let i=0;i<n;i++)labels.push(bs[i]?(bs[i].label||`${bs[i].start||bs[i].startTime||""}–${bs[i].end||bs[i].endTime||""}`):`Block ${i+1}`);
  let pb=Array(n).fill(0),ab=Array(n).fill(0);use.forEach(x=>{for(let i=0;i<n;i++){pb[i]+=Number(P[x]?.[i]||0);ab[i]+=Number(A[x]?.[i]||0)}});
- let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gap=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().reduce((s,x)=>s+Number(x.minutes||0),0);
+ let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gap=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0),material=lossRows().filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
  let expected=expectedByNow(pb,bs,$("dashDate").value);
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
  statusBanner(status,actual,expected);
  achievementBar(plan,actual,ach);
  thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
- $("dashKpis").innerHTML=`<div class="entry-kpi kpi-secondary"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi kpi-secondary"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi kpi-secondary"><small>LOSS</small><b>${loss} min</b></div>`;
+ $("dashKpis").innerHTML=`<div class="entry-kpi kpi-secondary"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi kpi-secondary"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi kpi-secondary"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi kpi-secondary"><small>MATERIAL WAITING</small><b>${material} min</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
 function achievementBar(plan,actual,ach){
