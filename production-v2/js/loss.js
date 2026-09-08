@@ -39,7 +39,14 @@ function renderSummary(rows){
  $("categorySummary").innerHTML=sorted.length?sorted.map(([k,v])=>`<div class="loss-cat"><span>${esc(k)}</span><b>${v} min</b></div>`).join(""):'<div class="empty-inline">ยังไม่มี Loss</div>';
 }
 function render(){
- let rows=allRows(),total=rows.reduce((s,x)=>s+Number(x.minutes||duration(x.start,x.end)||0),0),auto=autoRows().reduce((s,x)=>s+Number(x.minutes||0),0),manual=S.manual.reduce((s,x)=>s+Number(x.minutes||0),0);
+ // "Material" = waiting for raw material — doesn't stop the machine, so it's
+ // recorded and shown like any other category (Loss Records list, Loss by
+ // Category breakdown) but excluded from the Loss TOTALS below, same as the
+ // Dashboard's LOSS KPI already does (dashboard.js render(), lossRows()
+ // filter). Only the two summed KPIs need the filter — everything else
+ // (renderSummary, the Loss Records table, RECORDS count) still shows it.
+ let rows=allRows(),lossOnly=rows.filter(x=>x.category!=="Material");
+ let total=lossOnly.reduce((s,x)=>s+Number(x.minutes||duration(x.start,x.end)||0),0),auto=autoRows().reduce((s,x)=>s+Number(x.minutes||0),0),manual=S.manual.filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
  $("lossKpis").innerHTML=`<div class="entry-kpi"><small>TOTAL LOSS</small><b>${total} min</b></div><div class="entry-kpi"><small>PALLET CHANGE</small><b>${auto} min</b></div><div class="entry-kpi"><small>OTHER LOSS</small><b>${manual} min</b></div><div class="entry-kpi"><small>RECORDS</small><b>${rows.length}</b></div>`;
  renderSummary(rows);
  if(!rows.length){$("lossList").innerHTML='<div class="empty-state">ยังไม่มี Loss ในกะนี้</div>';return}
