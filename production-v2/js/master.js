@@ -494,12 +494,12 @@ function carryForwardRounds(blocks,cycleMin){
   // worked minutes, not by flooring each block in isolation (see the long
   // comment history in git — per-block flooring silently drops fractional
   // rounds whenever a block's length isn't a clean multiple of the cycle
-  // time, under-counting the whole shift). The shift TOTAL is rounded UP
-  // (ceiling) rather than down — e.g. 630÷12=52.5 becomes 53, not 52 — with
-  // the single leftover fractional round absorbed into the LAST WORK block
-  // only; every other block keeps the same floor-based distribution.
+  // time, under-counting the whole shift). The shift TOTAL is also rounded
+  // DOWN (floor) — e.g. 630÷12=52.5 becomes 52, not 53 — with the
+  // fractional leftover simply dropped (not owed to any block); every
+  // block still uses the same carry-forward distribution as before.
   const totalWorkMin=blocks.filter(([,,type])=>type==='WORK').reduce((s,[,,,minutes])=>s+minutes,0);
-  const targetTotal=Math.ceil(totalWorkMin/cycleMin);
+  const targetTotal=Math.floor(totalWorkMin/cycleMin);
   let cumMin=0,cumRounds=0;
   return blocks.map(([start,end,type,minutes],i)=>{
     if(type!=='WORK')return {start,end,type,minutes,cycleMin:null,plannedRounds:0};
@@ -769,8 +769,8 @@ function recomputeBlocksWithNewCycle(blocks,cycleMin){
   if(!work.length||!cycleMin)return blocks;
   const totalSched=work.reduce((s,b)=>s+Number(b.minutes||0),0);
   const totalProd=work.reduce((s,b)=>s+Number(b.productiveMinutes||0),0);
-  const targetSched=Math.ceil(totalSched/cycleMin);
-  const targetProd=Math.ceil(totalProd/cycleMin);
+  const targetSched=Math.floor(totalSched/cycleMin);
+  const targetProd=Math.floor(totalProd/cycleMin);
   let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0,workSeen=0;
   return blocks.map(b=>{
     if(b.type==='BREAK')return b;

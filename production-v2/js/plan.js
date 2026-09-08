@@ -68,9 +68,10 @@ function splitBlocks(){
 }
 function carryForwardPlanRounds(raw){
   // Same fix as Master Setup's carryForwardRounds — flooring each interval's
-  // rounds in isolation silently drops fractional rounds whenever an
-  // interval's minutes aren't a clean multiple of the cycle time, and the
-  // shift TOTAL should round UP, not down. Runs across every WORK interval
+  // rounds in isolation (and each block only knowing its own slice) drops
+  // fractional rounds inconsistently across blocks. Carrying the remainder
+  // forward keeps that distribution correct, and the shift TOTAL itself is
+  // also floored (630÷12=52.5 → 52, not 53). Runs across every WORK interval
   // for the whole shift continuously (Pallet Change cuts don't reset it,
   // and the tracked BREAK entries interleaved in `raw` are skipped here —
   // they always get 0 rounds regardless of position), matching exactly how
@@ -83,8 +84,8 @@ function carryForwardPlanRounds(raw){
   const cycle=work[0].cycle||10;
   const totalSched=work.reduce((s,r)=>s+r.minutes,0);
   const totalProd=work.reduce((s,r)=>s+r.productiveMinutes,0);
-  const targetSched=Math.ceil(totalSched/cycle);
-  const targetProd=Math.ceil(totalProd/cycle);
+  const targetSched=Math.floor(totalSched/cycle);
+  const targetProd=Math.floor(totalProd/cycle);
   let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0,workSeen=0;
   return raw.map(r=>{
     if(r.type!=="WORK")return {...r,scheduledRounds:0,rounds:0};
