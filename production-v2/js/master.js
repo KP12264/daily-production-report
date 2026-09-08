@@ -490,25 +490,16 @@ const C_NIGHT_BLOCKS=[
 ];
 
 function carryForwardRounds(blocks,cycleMin){
-  // Computes each WORK block's rounds from a RUNNING cumulative total of
-  // worked minutes, not by flooring each block in isolation (see the long
-  // comment history in git — per-block flooring silently drops fractional
-  // rounds whenever a block's length isn't a clean multiple of the cycle
-  // time, under-counting the whole shift). The shift TOTAL is also rounded
-  // DOWN (floor) — e.g. 630÷12=52.5 becomes 52, not 53 — with the
-  // fractional leftover simply dropped (not owed to any block); every
-  // block still uses the same carry-forward distribution as before.
-  const totalWorkMin=blocks.filter(([,,type])=>type==='WORK').reduce((s,[,,,minutes])=>s+minutes,0);
-  const targetTotal=Math.floor(totalWorkMin/cycleMin);
-  let cumMin=0,cumRounds=0;
-  return blocks.map(([start,end,type,minutes],i)=>{
+  // Rounds are no longer floored/ceil'd/distributed at all — each WORK
+  // block's rounds is simply minutes÷cycle, kept as an exact decimal (e.g.
+  // 5.25 rounds). Exact fractions sum correctly on their own (52.5 total
+  // stays 52.5 whether you add the blocks up or compute it directly), so
+  // none of the old carry-forward bookkeeping is needed anymore. Only the
+  // final Plan (rounds × Jig, computed downstream in plan.js) gets rounded
+  // — to the nearest whole number, not floor/ceil — and only at that point.
+  return blocks.map(([start,end,type,minutes])=>{
     if(type!=='WORK')return {start,end,type,minutes,cycleMin:null,plannedRounds:0};
-    cumMin+=minutes;
-    const isLastWork=!blocks.slice(i+1).some(([,,t])=>t==='WORK');
-    const newCumRounds=isLastWork?targetTotal:Math.floor(cumMin/cycleMin);
-    const rounds=newCumRounds-cumRounds;
-    cumRounds=newCumRounds;
-    return {start,end,type,minutes,cycleMin,plannedRounds:rounds};
+    return {start,end,type,minutes,cycleMin,plannedRounds:minutes/cycleMin};
   });
 }
 function shiftRecord(lineId,shift,blocks,status,cycleMin){
@@ -567,7 +558,7 @@ async function loadShiftMaster(){
   const workMin=blocks.filter(b=>b.type==='WORK').reduce((s,b)=>s+Number(b.minutes||0),0);
   const rounds=blocks.reduce((s,b)=>s+Number(b.plannedRounds||0),0);
   const state=rec.verificationStatus||'PENDING';
-  sum.textContent=`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds} planned rounds • ${state}`;
+  sum.textContent=`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds.toFixed(2)} planned rounds • ${state}`;
   const cycleInput=document.getElementById('shiftCycleInput');
   if(cycleInput)cycleInput.value=rec.standardCycleMinPerRound||'';
   window.currentShiftBlockMeta=blocks.map(b=>({start:b.start,end:b.end,type:b.type})); // start/end/type aren't editable — Recalculate reads them from here, not from the DOM
@@ -579,7 +570,7 @@ async function loadShiftMaster(){
     <td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.type)}</td>
     <td><input type="number" min="0" value="${b.minutes}" data-k="minutes" ${b.type!=="WORK"?"disabled":""}></td>
     <td>${b.cycleMin??'-'}</td>
-    <td><input type="number" min="0" value="${b.plannedRounds??0}" data-k="plannedRounds" ${b.type!=="WORK"?"disabled":""}></td>
+    <td><input type="number" min="0" step="0.01" value="${Number(b.plannedRounds||0).toFixed(2)}" data-k="plannedRounds" ${b.type!=="WORK"?"disabled":""}></td>
     <td>${state}</td>
     <td class="right"><button data-save-block="${i}">Save</button></td>
   </tr>`).join('');
@@ -767,21 +758,15 @@ function localDateStr(d=new Date()){const z=n=>String(n).padStart(2,'0');return 
 function recomputeBlocksWithNewCycle(blocks,cycleMin){
   const work=(blocks||[]).filter(b=>b.type!=='BREAK');
   if(!work.length||!cycleMin)return blocks;
-  const totalSched=work.reduce((s,b)=>s+Number(b.minutes||0),0);
-  const totalProd=work.reduce((s,b)=>s+Number(b.productiveMinutes||0),0);
-  const targetSched=Math.floor(totalSched/cycleMin);
-  const targetProd=Math.floor(totalProd/cycleMin);
-  let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0,workSeen=0;
+  // Same simplification as carryForwardRounds above — rounds are an exact
+  // decimal (minutes÷cycle), no carry-forward bookkeeping needed. Only the
+  // final per-cell Plan (rounds × qty) gets rounded, to the nearest whole
+  // number, right where it's computed.
   return blocks.map(b=>{
     if(b.type==='BREAK')return b;
-    workSeen++;
-    cumSchedMin+=Number(b.minutes||0);cumProdMin+=Number(b.productiveMinutes||0);
-    const isLast=workSeen===work.length;
-    const newSchedRounds=isLast?targetSched:Math.floor(cumSchedMin/cycleMin);
-    const newProdRounds=isLast?targetProd:Math.floor(cumProdMin/cycleMin);
-    const scheduledRounds=newSchedRounds-cumSchedRounds,rounds=newProdRounds-cumProdRounds;
-    cumSchedRounds=newSchedRounds;cumProdRounds=newProdRounds;
-    const cells=(b.cells||[]).map(c=>({...c,originalPlan:scheduledRounds*Number(c.qty||0),plan:rounds*Number(c.qty||0)}));
+    const scheduledRounds=Number(b.minutes||0)/cycleMin;
+    const rounds=Number(b.productiveMinutes||0)/cycleMin;
+    const cells=(b.cells||[]).map(c=>({...c,originalPlan:Math.round(scheduledRounds*Number(c.qty||0)),plan:Math.round(rounds*Number(c.qty||0))}));
     const originalTotal=cells.reduce((s,c)=>s+c.originalPlan,0),total=cells.reduce((s,c)=>s+c.plan,0);
     return {...b,scheduledRounds,rounds,cells,originalTotal,total};
   });

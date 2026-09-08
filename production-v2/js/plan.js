@@ -67,36 +67,17 @@ function splitBlocks(){
   return carryForwardPlanRounds(raw);
 }
 function carryForwardPlanRounds(raw){
-  // Same fix as Master Setup's carryForwardRounds — flooring each interval's
-  // rounds in isolation (and each block only knowing its own slice) drops
-  // fractional rounds inconsistently across blocks. Carrying the remainder
-  // forward keeps that distribution correct, and the shift TOTAL itself is
-  // also floored (630÷12=52.5 → 52, not 53). Runs across every WORK interval
-  // for the whole shift continuously (Pallet Change cuts don't reset it,
-  // and the tracked BREAK entries interleaved in `raw` are skipped here —
-  // they always get 0 rounds regardless of position), matching exactly how
-  // Master Setup now computes plannedRounds — so a Daily Plan built from the
-  // same Master data always agrees with it. scheduledRounds (Original Plan,
-  // no loss deducted) and rounds (Adjusted Plan, loss deducted) are carried
-  // forward independently since they track two different minute totals.
-  const work=raw.filter(r=>r.type==="WORK");
-  if(!work.length)return raw.map(r=>({...r,scheduledRounds:0,rounds:0}));
-  const cycle=work[0].cycle||10;
-  const totalSched=work.reduce((s,r)=>s+r.minutes,0);
-  const totalProd=work.reduce((s,r)=>s+r.productiveMinutes,0);
-  const targetSched=Math.floor(totalSched/cycle);
-  const targetProd=Math.floor(totalProd/cycle);
-  let cumSchedMin=0,cumSchedRounds=0,cumProdMin=0,cumProdRounds=0,workSeen=0;
+  // Rounds are no longer floored/distributed via carry-forward — each WORK
+  // interval's rounds is simply minutes÷cycle, kept as an exact decimal.
+  // Exact fractions sum correctly on their own, so summing per-interval
+  // rounds always agrees with computing the shift total directly — no
+  // bookkeeping needed. Only the final per-cell Plan (rounds × qty,
+  // computed in build() below) gets rounded, to the nearest whole number,
+  // right where it's computed — matching Master Setup's carryForwardRounds.
   return raw.map(r=>{
     if(r.type!=="WORK")return {...r,scheduledRounds:0,rounds:0};
-    workSeen++;
-    cumSchedMin+=r.minutes;cumProdMin+=r.productiveMinutes;
-    const isLast=workSeen===work.length;
-    const newSchedRounds=isLast?targetSched:Math.floor(cumSchedMin/r.cycle);
-    const newProdRounds=isLast?targetProd:Math.floor(cumProdMin/r.cycle);
-    const scheduledRounds=newSchedRounds-cumSchedRounds,rounds=newProdRounds-cumProdRounds;
-    cumSchedRounds=newSchedRounds;cumProdRounds=newProdRounds;
-    return {...r,scheduledRounds,rounds};
+    const cycle=r.cycle||10;
+    return {...r,scheduledRounds:r.minutes/cycle,rounds:r.productiveMinutes/cycle};
   });
 }
 function build(){
@@ -113,7 +94,7 @@ function build(){
       return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:0,lossMinutes:0,productiveMinutes:0,rounds:0,activePositions:0,slotSnapshot:[],cells,originalTotal:0,total:0,type:"BREAK"};
     }
     let slots=slotStateAt(b.start),pm=new Map(mapForSlots(slots).map(p=>[p.model+"|||"+p.door,p]));
-    let cells=cols.map(c=>{let p=pm.get(c.model+"|||"+c.door),qty=p?.qty||0;return{...c,qty,originalPlan:b.scheduledRounds*qty,plan:b.rounds*qty}});
+    let cells=cols.map(c=>{let p=pm.get(c.model+"|||"+c.door),qty=p?.qty||0;return{...c,qty,originalPlan:Math.round(b.scheduledRounds*qty),plan:Math.round(b.rounds*qty)}});
     return{start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,cells,originalTotal:cells.reduce((s,c)=>s+c.originalPlan,0),total:cells.reduce((s,c)=>s+c.plan,0)}
   })
 }
@@ -204,13 +185,13 @@ function table(){
  S.matrix.forEach(x=>h+=`<th>${x.start}–${x.end}<br><small>${x.type==="BREAK"?"BREAK":"Plan "+x.total}</small></th>`);
  h+='<th class="sum-col sum-diff">Original</th><th class="sum-col sum-ach">Adjusted</th></tr></thead><tbody>';
  h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Sched. Rounds</b></div></td>';
- S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.scheduledRounds}</div></td>`);
+ S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.type==="BREAK"?"-":Number(x.scheduledRounds).toFixed(2)}</div></td>`);
  h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
  h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Loss</b></div></td>';
  S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.lossMinutes?x.lossMinutes+" min":"-"}</div></td>`);
  h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
  h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Adj. Rounds</b></div></td>';
- S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.rounds}</div></td>`);
+ S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.type==="BREAK"?"-":Number(x.rounds).toFixed(2)}</div></td>`);
  h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
  ps.forEach(p=>{
   h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${p.model}</b><small>${p.door||"-"}</small></div></td>`;
