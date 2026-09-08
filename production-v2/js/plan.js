@@ -101,6 +101,12 @@ function distributeRounded(fractions,target){
 function build(){
   let blocks=splitBlocks(),allKeys=new Map;
   blocks.filter(b=>b.type==="WORK").forEach(b=>mapForSlots(slotStateAt(b.start)).forEach(p=>allKeys.set(p.model+"|||"+p.door,{model:p.model,door:p.door})));
+  // Also register every Model/Door in this Line's full Pallet/Jig layout,
+  // even pallets that aren't checked Active today — otherwise a model with
+  // no Plan simply has no column and its row vanishes from the table. This
+  // way it still gets a column; qtyByCol/originalPlan/plan all resolve to 0
+  // for it below since no active slot ever supplies its qty.
+  S.pallets.forEach(p=>posOf(p).forEach(q=>allKeys.set(q.model+"|||"+q.door,{model:q.model,door:q.door})));
   let cols=[...allKeys.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
 
   // Pass 1 — raw per-block data, unrounded. Each block just records how
