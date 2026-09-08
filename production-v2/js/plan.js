@@ -109,7 +109,7 @@ function build(){
     if(b.type==="BREAK")return {start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:0,lossMinutes:0,productiveMinutes:0,rounds:0,activePositions:0,slotSnapshot:[],type:"BREAK",qtyByCol:cols.map(()=>0)};
     let slots=slotStateAt(b.start),pm=new Map(mapForSlots(slots).map(p=>[p.model+"|||"+p.door,p]));
     let qtyByCol=cols.map(c=>pm.get(c.model+"|||"+c.door)?.qty||0);
-    return {start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,qtyByCol};
+    return {start:b.start,end:b.end,minutes:b.minutes,scheduledRounds:b.scheduledRounds,lossMinutes:b.lossMinutes,productiveMinutes:b.productiveMinutes,rounds:b.rounds,activePositions:slots.filter(s=>s.active).length,slotSnapshot:slots,qtyByCol,type:"WORK"};
   });
 
   // Pass 2 — for each Model/Door column, the shift-level target is rounded
