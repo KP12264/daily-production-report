@@ -18,8 +18,8 @@ async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map
    pool maps to the wrong real Model/Door, correct it here — everything
    downstream (grouping, shortage warnings) follows from this table alone. */
 const POOLS={
-  bm_rr:[["BM","RR"]], bm_rl:[["BM","RL"]], bm_ft:[["BM","FT"]], bm_fb:[["BM","FB"]],
-  bm28_fr:[["BM28","FR"]], bm28_fl:[["BM28","FL"]],
+  bm_rr:[["BM 23 29","RR"]], bm_rl:[["BM 23 29","RL"]], bm_ft:[["BM 23 29","FT"]], bm_fb:[["BM 23 29","FB"]],
+  bm28_fr:[["BM28 FL FR","FR"]], bm28_fl:[["BM28 FL FR","FL"]],
   glass_rr:[["BM28 Glass","RR"]], glass_rl:[["BM28 Glass","RL"]], glass_ft:[["BM28 Glass","FT"]], glass_fb:[["BM28 Glass","FB"]],
   glasstd_fr:[["BM28 Glass T-Door","FR"]], glasstd_fl:[["BM28 Glass T-Door","FL"]],
   fuf14_r:[["FUF14","R"]], fuf1822_r:[["FUF18/22","R"]],
@@ -31,7 +31,7 @@ const POOLS={
   door53c_r:[["Door 5.3 Cu.(159) C","R"]], door53f_r:[["Door 5.3 Cu.(159) F","R"]],
   door66c_r:[["Door 6.6 Cu.(199) C","R"]], door66f_r:[["Door 6.6 Cu.(199) F","R"]],
   f636:[["636","F"]],
-  d620flat_r:[["620/550 หน้าเรียบ","R"]], d620faucet_r:[["620/550 ก๊อกน้ำ","R"]],
+  d620flat_r:[["620 550 หน้าเรียบ","R"]], d620faucet_r:[["620 550 ก๊อกน้ำ","R"]],
   d520_rl:[["520","RL"]],
   d520flat_rr:[["520 หน้าเรียบ","RR"]], d520faucet_rr:[["520 ก๊อกน้ำ","RR"]],
   frfl_big4_fr:[["T-Door Horizontal เรียบ","FR"],["T-Door Horizontal ก๊อก","FR"]],
@@ -152,11 +152,15 @@ function render(totals,logCount){
 function init(){
  $("asmDate").value=localDate();
  $("asmLoadBtn").onclick=load;
+ // เปลี่ยน Date/Shift แล้วโหลดใหม่ทันที ไม่ต้องกด Load เอง — เหมือนที่แก้ใน
+ // dashboard.js / entry.js / plan.js
+ $("asmDate").onchange=load;$("asmShift").onchange=load;
  const sel=$("asmGroupFilter");
  if(sel){
   sel.innerHTML='<option value="">ทุก Model</option>'+BOM.map(g=>`<option value="${esc(g.group)}">${esc(g.group)}</option>`).join("");
   sel.addEventListener("change",()=>{if(window.currentAsmTotals)render(window.currentAsmTotals,0)});
  }
+ load();
 }
 if(document.readyState==="loading")addEventListener("DOMContentLoaded",init);else init();
 })();
