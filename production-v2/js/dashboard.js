@@ -255,6 +255,9 @@ async function load(){
 }
 async function init(){
  $("dashDate").value=localDate();$("dashLoadBtn").onclick=load;$("dashModel").onchange=render;$("dashDoor").onchange=render;
+ // เปลี่ยน Date/Line/Shift แล้วโหลดใหม่ทันที ไม่ต้องกด Load Dashboard เอง —
+ // ปุ่มยังอยู่เผื่ออยากรีเฟรชข้อมูลซ้ำที่ตัวกรองเดิม (เช่น มีคนกรอก Actual เพิ่มระหว่างเปิดหน้าไว้)
+ $("dashDate").onchange=load;$("dashLine").onchange=load;$("dashShift").onchange=load;
  $("dashHourlyToggle")?.addEventListener("click",()=>{
   let open=$("dashHourly").style.display!=="none";
   $("dashHourly").style.display=open?"none":"block";
