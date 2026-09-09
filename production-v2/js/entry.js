@@ -40,7 +40,14 @@ function openModelOrder(){
  host.querySelectorAll("[data-order-move]").forEach(b=>b.onclick=()=>{moveModel(b.dataset.orderMove,Number(b.dataset.dir));openModelOrder()})
 }
 function closeModelOrder(){$("modelOrderModal")?.classList.remove("open");render()}
-function actualTotal(){return Object.values(S.actual).reduce((s,x)=>s+(Number(x)||0),0)}
+function actualTotal(){
+ // บวกเฉพาะ cell ที่ยังตรงกับแถวในตารางปัจจุบัน (Model/Door ที่มีอยู่ใน
+ // S.plan.blocks[].cells จริง) — ไม่บวกรวม key เก่าที่ค้างมาจากก่อนเปลี่ยนชื่อ
+ // Model ใน Master ซึ่งไม่มีแถวไหนแสดงมันอีกแล้ว แต่ยังฝังอยู่ใน S.actual
+ let valid=new Set();
+ (S.plan?.blocks||[]).forEach((b,bi)=>(b.cells||[]).forEach(c=>valid.add(key(bi,c.model,c.door))));
+ return Object.entries(S.actual).reduce((s,[k,v])=>s+(valid.has(k)?(Number(v)||0):0),0);
+}
 function adjustedPlan(){return Number(S.plan?.adjustedPlan??S.plan?.totalPlan??0)}
 function originalPlan(){return Number(S.plan?.originalPlan??S.plan?.totalPlan??0)}
 function renderKpis(){
