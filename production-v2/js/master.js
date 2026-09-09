@@ -268,7 +268,7 @@ async function loadLayouts(){
   }
   const lineId=select.value;
   const all=await v2ReadAll(LAYOUT_COLLECTION);
-  const rows=all.filter(x=>x.lineId===lineId).sort((a,b)=>(a.palletNo||0)-(b.palletNo||0));
+  const rows=all.filter(x=>x.lineId===lineId).sort((a,b)=>(a.sortOrder??a.palletNo??999)-(b.sortOrder??b.palletNo??999));
   const body=document.getElementById('layoutRows');
   const sum=document.getElementById('layoutSummary');
   const hint=document.getElementById('layoutModelHint');
