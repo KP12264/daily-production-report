@@ -234,17 +234,17 @@ function formatContextDate(dateStr){
 }
 // ข้อเสนอแนะสั้นๆ ต่อ Loss category — ใครควรถูกตามก่อนเมื่อ category นี้เป็นสาเหตุหลัก
 const CATEGORY_ACTIONS={
- "Material":"→ Check material availability / supply status and confirm root cause",
- "Machine":"→ Check machine condition and confirm cause of downtime",
- "Robot":"→ Check robot condition / alarm and confirm root cause",
- "Jig":"→ Check Jig condition / setup / alignment",
- "Conveyor":"→ Check conveyor condition (jam / sensor / stopper) and confirm root cause",
- "Pallet Change":"→ Review pallet change timing and production impact",
- "Change Model":"→ Review changeover timing and setup process",
- "Quality":"→ Check quality issue and confirm disposition",
- "Manpower":"→ Review manpower allocation for this shift",
- "Process / Method":"→ Review process/method and confirm adjustment needed",
- "Waiting":"→ Check what was being waited on and confirm root cause",
+ "Material":"→ ตรวจสอบสถานะวัตถุดิบและยืนยันสาเหตุ",
+ "Machine":"→ ตรวจสอบสภาพเครื่องและยืนยันสาเหตุ Downtime",
+ "Robot":"→ ตรวจสอบ Robot / Alarm และยืนยันสาเหตุ",
+ "Jig":"→ ตรวจสอบสภาพ Jig / Setup / Alignment",
+ "Conveyor":"→ ตรวจสอบสภาพ Conveyor (Jam / Sensor / Stopper) และยืนยันสาเหตุ",
+ "Pallet Change":"→ ตรวจสอบเวลาเปลี่ยน Pallet และผลกระทบต่อการผลิต",
+ "Change Model":"→ ตรวจสอบขั้นตอนเปลี่ยนรุ่นและระยะเวลา Setup",
+ "Quality":"→ ตรวจสอบปัญหาคุณภาพและยืนยันการตัดสินงาน",
+ "Manpower":"→ ตรวจสอบการจัดสรรกำลังคนของกะนี้",
+ "Process / Method":"→ ตรวจสอบ Process/Method และยืนยันการปรับแก้ที่ต้องทำ",
+ "Waiting":"→ ตรวจสอบว่ารออะไรอยู่และยืนยันสาเหตุ",
 };
 function topLossCategory(){
  let byCat={};
@@ -306,7 +306,9 @@ function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan){
  let sec=$("dashKpis");
  if(sec)sec.innerHTML=`<span>Adjusted Plan (full shift): <b>${plan.toLocaleString()}</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${gapPlan.toLocaleString()}</b></span>`;
 }
-function lossSummaryCard(loss,material){
+let mainLossState={cat:null,detail:null};
+function biLabel(en,th){return th?`${esc(th)} (${esc(en)})`:esc(en)}
+function lossSummaryCard(){
  let host=$("dashLossSummary");
  if(!host)return;
  let {entries,total}=topLossCategory();
@@ -316,18 +318,55 @@ function lossSummaryCard(loss,material){
  let top3=entries.slice(0,3);
  // Top Detail — เสริมทางเลือก เฉพาะเมื่อมี detailCause จริงในข้อมูลของ
  // Category อันดับ 1 เท่านั้น (ไม่ fabricate ให้ record เก่าที่ไม่มีข้อมูลนี้)
- let topCatRows=lossRows().filter(x=>(x.category||"Other")===topName&&x.detailCause&&x.detailCause!=="Unspecified");
+ let topCatRows=lossRows().filter(x=>(x.category||"Other")===topName&&x.detailCause);
  let topDetailHtml="";
  if(topCatRows.length){
-  let byDetail={};
-  topCatRows.forEach(x=>{byDetail[x.detailCause]=(byDetail[x.detailCause]||0)+Number(x.minutes||0)});
-  let [dName,dMin]=Object.entries(byDetail).sort((a,b)=>b[1]-a[1])[0];
-  topDetailHtml=`<div class="dash-main-loss-detail">Top Detail: <b>${esc(dName)}</b> · ${dMin} min</div>`;
+  let byTop={};
+  topCatRows.forEach(x=>{byTop[x.detailCause]??={min:0,th:x.detailCauseTh};byTop[x.detailCause].min+=Number(x.minutes||0)});
+  let [dName,dInfo]=Object.entries(byTop).sort((a,b)=>b[1].min-a[1].min)[0];
+  topDetailHtml=`<div class="dash-main-loss-detail">Top Detail: <b>${biLabel(dName,dInfo.th)}</b> · ${dInfo.min} min</div>`;
  }
+ // Category → Detail Cause → Individual Record, inline, one level
+ // expanded at a time per level (mainLossState) — clicking the same
+ // row again collapses it; clicking a different Category row switches
+ // which one is open and resets any open Detail Cause under the old one.
+ let rowsHtml=top3.map(([catName,catMin],i)=>{
+  let catPct=total?Math.round(catMin/total*100):0;
+  let isOpen=mainLossState.cat===catName;
+  let row=`<div class="dash-loss-cat-row" data-mloss-cat="${esc(catName)}"><span class="dash-loss-chevron">${isOpen?"▾":"›"}</span><span class="dash-loss-cat-rank">${i+1}. ${esc(catName)}</span><b>${catMin} min</b><small>${catPct}%</small></div>`;
+  if(!isOpen)return row;
+  let byDetail={};
+  lossRows().filter(x=>(x.category||"Other")===catName).forEach(x=>{
+   let key=x.detailCause||"__unspec__";
+   byDetail[key]??={min:0,th:x.detailCauseTh,items:[]};
+   byDetail[key].min+=Number(x.minutes||0);
+   byDetail[key].items.push(x);
+  });
+  let detailHtml=Object.entries(byDetail).sort((a,b)=>b[1].min-a[1].min).map(([key,info])=>{
+   let label=key==="__unspec__"?"ไม่ระบุรายละเอียด (Unspecified)":key==="Other"?"อื่น ๆ (Other)":biLabel(key,info.th);
+   let dKey=catName+"|||"+key,detailOpen=mainLossState.detail===dKey;
+   let dRow=`<div class="dash-loss-detail-row" data-mloss-detail="${esc(dKey)}"><span class="dash-loss-chevron">${detailOpen?"▾":"›"}</span><span>${label}</span><b>${info.min} min</b></div>`;
+   if(!detailOpen)return dRow;
+   // รายการดิบ — โชว์เฉพาะ field ที่มีจริง ไม่ประดิษฐ์ Model/Door ที่ Loss
+   // record ไม่มี (ตามที่ระบุไว้ชัดเจน)
+   let recHtml=info.items.map(x=>{
+    let remark=x.detailCause==="Other"&&x.customCause?`Other: ${esc(x.customCause)}${x.remark?" · "+esc(x.remark):""}`:esc(x.remark||"");
+    return `<div class="dash-loss-record-row"><span>${esc(x.start||"")}–${esc(x.end||"")}</span><b>${x.minutes||0} min</b>${remark?`<small>${remark}</small>`:""}</div>`;
+   }).join("");
+   return dRow+`<div class="dash-loss-record-list">${recHtml}</div>`;
+  }).join("");
+  return row+`<div class="dash-loss-detail-list">${detailHtml}</div>`;
+ }).join("");
  host.innerHTML=`<h3>MAIN LOSS</h3>
   <div class="dash-main-loss"><div class="dash-main-loss-name">${esc(topName)}</div><div class="dash-main-loss-num">${topMin} min <span>· ${pct}% of Total Loss</span></div>${topDetailHtml}</div>
   <div class="dash-loss-total">TOTAL LOSS: <b>${total} min</b></div>
-  <div class="dash-loss-top3">${top3.map(([c,m],i)=>`<div class="dash-loss-top3-row"><span>${i+1}. ${esc(c)}</span><b>${m} min</b><small>${total?Math.round(m/total*100):0}%</small></div>`).join("")}</div>`;
+  <div class="dash-loss-top3">${rowsHtml}</div>`;
+ host.onclick=e=>{
+  let dEl=e.target.closest("[data-mloss-detail]");
+  if(dEl){let k=dEl.dataset.mlossDetail;mainLossState.detail=mainLossState.detail===k?null:k;lossSummaryCard();return}
+  let cEl=e.target.closest("[data-mloss-cat]");
+  if(cEl){let c=cEl.dataset.mlossCat;if(mainLossState.cat===c){mainLossState.cat=null;mainLossState.detail=null}else{mainLossState.cat=c;mainLossState.detail=null}lossSummaryCard()}
+ };
 }
 function mostAffectedCard(P,A,use){
  let host=$("dashMostAffected");
@@ -392,10 +431,13 @@ function lossView(){
   // detailCause เลย) และ record เก่าก่อนฟีเจอร์นี้ ถูกจัดเข้ากลุ่ม
   // "Unspecified" เสมอ ผลรวมของกลุ่มยังคงเท่ากับ total เดิมของ Category
   let byDetail={};
-  items.forEach(x=>{let dc=x.detailCause||"Unspecified";(byDetail[dc]??=[]).push(x)});
-  let detailGroups=Object.entries(byDetail).map(([name,arr])=>({name,total:arr.reduce((s,x)=>s+Number(x.minutes||0),0)})).sort((a,b)=>b.total-a.total);
-  if(detailGroups.length>1||detailGroups[0]?.name!=="Unspecified"){
-   h+='<div class="loss-detail-breakdown">'+detailGroups.map(d=>`<div class="loss-detail-cause-row"><span>${esc(d.name)}</span><b>${d.total} min</b></div>`).join("")+'</div>';
+  items.forEach(x=>{let dc=x.detailCause||"__unspec__";(byDetail[dc]??={th:x.detailCauseTh,arr:[]});byDetail[dc].arr.push(x)});
+  let detailGroups=Object.entries(byDetail).map(([key,{th,arr}])=>({key,th,total:arr.reduce((s,x)=>s+Number(x.minutes||0),0)})).sort((a,b)=>b.total-a.total);
+  if(detailGroups.length>1||detailGroups[0]?.key!=="__unspec__"){
+   h+='<div class="loss-detail-breakdown">'+detailGroups.map(d=>{
+    let label=d.key==="__unspec__"?"ไม่ระบุรายละเอียด (Unspecified)":d.key==="Other"?"อื่น ๆ (Other)":biLabel(d.key,d.th);
+    return `<div class="loss-detail-cause-row"><span>${label}</span><b>${d.total} min</b></div>`;
+   }).join("")+'</div>';
   }
   items.forEach(x=>h+=`<div class="loss-detail-row"><span>${esc(x.start||"")}–${esc(x.end||"")}</span><b>${x.minutes} min</b>${x.remark?`<small>${esc(x.remark)}</small>`:""}</div>`);
   h+=`</div>`;
@@ -409,6 +451,7 @@ function lossView(){
 }
 async function load(){
  let d=$("dashDate").value,l=$("dashLine").value.toUpperCase(),sh=$("dashShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});stat("Loading...");
+ mainLossState={cat:null,detail:null};
  try{
   let [p,a,loss]=await Promise.all([
    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${l}_${sh}`).get(),

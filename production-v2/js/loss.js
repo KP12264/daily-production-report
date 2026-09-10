@@ -44,10 +44,11 @@ function currentCategoryId(){
  let sel=$("lossCategory");
  return sel.selectedOptions[0]?.dataset.catId||null;
 }
+function biLabel(en,th){return th?`${th} (${en})`:en}
 function populateDetailCauseDropdown(preserveValue){
  let sel=$("lossDetailCause"),catId=currentCategoryId();
  let details=catId?(S.lossDetailsByCat?.[catId]||[]):[];
- let opts=details.map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`);
+ let opts=details.map(x=>`<option value="${esc(x.name)}" data-th="${esc(x.nameTh||"")}">${esc(biLabel(x.name,x.nameTh))}</option>`);
  if(!details.length)opts=['<option value="Other">Other</option>']; // fallback ถ้า Category นี้ยังไม่มี Detail Cause ใน Master
  sel.innerHTML=opts.join("");
  if(preserveValue&&[...sel.options].some(o=>o.value===preserveValue))sel.value=preserveValue;
@@ -101,19 +102,19 @@ function render(){
  if(!rows.length){$("lossList").innerHTML='<div class="empty-state">ยังไม่มี Loss ในกะนี้</div>';return}
  let h='<div class="table-scroll"><table class="grid loss-table"><thead><tr><th>Start</th><th>End</th><th>Minutes</th><th>Category</th><th>Detail Cause</th><th>Remark</th><th>Source</th><th>Action</th></tr></thead><tbody>';
  rows.sort((a,b)=>mins(a.start||"00:00")-mins(b.start||"00:00")).forEach(x=>{
-   let detailText=x.auto?"—":!x.detailCause?"Unspecified":x.detailCause==="Other"?`Other${x.customCause?": "+esc(x.customCause):""}`:esc(x.detailCause);
+   let detailText=x.auto?"—":!x.detailCause?"ไม่ระบุรายละเอียด (Unspecified)":x.detailCause==="Other"?`อื่น ๆ (Other)${x.customCause?": "+esc(x.customCause):""}`:esc(biLabel(x.detailCause,x.detailCauseTh));
    h+=`<tr><td>${esc(x.start||"-")}</td><td>${esc(x.end||"-")}</td><td><b>${Number(x.minutes||duration(x.start,x.end)||0)}</b></td><td>${esc(x.category||"-")}</td><td>${detailText}</td><td>${esc(x.remark||"-")}</td><td>${x.auto?'<span class="source-auto">DAILY PLAN</span>':'<span class="source-manual">MANUAL</span>'}</td><td>${x.auto?'<span class="muted">แก้ที่ Daily Plan</span>':`<button class="loss-edit" data-edit="${x.id}">Edit</button> <button class="loss-delete" data-del="${x.id}">Delete</button>`}</td></tr>`
  }); h+='</tbody></table></div>';$("lossList").innerHTML=h;
  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>remove(b.dataset.del));
  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>beginEdit(b.dataset.edit));
 }
 function clearForm(){
- S.editId=null;$("lossStart").value="";$("lossEnd").value="";$("lossRemark").value="";$("lossImpactType").value="";$("addLossBtn").textContent="Add Loss";$("cancelEditBtn").hidden=true;
+ S.editId=null;$("lossStart").value="";$("lossEnd").value="";$("lossRemark").value="";$("addLossBtn").textContent="Add Loss";$("cancelEditBtn").hidden=true;
  populateCategoryDropdown(); // รีเซ็ต Category กลับตัวแรก + Detail Cause ตาม
 }
 function beginEdit(id){
  let x=S.manual.find(v=>v.id===id);if(!x)return;S.editId=id;
- $("lossStart").value=x.start;$("lossEnd").value=x.end;$("lossRemark").value=x.remark||"";$("lossImpactType").value=x.impactType||"";
+ $("lossStart").value=x.start;$("lossEnd").value=x.end;$("lossRemark").value=x.remark||"";
  $("lossCategory").value=x.category;
  populateDetailCauseDropdown(); // ตาม Category ของ record นี้
  if(x.detailCause){
@@ -121,7 +122,7 @@ function beginEdit(id){
   // ชั่วคราวถ้าค่านั้นไม่อยู่ใน Master ปัจจุบันแล้ว เช่นถูก Disable ไปทีหลัง —
   // ข้อมูลเก่ายังต้องแสดง/แก้ไขต่อได้โดยไม่บังคับเปลี่ยน)
   let sel=$("lossDetailCause");
-  if(![...sel.options].some(o=>o.value===x.detailCause))sel.insertAdjacentHTML("afterbegin",`<option value="${esc(x.detailCause)}">${esc(x.detailCause)}</option>`);
+  if(![...sel.options].some(o=>o.value===x.detailCause))sel.insertAdjacentHTML("afterbegin",`<option value="${esc(x.detailCause)}" data-th="${esc(x.detailCauseTh||"")}">${esc(biLabel(x.detailCause,x.detailCauseTh))}</option>`);
   sel.value=x.detailCause;
  }else{
   // Record เก่าไม่มี detailCause — โชว์ "Unspecified" เป็นค่าเริ่มต้น ผู้ใช้
@@ -143,7 +144,7 @@ async function load(){
 async function saveLoss(){
  if(!S.loaded){note("กด Load ก่อนเพิ่ม Loss","plan-warn");return}
  let start=norm($("lossStart").value),end=norm($("lossEnd").value),category=$("lossCategory").value,remark=val($("lossRemark").value);
- let detailCause=$("lossDetailCause").value,customCause=val($("lossCustomCause").value),impactType=$("lossImpactType").value;
+ let detailSel=$("lossDetailCause"),detailCause=detailSel.value,detailCauseTh=detailSel.selectedOptions[0]?.dataset.th||"",customCause=val($("lossCustomCause").value);
  if(!category){note("กรุณาเลือก Category","plan-warn");return}
  // Detail Cause จำเป็นสำหรับรายการใหม่เสมอ — สำหรับรายการเก่าที่แก้ไข ถ้า
  // เดิมไม่มี detailCause (โชว์ "Unspecified") และผู้ใช้ไม่ได้เปลี่ยน ปล่อยผ่านได้
@@ -156,8 +157,7 @@ async function saveLoss(){
  let conflicts=breakConflicts(start,end);
  if(conflicts.length){note(`บันทึกไม่ได้: ${start}–${end} ซ้อน Scheduled Break ${conflicts.map(x=>x.start+"–"+x.end).join(", ")} · Break ไม่ถือเป็น Loss`,"plan-warn");return}
  let data={date:$("lossDate").value,lineId:$("lossLine").value.toUpperCase(),shift:$("lossShift").value,category,start,end,minutes:m,remark,source:"MANUAL",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),version:1};
- if(detailCause){data.detailCause=detailCause;if(detailCause==="Other")data.customCause=customCause}
- if(impactType)data.impactType=impactType;
+ if(detailCause){data.detailCause=detailCause;if(detailCauseTh)data.detailCauseTh=detailCauseTh;if(detailCause==="Other")data.customCause=customCause}
  try{
    stat("Saving...");
    if(S.editId){await ProdV2DB.set("prodV2_lossLogs",S.editId,data,true);let i=S.manual.findIndex(x=>x.id===S.editId);S.manual[i]={id:S.editId,...data};note(`แก้ไข ${category} Loss ${m} นาทีแล้ว`,"plan-ok")}

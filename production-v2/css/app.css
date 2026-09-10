@@ -804,9 +804,23 @@ input,select,textarea,.grid input,.grid select{
 .dash-main-loss-num span{color:var(--muted);font-weight:600}
 .dash-loss-total{font-size:13px;color:var(--muted);margin:12px 0 10px;padding-top:10px;border-top:1px solid var(--line)}
 .dash-loss-total b{color:var(--heading)}
-.dash-loss-top3-row{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;color:var(--text)}
-.dash-loss-top3-row b{margin-left:auto}
-.dash-loss-top3-row small{color:var(--muted);width:36px;text-align:right}
+/* MAIN LOSS — Category → Detail Cause → Individual Record, expandable
+   inline within the existing card (no new card, no modal/popup) */
+.dash-loss-cat-row,.dash-loss-detail-row{display:flex;align-items:center;gap:8px;font-size:13px;padding:7px 4px;color:var(--text);cursor:pointer;border-radius:6px;transition:background .12s}
+.dash-loss-cat-row:hover,.dash-loss-detail-row:hover{background:var(--bg-soft,#f8fafc)}
+[data-theme="dark"] .dash-loss-cat-row:hover,[data-theme="dark"] .dash-loss-detail-row:hover{background:#1a1a1a}
+.dash-loss-cat-row b,.dash-loss-detail-row b{margin-left:auto}
+.dash-loss-cat-row small{color:var(--muted);width:36px;text-align:right}
+.dash-loss-cat-rank{flex:1}
+.dash-loss-chevron{width:14px;color:var(--muted);font-size:12px;flex-shrink:0}
+.dash-loss-detail-list{margin:0 0 4px 22px;padding-left:10px;border-left:2px solid var(--line)}
+.dash-loss-detail-row{font-size:12.5px}
+.dash-loss-record-list{margin:0 0 6px 22px;padding:6px 10px;background:var(--bg-soft,#f8fafc);border-radius:8px}
+[data-theme="dark"] .dash-loss-record-list{background:#1a1a1a}
+.dash-loss-record-row{display:flex;align-items:baseline;gap:10px;font-size:12px;padding:3px 0;color:var(--muted)}
+.dash-loss-record-row span{min-width:96px;font-variant-numeric:tabular-nums}
+.dash-loss-record-row b{color:var(--heading)}
+.dash-loss-record-row small{color:var(--muted)}
 
 /* Most Affected card */
 .dash-affected-name{font-size:20px;font-weight:800;color:var(--heading)}

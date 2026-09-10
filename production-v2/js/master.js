@@ -856,7 +856,7 @@ async function loadLossCategories(){
     const keep=lossDetailCategoryFilter.value;
     lossDetailCategoryFilter.innerHTML=rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}${x.active===false?' (Inactive)':''}</option>`).join('');
     if(rows.some(x=>x.id===keep))lossDetailCategoryFilter.value=keep;
-    if(lossDetailCategoryFilter.value)loadLossDetailCauses(); else lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">ยังไม่มี Category</td></tr>';
+    if(lossDetailCategoryFilter.value)loadLossDetailCauses(); else lossDetailBody.innerHTML='<tr><td colspan="5" class="empty">ยังไม่มี Category</td></tr>';
   }catch(e){setStatus(e.message,'err');lossCategoryBody.innerHTML='<tr><td colspan="4" class="empty">โหลด Loss Category ไม่ได้</td></tr>'}
 }
 document.getElementById('addLossCategory')?.addEventListener('click',()=>{
@@ -890,9 +890,10 @@ lossCategoryBody?.addEventListener('click',async e=>{
 });
 
 function lossDetailRowHtml(x={},docId='',isNew=false){
-  const name=x.name||'',order=Number(x.order||0);
+  const name=x.name||'',nameTh=x.nameTh||'',order=Number(x.order||0);
   return `<tr>
     <td><input value="${esc(name)}" placeholder="Material NG" data-k="name"></td>
+    <td><input value="${esc(nameTh)}" placeholder="วัตถุดิบ NG" data-k="nameTh"></td>
     <td><input type="number" min="1" value="${order||''}" data-k="order"></td>
     <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
     <td class="right"><button ${isNew?'data-save-lossdetail-new':`data-save-lossdetail="${esc(docId)}"`}>Save</button> ${isNew?'':`<button data-delete-lossdetail="${esc(docId)}" class="danger">Delete</button>`}</td>
@@ -900,14 +901,14 @@ function lossDetailRowHtml(x={},docId='',isNew=false){
 }
 async function loadLossDetailCauses(){
   const categoryId=lossDetailCategoryFilter.value;
-  if(!categoryId){lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">เลือก Category ก่อน</td></tr>';return}
-  lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">Loading…</td></tr>';
+  if(!categoryId){lossDetailBody.innerHTML='<tr><td colspan="5" class="empty">เลือก Category ก่อน</td></tr>';return}
+  lossDetailBody.innerHTML='<tr><td colspan="5" class="empty">Loading…</td></tr>';
   try{
     const snap=await ProdV2DB.collection(LOSS_DETAIL_COLLECTION).where('categoryId','==',categoryId).get();
     const rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));
     rows.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||String(a.name).localeCompare(String(b.name)));
-    lossDetailBody.innerHTML=rows.length?rows.map(x=>lossDetailRowHtml(x,x.id,false)).join(''):'<tr><td colspan="4" class="empty">ยังไม่มี Detail Cause สำหรับ Category นี้ — กด + Add Detail Cause</td></tr>';
-  }catch(e){setStatus(e.message,'err');lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">โหลด Detail Cause ไม่ได้</td></tr>'}
+    lossDetailBody.innerHTML=rows.length?rows.map(x=>lossDetailRowHtml(x,x.id,false)).join(''):'<tr><td colspan="5" class="empty">ยังไม่มี Detail Cause สำหรับ Category นี้ — กด + Add Detail Cause</td></tr>';
+  }catch(e){setStatus(e.message,'err');lossDetailBody.innerHTML='<tr><td colspan="5" class="empty">โหลด Detail Cause ไม่ได้</td></tr>'}
 }
 lossDetailCategoryFilter?.addEventListener('change',loadLossDetailCauses);
 document.getElementById('addLossDetailCause')?.addEventListener('click',()=>{
@@ -931,10 +932,10 @@ lossDetailBody?.addEventListener('click',async e=>{
   const btn=e.target.closest('button');
   if(!btn||(!btn.hasAttribute('data-save-lossdetail')&&!btn.hasAttribute('data-save-lossdetail-new')))return;
   const tr=btn.closest('tr'),get=k=>tr.querySelector(`[data-k="${k}"]`).value;
-  const categoryId=lossDetailCategoryFilter.value,name=get('name').trim();
+  const categoryId=lossDetailCategoryFilter.value,name=get('name').trim(),nameTh=get('nameTh').trim();
   if(!categoryId||!name)return alert('กรุณาเลือก Category และใส่ชื่อ Detail Cause');
   const categoryName=lossDetailCategoryFilter.selectedOptions[0]?.textContent.replace(' (Inactive)','')||'';
-  const data={categoryId,categoryName,name,order:Number(get('order'))||0,active:get('active')==='true',updatedAt:Date.now()};
+  const data={categoryId,categoryName,name,nameTh,order:Number(get('order'))||0,active:get('active')==='true',updatedAt:Date.now()};
   const id=btn.dataset.saveLossdetail||`lossdetail_${safeKey(categoryId)}_${safeKey(name)}`;
   try{
     setStatus('Saving…');btn.disabled=true;
@@ -949,18 +950,18 @@ lossDetailBody?.addEventListener('click',async e=>{
 // Category/Detail Cause the user has since added themselves under a
 // different name, and never touches prodV2_lossLogs at all.
 const LOSS_CAUSE_SEED_V1=[
-  {cat:'Machine',details:['Machine Breakdown','Machine Alarm','Machine Adjustment','Setting or Parameter Adjustment','Maintenance','Utility Problem','Machine Not Ready','Other']},
-  {cat:'Robot',details:['Robot Alarm','Pick Failure','Position Error','Sensor Problem','Vacuum Problem','Robot Adjustment','Robot Reset or Recovery','Other']},
-  {cat:'Jig',details:['Jig Problem','Jig Adjustment','Jig Change','Jig Alignment','Jig Damage','Jig Cleaning','Jig Not Ready','Other']},
-  {cat:'Conveyor',details:['Conveyor Jam','Sensor Error','Stopper Problem','Motor / Drive Problem','Chain / Roller Problem','Conveyor Adjustment','Other']},
-  {cat:'Material',details:['Material Shortage','Material Not Ready','Waiting Material Delivery','Material NG','Wrong Material or Part','Waiting Replacement','Material Identification or Confirmation','Other']},
-  {cat:'Waiting',details:['Waiting Material','Waiting QC Confirmation','Waiting Engineering','Waiting Previous Process','Waiting Instruction','Waiting Tool / Equipment','Other']},
-  {cat:'Change Model',details:['Model Changeover','Jig Replacement','Parameter Setup','First Piece Verification','Trial Run','Other']},
-  {cat:'Quality',details:['Waiting Quality Confirmation','Inspection or Recheck','Quality Problem Adjustment','Trial or Verification','Waiting Disposition','Other']},
-  {cat:'Pallet Change',details:['Planned Pallet Change','Unplanned Pallet Change','Waiting Pallet','Pallet Not Ready','Pallet Setup or Adjustment','Pallet Problem','Other']},
-  {cat:'Manpower',details:['Operator Shortage','Waiting Operator','Manpower Allocation','Training or New Operator','Operator Change','Other']},
-  {cat:'Process / Method',details:['Process Adjustment','Parameter Adjustment','Model Changeover','Work Method Issue','Setup or Preparation','Trial Run','Other']},
-  {cat:'Other',details:['Other']},
+  {cat:'Machine',details:[['Machine Breakdown','เครื่องจักรเสีย'],['Machine Alarm','Machine Alarm'],['Machine Adjustment','ปรับตั้งเครื่อง'],['Setting or Parameter Adjustment','ปรับ Setting / Parameter'],['Maintenance','Maintenance'],['Utility Problem','Utility มีปัญหา'],['Machine Not Ready','เครื่องจักรไม่พร้อม'],['Other','อื่น ๆ']]},
+  {cat:'Robot',details:[['Robot Alarm','Robot Alarm'],['Pick Failure','Robot จับชิ้นงานไม่ได้'],['Position Error','ตำแหน่ง Robot ผิดปกติ'],['Sensor Problem','Sensor มีปัญหา'],['Vacuum Problem','Vacuum มีปัญหา'],['Robot Adjustment','ปรับ Robot'],['Robot Reset or Recovery','Reset / Recovery Robot'],['Other','อื่น ๆ']]},
+  {cat:'Jig',details:[['Jig Problem','Jig มีปัญหา'],['Jig Adjustment','ปรับ Jig'],['Jig Change','เปลี่ยน Jig'],['Jig Alignment','Jig ไม่ตรงตำแหน่ง'],['Jig Damage','Jig ชำรุด'],['Jig Cleaning','ทำความสะอาด Jig'],['Jig Not Ready','Jig ไม่พร้อม'],['Other','อื่น ๆ']]},
+  {cat:'Conveyor',details:[['Conveyor Jam','Conveyor ติดขัด'],['Sensor Error','Sensor Error'],['Stopper Problem','Stopper มีปัญหา'],['Motor / Drive Problem','Motor / Drive มีปัญหา'],['Chain / Roller Problem','Chain / Roller มีปัญหา'],['Conveyor Adjustment','ปรับ Conveyor'],['Other','อื่น ๆ']]},
+  {cat:'Material',details:[['Material Shortage','วัตถุดิบขาด'],['Material Not Ready','วัตถุดิบไม่พร้อม'],['Waiting Material Delivery','รอวัตถุดิบเข้าไลน์'],['Material NG','วัตถุดิบ NG'],['Wrong Material or Part','วัตถุดิบ/Part ผิดรุ่น'],['Waiting Replacement','รอวัตถุดิบทดแทน'],['Material Identification or Confirmation','รอตรวจสอบ/ยืนยันวัตถุดิบ'],['Other','อื่น ๆ']]},
+  {cat:'Waiting',details:[['Waiting Material','รอวัตถุดิบ'],['Waiting QC Confirmation','รอ QC ยืนยัน'],['Waiting Engineering','รอ Engineering'],['Waiting Previous Process','รอกระบวนการก่อนหน้า'],['Waiting Instruction','รอคำสั่ง'],['Waiting Tool / Equipment','รอ Tool / Equipment'],['Other','อื่น ๆ']]},
+  {cat:'Change Model',details:[['Model Changeover','เปลี่ยนรุ่น'],['Jig Replacement','เปลี่ยน Jig'],['Parameter Setup','ตั้ง Parameter'],['First Piece Verification','ตรวจ First Piece'],['Trial Run','ทดลองผลิต / Trial Run'],['Other','อื่น ๆ']]},
+  {cat:'Quality',details:[['Waiting Quality Confirmation','รอ Quality ยืนยัน'],['Inspection or Recheck','ตรวจสอบ / Recheck'],['Quality Problem Adjustment','ปรับแก้ปัญหาคุณภาพ'],['Trial or Verification','ทดลอง / Verification'],['Waiting Disposition','รอการตัดสินงาน'],['Other','อื่น ๆ']]},
+  {cat:'Pallet Change',details:[['Planned Pallet Change','เปลี่ยน Pallet ตามแผน'],['Unplanned Pallet Change','เปลี่ยน Pallet นอกแผน'],['Waiting Pallet','รอ Pallet'],['Pallet Not Ready','Pallet ไม่พร้อม'],['Pallet Setup or Adjustment','ปรับตั้ง Pallet'],['Pallet Problem','Pallet มีปัญหา'],['Other','อื่น ๆ']]},
+  {cat:'Manpower',details:[['Operator Shortage','Operator ไม่เพียงพอ'],['Waiting Operator','รอ Operator'],['Manpower Allocation','จัดสรรกำลังคน'],['Training or New Operator','Training / Operator ใหม่'],['Operator Change','เปลี่ยน Operator'],['Other','อื่น ๆ']]},
+  {cat:'Process / Method',details:[['Process Adjustment','ปรับ Process'],['Parameter Adjustment','ปรับ Parameter'],['Model Changeover','เปลี่ยนรุ่น'],['Work Method Issue','วิธีการทำงานมีปัญหา'],['Setup or Preparation','Setup / เตรียมการ'],['Trial Run','Trial Run'],['Other','อื่น ๆ']]},
+  {cat:'Other',details:[['Other','อื่น ๆ']]},
 ];
 document.getElementById('seedLossCauseV1')?.addEventListener('click',async()=>{
   if(!confirm(`Initialize Loss Cause Master (V1)?\n\nจะสร้าง/อัปเดต ${LOSS_CAUSE_SEED_V1.length} Category และ Detail Cause ของแต่ละ Category ตามชุดที่ยืนยันไว้ (merge — ไม่ลบ/ไม่ทับ Category หรือ Detail Cause ที่คุณเพิ่มเองภายหลังถ้าใช้ชื่ออื่น) ไม่กระทบ Loss record เก่าเลย ดำเนินการต่อ?`))return;
@@ -973,10 +974,10 @@ document.getElementById('seedLossCauseV1')?.addEventListener('click',async()=>{
       const catId=`losscat_${safeKey(cat)}`;
       await ProdV2DB.set(LOSS_CAT_COLLECTION,catId,{name:cat,order:ci,active:true,updatedAt:Date.now()},{merge:true});
       let di=0;
-      for(const d of details){
+      for(const [d,dTh] of details){
         di++;
         const detId=`lossdetail_${safeKey(catId)}_${safeKey(d)}`;
-        await ProdV2DB.set(LOSS_DETAIL_COLLECTION,detId,{categoryId:catId,categoryName:cat,name:d,order:di,active:true,updatedAt:Date.now()},{merge:true});
+        await ProdV2DB.set(LOSS_DETAIL_COLLECTION,detId,{categoryId:catId,categoryName:cat,name:d,nameTh:dTh,order:di,active:true,updatedAt:Date.now()},{merge:true});
       }
     }
     setStatus('✓ Loss Cause Master V1 seeded','ok');
