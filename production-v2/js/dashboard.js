@@ -152,7 +152,7 @@ function statusBanner(status,actual,expected,gapExpected,ach,contextLine){
  if(!host)return;
  host.className="dash-status-banner "+(ok?"kpi-good-bg":"kpi-bad-bg");
  let ctx=contextLine?`<div class="dash-status-context">${esc(contextLine)}</div>`:"";
- host.innerHTML=`${ctx}<div class="dash-status-main"><span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span></div><div class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}${gapExpected!=null?` · GAP ${gapExpected>0?"+":""}${gapExpected.toLocaleString()} pcs · ACHIEVEMENT ${ach.toFixed(1)}%`:""}</div>`;
+ host.innerHTML=`${ctx}<div class="dash-status-main"><span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span></div><div class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}</div>`;
 }
 function currentBlockIndex(bs,viewDate){
  // "Current block" only makes sense when looking at TODAY — a past/future
@@ -294,7 +294,7 @@ function performance(P,A,keys){
 }
 function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan){
  let host=$("dashPrimaryKpis");
- if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b></div>`;
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div>`;
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");
@@ -334,10 +334,12 @@ function actionCard(){
  let {top:topCat}=topLossCategory();
  if(!topCat){host.innerHTML="";return}
  let action=CATEGORY_ACTIONS[topCat]||"→ ตรวจสอบสาเหตุเพิ่มเติมกับหัวหน้ากะ";
- host.innerHTML=`<h3>ACTION REQUIRED</h3>
-  <div class="dash-action-cat">${esc(topCat)}</div>
-  <div class="dash-action-text">${esc(action)}</div>
-  <div class="dash-action-meta"><span>Owner: —</span><span>Status: —</span><span>ETA: —</span></div>`;
+ host.innerHTML=`<div class="dash-action-strip">
+  <span class="dash-action-strip-label">ACTION</span>
+  <span class="dash-action-strip-cat">${esc(topCat)}</span>
+  <span class="dash-action-strip-text">${esc(action)}</span>
+  <span class="dash-action-strip-meta">Owner: — · Status: — · ETA: —</span>
+ </div>`;
 }
 function top3BehindPlanCard(P,A,use){
  let host=$("dashTop3");

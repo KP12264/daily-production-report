@@ -806,10 +806,19 @@ input,select,textarea,.grid input,.grid select{
 .dash-affected-nums{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:13px;color:var(--muted)}
 .dash-affected-nums b{display:block;font-size:17px;color:var(--heading);margin-top:2px}
 
-/* Action Required card */
-.dash-action-cat{font-size:16px;font-weight:800;color:var(--heading)}
-.dash-action-text{font-size:14px;color:var(--text);margin-top:6px}
-.dash-action-meta{display:flex;gap:18px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+/* GAP / ACHIEVEMENT reference captions — secondary but must stay legible on
+   a meeting-room screen, so deliberately larger/higher-contrast than the
+   normal small-caption pattern used elsewhere (e.g. .kpi-label at 10px). */
+.dash-pkpi-ref{display:block;font-size:13px;font-weight:600;color:var(--text);opacity:.75;margin-top:6px}
+
+/* Action Required — compact single-row strip instead of a stacked card, so
+   Line Performance / 7-Day Avg / Top 3 sit higher on the first screen */
+.dash-action-strip{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.dash-action-strip-label{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.dash-action-strip-cat{font-size:14px;font-weight:800;color:var(--heading)}
+.dash-action-strip-text{font-size:13px;color:var(--text);flex:1}
+.dash-action-strip-meta{font-size:12px;color:var(--muted);white-space:nowrap}
+@media(max-width:700px){.dash-action-strip{flex-direction:column;gap:4px}}
 
 /* Line Performance chips — colored dot + CURRENT tag */
 .dash-other-line-chip small{display:block;font-size:10px;font-weight:800;color:var(--blue);margin-top:2px}

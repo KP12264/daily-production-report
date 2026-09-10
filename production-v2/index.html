@@ -18,15 +18,28 @@
 <label><span>DOOR</span><select id="dashDoor"><option value="">All Doors</option></select></label>
 </section>
 <div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
-<section class="dash-status-row">
+
+<!-- ===== EXECUTIVE SUMMARY — everything above this point (plus the next
+     few blocks) is meant to answer the situation in 5-10 seconds without
+     scrolling. Detailed/engineering drill-down lives below the divider. ===== -->
 <section id="dashStatusBanner" class="dash-status-banner"></section>
-<section id="dashInsightBanner" class="dash-insight-banner"></section>
-<section id="dashTrendLine" class="dash-trend-line"></section>
-<section id="dashOtherLines" class="dash-other-lines"></section>
-<section id="dashThisBlock" class="dash-this-block"></section>
+<section id="dashPrimaryKpis" class="dash-primary-kpis"></section>
+<section id="dashKpis" class="dash-secondary-caption"></section>
+<section class="dash-exec-grid-2col">
+<div id="dashLossSummary" class="section-card exec-card"></div>
+<div id="dashMostAffected" class="section-card exec-card"></div>
 </section>
+<section id="dashActionCard" class="section-card exec-card"></section>
+<section class="dash-exec-grid-2col">
+<div class="section-card exec-card"><h3>LINE PERFORMANCE</h3><div id="dashOtherLines" class="dash-other-lines"></div></div>
+<div class="section-card exec-card"><h3>VS 7-DAY AVG</h3><div id="dashTrendLine" class="dash-trend-line"></div></div>
+</section>
+<section id="dashTop3" class="section-card exec-card"></section>
+
+<div class="dash-fold-divider"><span>Detailed / Engineering View</span></div>
+
+<section id="dashThisBlock" class="dash-this-block"></section>
 <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
-<section id="dashKpis" class="dash-kpis"></section>
 <section id="dashAchievementBar" class="dash-ach-bar"></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Plan vs Actual by Time Block</h2><p>Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
