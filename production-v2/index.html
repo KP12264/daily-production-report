@@ -7,7 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 </head><body><div class="site-wrap">
-<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn current" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html" class="active">Dashboard</a><a href="exec.html">Executive</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn current" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html" class="active">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
 <section class="hero"><div><div class="eyebrow">STEP 8 · LIVE PRODUCTION OVERVIEW</div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div></section>
 <main class="content">
 <section class="filter-card dash-filters">
@@ -16,11 +16,13 @@
 <label><span>SHIFT</span><select id="dashShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
 <label><span>MODEL</span><select id="dashModel"><option value="">All Models</option></select></label>
 <label><span>DOOR</span><select id="dashDoor"><option value="">All Doors</option></select></label>
-<button id="dashLoadBtn" class="primary">Load Dashboard</button>
 </section>
 <div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
 <section class="dash-status-row">
 <section id="dashStatusBanner" class="dash-status-banner"></section>
+<section id="dashInsightBanner" class="dash-insight-banner"></section>
+<section id="dashTrendLine" class="dash-trend-line"></section>
+<section id="dashOtherLines" class="dash-other-lines"></section>
 <section id="dashThisBlock" class="dash-this-block"></section>
 </section>
 <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
@@ -36,5 +38,5 @@
 </main></div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
-<script src="js/dashboard.js?v=20260902-fix48"></script>
+<script src="js/dashboard.js?v=20260902-fix49"></script>
 </body></html>
