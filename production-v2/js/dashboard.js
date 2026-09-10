@@ -85,17 +85,27 @@ function render(){
   // ค้างมาจากก่อนเปลี่ยนชื่อ Model ใน Master ไม่ให้บวกเข้าไปในยอดรวมซ้ำซ้อน
   if(P[x])ab[i]+=Number(A[x]?.[i]||0);
  }});
- let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gap=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0),material=lossRows().filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
+ // gapPlan = เทียบ Adjusted Plan เต็มกะ (secondary, ใต้ Adjusted Plan) — ยังคง
+ // สูตรเดิมไว้ ไม่ลบทิ้ง แค่ลดความเด่น
+ // gapExpected = เทียบ Expected Now (real-time pacing) — ตัวหลักที่โชว์เด่น
+ // ใน Header/Primary KPI ตามที่ยืนยันไว้ (spec §1 + §13 — สองค่านี้คนละความหมาย
+ // กัน ไม่ได้แก้สูตร Plan/Actual/Expected เดิมเลย แค่เพิ่มค่าที่ derive จากของ
+ // ที่มีอยู่แล้วและเปลี่ยนว่าตัวไหนโชว์เด่นกว่า)
+ let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gapPlan=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0),material=lossRows().filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
  let expected=expectedByNow(pb,bs,$("dashDate").value);
+ let gapExpected=actual-expected;
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
- statusBanner(status,actual,expected);
+ let lineName=S.lines.find(x=>(x.lineId||x.code||x.id||"").toUpperCase()===$("dashLine").value.toUpperCase())?.lineName||$("dashLine").value;
+ let contextLine=`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate($("dashDate").value)}`;
+ statusBanner(status,actual,expected,gapExpected,ach,contextLine);
  insightBanner(P,A,use,loss,material);
+ primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan);
+ lossSummaryCard(loss,material);
+ mostAffectedCard(P,A,use);
+ actionCard();
+ top3BehindPlanCard(P,A,use);
  achievementBar(plan,actual,ach);
  thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
- let {top:spotlightCat}=topLossCategory();
- let lossSpotlight=spotlightCat&&spotlightCat!=="Material"?" kpi-spotlight":"";
- let materialSpotlight=spotlightCat==="Material"?" kpi-spotlight":"";
- $("dashKpis").innerHTML=`<div class="entry-kpi kpi-secondary"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi kpi-secondary"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi kpi-secondary${lossSpotlight}"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi kpi-secondary${materialSpotlight}"><small>MATERIAL WAITING</small><b>${material} min</b></div>`;
  charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; S.todayAch=ach;S.todayMaterial=material; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
 function achievementBar(plan,actual,ach){
@@ -136,12 +146,13 @@ function hourlySummary(){
  }
  host.innerHTML=h||'<div class="empty-state">ไม่มีข้อมูล</div>';
 }
-function statusBanner(status,actual,expected){
+function statusBanner(status,actual,expected,gapExpected,ach,contextLine){
  let ok=status==="ON TARGET";
  let host=$("dashStatusBanner");
  if(!host)return;
  host.className="dash-status-banner "+(ok?"kpi-good-bg":"kpi-bad-bg");
- host.innerHTML=`<span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span><span class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}</span>`;
+ let ctx=contextLine?`<div class="dash-status-context">${esc(contextLine)}</div>`:"";
+ host.innerHTML=`${ctx}<div class="dash-status-main"><span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span></div><div class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}${gapExpected!=null?` · GAP ${gapExpected>0?"+":""}${gapExpected.toLocaleString()} pcs · ACHIEVEMENT ${ach.toFixed(1)}%`:""}</div>`;
 }
 function currentBlockIndex(bs,viewDate){
  // "Current block" only makes sense when looking at TODAY — a past/future
@@ -208,6 +219,19 @@ function statusBadge(gap){
  return '<span class="status-badge status-bad">BEHIND PLAN</span>';
 }
 function achClass(z){return z>=100?"kpi-good":z>=95?"kpi-watch":"kpi-bad"}
+function plannedRowsSorted(P,A,use){
+ // Shared by the full Model/Door Performance table AND the compact Top-3
+ // card — Plan>0 only (unplanned extra production never counts as "worst"),
+ // worst Achievement% first. Single source of truth so both views agree.
+ return use.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}})
+  .filter(r=>r.p>0).sort((r1,r2)=>r1.z-r2.z);
+}
+const MONTHS_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+function formatContextDate(dateStr){
+ let [y,m,d]=String(dateStr||"").split("-").map(Number);
+ if(!y||!m||!d)return dateStr||"";
+ return `${d} ${MONTHS_EN[m-1]||""} ${y}`;
+}
 // ข้อเสนอแนะสั้นๆ ต่อ Loss category — ใครควรถูกตามก่อนเมื่อ category นี้เป็นสาเหตุหลัก
 const CATEGORY_ACTIONS={
  "Material":"→ ติดต่อฝ่ายคลัง/จัดซื้อ ตรวจสอบ Lead Time วัตถุดิบ",
@@ -255,7 +279,7 @@ function performance(P,A,keys){
  // แยก 2 กลุ่ม: มีแผน (p>0) เรียง Achievement ต่ำสุดก่อน = ตัวที่แย่จริงต้อง
  // แก้ก่อน — กับ ไม่มีแผน (p=0) ที่ทำเพิ่มนอกแผน เรียง Actual มากสุดก่อน ไม่ให้
  // มาปนอยู่บนสุดจนบังตัวร้ายจริง (เพราะ Achievement คำนวณไม่ได้เมื่อ Plan=0)
- let planned=all.filter(r=>r.p>0).sort((r1,r2)=>r1.z-r2.z);
+ let planned=plannedRowsSorted(P,A,keys);
  let unplanned=all.filter(r=>r.p===0).sort((r1,r2)=>r2.a-r1.a);
  let rowHtml=r=>{let q=splitKey(r.x);return `<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.p?r.z.toFixed(1)+"%":"—"}</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`};
  let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
@@ -267,6 +291,63 @@ function performance(P,A,keys){
  let rows=all,tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
  h+=`<tr class="dash-this-block-total"><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
  h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+}
+function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan){
+ let host=$("dashPrimaryKpis");
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b></div>`;
+ // Adjusted Plan demoted to a small secondary caption (still visible, not
+ // competing visually with Expected Now) — reuses the old #dashKpis host.
+ let sec=$("dashKpis");
+ if(sec)sec.innerHTML=`<span>Adjusted Plan (full shift): <b>${plan.toLocaleString()}</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${gapPlan.toLocaleString()}</b></span>`;
+}
+function lossSummaryCard(loss,material){
+ let host=$("dashLossSummary");
+ if(!host)return;
+ let {entries,total}=topLossCategory();
+ if(!entries.length){host.innerHTML='<h3>MAIN LOSS</h3><div class="empty-state">No production loss recorded</div>';return}
+ let [topName,topMin]=entries[0];
+ let pct=total?Math.round(topMin/total*100):0;
+ let top3=entries.slice(0,3);
+ host.innerHTML=`<h3>MAIN LOSS</h3>
+  <div class="dash-main-loss"><div class="dash-main-loss-name">${esc(topName)}</div><div class="dash-main-loss-num">${topMin} min <span>· ${pct}% of Total Loss</span></div></div>
+  <div class="dash-loss-total">TOTAL LOSS: <b>${total} min</b></div>
+  <div class="dash-loss-top3">${top3.map(([c,m],i)=>`<div class="dash-loss-top3-row"><span>${i+1}. ${esc(c)}</span><b>${m} min</b><small>${total?Math.round(m/total*100):0}%</small></div>`).join("")}</div>`;
+}
+function mostAffectedCard(P,A,use){
+ let host=$("dashMostAffected");
+ if(!host)return;
+ let worst=plannedRowsSorted(P,A,use)[0];
+ if(!worst){host.innerHTML='<h3>MOST AFFECTED</h3><div class="empty-state">No planned Model/Door behind today</div>';return}
+ let q=splitKey(worst.x);
+ host.innerHTML=`<h3>MOST AFFECTED</h3>
+  <div class="dash-affected-name">${esc(q.model)} <small>${esc(q.door)}</small></div>
+  <div class="dash-affected-nums">
+   <span>Plan <b>${worst.p.toLocaleString()}</b></span>
+   <span>Actual <b>${worst.a.toLocaleString()}</b></span>
+   <span>Gap <b class="${worst.g<0?"kpi-bad":"kpi-good"}">${worst.g>0?"+":""}${worst.g.toLocaleString()}</b></span>
+   <span>Achievement <b class="${achClass(worst.z)}">${worst.z.toFixed(1)}%</b></span>
+  </div>`;
+}
+function actionCard(){
+ let host=$("dashActionCard");
+ if(!host)return;
+ let {top:topCat}=topLossCategory();
+ if(!topCat){host.innerHTML="";return}
+ let action=CATEGORY_ACTIONS[topCat]||"→ ตรวจสอบสาเหตุเพิ่มเติมกับหัวหน้ากะ";
+ host.innerHTML=`<h3>ACTION REQUIRED</h3>
+  <div class="dash-action-cat">${esc(topCat)}</div>
+  <div class="dash-action-text">${esc(action)}</div>
+  <div class="dash-action-meta"><span>Owner: —</span><span>Status: —</span><span>ETA: —</span></div>`;
+}
+function top3BehindPlanCard(P,A,use){
+ let host=$("dashTop3");
+ if(!host)return;
+ // อันดับตาม Gap (ชิ้น) ไม่ใช่ Achievement% — ต่างจากตาราง Performance หลัก
+ // ที่เรียงตาม Achievement — ที่นี่ต้องการ "กระทบยอดรวมมากสุด" ไม่ใช่
+ // "สัดส่วนพลาดมากสุด" ตัวเลข pcs ที่หายไปเยอะสุดสำคัญกว่าสำหรับสรุปผู้บริหาร
+ let rows=[...plannedRowsSorted(P,A,use)].sort((r1,r2)=>r1.g-r2.g).slice(0,3);
+ if(!rows.length){host.innerHTML='<h3>TOP 3 BEHIND PLAN</h3><div class="empty-state">No planned Model/Door behind today</div>';return}
+ host.innerHTML=`<h3>TOP 3 BEHIND PLAN</h3><div class="dash-top3-list">${rows.map((r,i)=>{let q=splitKey(r.x);return `<div class="dash-top3-row"><span class="dash-top3-rank">${i+1}</span><span class="dash-top3-name">${esc(q.model)} <small>${esc(q.door)}</small></span><b class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g.toLocaleString()} pcs</b></div>`}).join("")}</div>`;
 }
 function lossView(){
  let rows=lossRows(),t={};
@@ -340,13 +421,14 @@ async function trendCompare(d,l,sh){
   let avgAch=valid.reduce((s,r)=>s+(r.plan?r.actual/r.plan*100:0),0)/valid.length;
   let avgMaterial=valid.reduce((s,r)=>s+r.material,0)/valid.length;
   let achDiff=S.todayAch-avgAch;
-  let achTxt=`Achievement เฉลี่ย 7 วัน <b>${avgAch.toFixed(1)}%</b> — วันนี้${achDiff>=0?"สูงกว่า":"ต่ำกว่า"}ค่าเฉลี่ย <b>${Math.abs(achDiff).toFixed(1)} pts</b>`;
+  let achArrow=achDiff>=0?"↑":"↓";
+  let achTxt=`<div class="dash-trend-headline ${achDiff>=0?"kpi-good":"kpi-bad"}">${achArrow} ${Math.abs(achDiff).toFixed(1)} pts</div><div class="dash-trend-detail">Today: <b>${S.todayAch.toFixed(1)}%</b> · 7-Day Avg: <b>${avgAch.toFixed(1)}%</b></div>`;
   let matTxt="";
   if(avgMaterial>0){
    let ratio=S.todayMaterial/avgMaterial;
-   matTxt=` · Material เฉลี่ย <b>${avgMaterial.toFixed(0)} นาที/วัน</b> — วันนี้${ratio>=1?`สูงกว่า ${ratio.toFixed(1)} เท่า`:`ต่ำกว่า ${(avgMaterial-S.todayMaterial).toFixed(0)} นาที`}`;
+   matTxt=`<div class="dash-trend-detail dash-trend-material">Material Today: <b>${S.todayMaterial.toFixed(0)} min</b> · 7-Day Avg: <b>${avgMaterial.toFixed(0)} min</b> ${ratio>=1?`<span class="kpi-bad">↑ ${ratio.toFixed(1)}×</span>`:`<span class="kpi-good">↓ lower</span>`}</div>`;
   }
-  host.innerHTML=`เทียบค่าเฉลี่ย 7 วันย้อนหลัง (${valid.length} วันที่มีข้อมูล): ${achTxt}${matTxt}`;
+  host.innerHTML=`${achTxt}${matTxt}`;
  }catch(e){console.error(e)}
 }
 async function otherLinesToday(d,sh,currentLineId){
@@ -370,7 +452,7 @@ async function otherLinesToday(d,sh,currentLineId){
    return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
   }));
   if(!rows.length)return;
-  host.innerHTML=rows.map(r=>`<div class="dash-other-line-chip${r.lid===currentLineId?" current":""}"><span>${esc(r.name)}</span><b class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</b></div>`).join("");
+  host.innerHTML=rows.map(r=>{let dot=!r.plan?"⚪":r.ach>=100?"🟢":r.ach>=95?"🟠":"🔴";return `<div class="dash-other-line-chip${r.lid===currentLineId?" current":""}"><span>${dot} ${esc(r.name)}</span><b class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</b>${r.lid===currentLineId?'<small>← CURRENT</small>':""}</div>`}).join("");
  }catch(e){console.error(e)}
 }
 async function init(){

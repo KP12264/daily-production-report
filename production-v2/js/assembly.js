@@ -20,8 +20,10 @@ async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map
 const POOLS={
   bm_rr:[["BM 23 29","RR"]], bm_rl:[["BM 23 29","RL"]], bm_ft:[["BM 23 29","FT"]], bm_fb:[["BM 23 29","FB"]],
   bm28_fr:[["BM28 FL FR","FR"]], bm28_fl:[["BM28 FL FR","FL"]],
-  glass_rr:[["BM28 Glass","RR"]], glass_rl:[["BM28 Glass","RL"]], glass_ft:[["BM28 Glass","FT"]], glass_fb:[["BM28 Glass","FB"]],
-  glasstd_fr:[["BM28 Glass T-Door","FR"]], glasstd_fl:[["BM28 Glass T-Door","FL"]],
+  glass_rr_common:[["BM 23 29 Glass","RR"],["BM28 Glass","RR"]],
+  glass_rl_common:[["BM 23 29 Glass","RL"],["BM28 Glass","RL"]],
+  bm2329glass_ft:[["BM 23 29 Glass","FT"]], bm2329glass_fb:[["BM 23 29 Glass","FB"]],
+  bm28glass_fr:[["BM28 Glass","FR"]], bm28glass_fl:[["BM28 Glass","FL"]],
   fuf14_r:[["FUF14","R"]], fuf1822_r:[["FUF18/22","R"]],
   tm14_f:[["TM14","F"]], tm14_r:[["TM14","R"]],
   tm1921_f:[["TM19/21","F"]], tm1921_r:[["TM19/21","R"]],
@@ -45,12 +47,12 @@ const POOLS={
 };
 const BOM=[
  {group:"BM (Common RR/RL)",cabinets:[
-   {name:"BM (BM23+BM29)",parts:{RR:"bm_rr",RL:"bm_rl",FT:"bm_ft",FB:"bm_fb"}},
-   {name:"BM28",parts:{RR:"bm_rr",RL:"bm_rl",FR:"bm28_fr",FL:"bm28_fl"}},
+   {name:"BM 23 29",parts:{RR:"bm_rr",RL:"bm_rl",FT:"bm_ft",FB:"bm_fb"}},
+   {name:"BM28 FL FR",parts:{RR:"bm_rr",RL:"bm_rl",FR:"bm28_fr",FL:"bm28_fl"}},
  ]},
- {group:"BM28 Glass (Common RR/RL)",cabinets:[
-   {name:"BM28 Glass",parts:{RR:"glass_rr",RL:"glass_rl",FT:"glass_ft",FB:"glass_fb"}},
-   {name:"BM28 Glass T-Door",parts:{RR:"glass_rr",RL:"glass_rl",FR:"glasstd_fr",FL:"glasstd_fl"}},
+ {group:"BM Glass (Common RR/RL)",cabinets:[
+   {name:"BM 23 29 Glass",parts:{RR:"glass_rr_common",RL:"glass_rl_common",FT:"bm2329glass_ft",FB:"bm2329glass_fb"}},
+   {name:"BM28 Glass",parts:{RR:"glass_rr_common",RL:"glass_rl_common",FR:"bm28glass_fr",FL:"bm28glass_fl"}},
  ]},
  {group:"FUF",cabinets:[
    {name:"FUF14",parts:{R:"fuf14_r"}},

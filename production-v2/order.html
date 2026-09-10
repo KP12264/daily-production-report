@@ -1,0 +1,34 @@
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Order Tracking · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260902-fix55">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn current" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html" class="active">Order Tracking</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
+<section class="hero"><div><div class="eyebrow">ORDER TRACKING</div><h1>Order Tracking</h1><p>เทียบยอดผลิตแต่ละวัน กับเป้าหมายรายวันที่คำนวณจาก Order</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="orderStatus" class="hero-status">Ready</div></div></section>
+<div id="authGateHost"></div>
+<main class="content" id="appMain">
+
+<section class="section-card"><div class="section-title-row"><div><h2>Upload Order (Excel)</h2><p>คอลัมน์ที่ต้องมี: <b>Line, Model, Door, Qty, StartDate, DueDate</b> (แถวแรกเป็นหัวคอลัมน์ · วันที่รูปแบบ YYYY-MM-DD) · อัปโหลดซ้ำ Order เดิม (Line+Model+Door+StartDate ตรงกัน) จะอัปเดตทับของเดิม ไม่สร้างซ้ำ</p></div></div>
+<div class="loss-form">
+<label><span>ORDER FILE (.xlsx)</span><input id="orderFile" type="file" accept=".xlsx,.xls"></label>
+<div class="loss-actions"><button id="uploadOrderBtn" class="primary">Upload Order</button></div>
+</div>
+<div id="uploadMessage" class="notice info-notice">เลือกไฟล์ Excel แล้วกด Upload Order</div>
+</section>
+
+<section class="filter-card loss-filters">
+<label><span>LINE</span><select id="orderLineFilter"><option value="">All Lines</option></select></label>
+<button id="loadOrdersBtn" class="primary">Load Tracking</button>
+</section>
+<div id="orderMessage" class="notice info-notice">เลือก Line (หรือ All Lines) แล้วกด Load Tracking</div>
+
+<section class="section-card"><div class="section-title-row"><div><h2>Order Tracking</h2><p>Target/day = Qty ÷ จำนวนวันของ Order · Target-to-date และ Actual-to-date นับถึงวันนี้ (หรือถึง Due Date ถ้าเลยกำหนดแล้ว)</p></div><span id="orderBadge" class="soft-badge">NOT LOADED</span></div><div id="orderTableArea" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+
+</main></div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-2-2-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/order.js?v=20260909-fix1"></script>
+<script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
+</body></html>
