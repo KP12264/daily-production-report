@@ -1,6 +1,7 @@
 (()=>{const $=id=>document.getElementById(id);let S={lines:[],plan:null,actual:null,manual:[],hourly:null,cum:null,keys:[]};
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
+function addDays(dateStr,n){let d=new Date(dateStr+"T12:00:00");d.setDate(d.getDate()+n);return localDate(d)}
 function stat(t,c=""){$("dashStatus").textContent=t;$("dashStatus").className="hero-status "+c}
 function note(t,c=""){$("dashMessage").textContent=t;$("dashMessage").className="notice info-notice "+c}
 async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
@@ -88,10 +89,14 @@ function render(){
  let expected=expectedByNow(pb,bs,$("dashDate").value);
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
  statusBanner(status,actual,expected);
+ insightBanner(P,A,use,loss,material);
  achievementBar(plan,actual,ach);
  thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
- $("dashKpis").innerHTML=`<div class="entry-kpi kpi-secondary"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi kpi-secondary"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi kpi-secondary"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi kpi-secondary"><small>MATERIAL WAITING</small><b>${material} min</b></div>`;
- charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+ let {top:spotlightCat}=topLossCategory();
+ let lossSpotlight=spotlightCat&&spotlightCat!=="Material"?" kpi-spotlight":"";
+ let materialSpotlight=spotlightCat==="Material"?" kpi-spotlight":"";
+ $("dashKpis").innerHTML=`<div class="entry-kpi kpi-secondary"><small>ADJUSTED PLAN</small><b>${plan.toLocaleString()}</b></div><div class="entry-kpi kpi-secondary"><small>EXPECTED (NOW)</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi kpi-primary"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi kpi-secondary${lossSpotlight}"><small>LOSS</small><b>${loss} min</b></div><div class="entry-kpi kpi-secondary${materialSpotlight}"><small>MATERIAL WAITING</small><b>${material} min</b></div>`;
+ charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; S.todayAch=ach;S.todayMaterial=material; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
 function achievementBar(plan,actual,ach){
  let host=$("dashAchievementBar");
@@ -203,15 +208,63 @@ function statusBadge(gap){
  return '<span class="status-badge status-bad">BEHIND PLAN</span>';
 }
 function achClass(z){return z>=100?"kpi-good":z>=95?"kpi-watch":"kpi-bad"}
+// ข้อเสนอแนะสั้นๆ ต่อ Loss category — ใครควรถูกตามก่อนเมื่อ category นี้เป็นสาเหตุหลัก
+const CATEGORY_ACTIONS={
+ "Material":"→ ติดต่อฝ่ายคลัง/จัดซื้อ ตรวจสอบ Lead Time วัตถุดิบ",
+ "Machine":"→ แจ้งฝ่ายซ่อมบำรุง ตรวจเครื่องจักร",
+ "Robot":"→ แจ้งทีม Automation ตรวจ Robot",
+ "Jig":"→ ตรวจสอบ Jig/อุปกรณ์จับยึด",
+ "Pallet Change":"→ ทบทวนแผนเปลี่ยน Pallet ระหว่างกะ กับหัวหน้าไลน์",
+};
+function topLossCategory(){
+ let byCat={};
+ lossRows().forEach(x=>{let c=x.category||"Other";byCat[c]=(byCat[c]||0)+Number(x.minutes||0)});
+ let entries=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+ return {entries,total:entries.reduce((s,[,v])=>s+v,0),top:entries[0]?entries[0][0]:null,topMin:entries[0]?entries[0][1]:0};
+}
+function insightBanner(P,A,use,loss,material){
+ let host=$("dashInsightBanner");
+ if(!host)return;
+ // สาเหตุหลัก: เทียบทุก Loss category (รวม Material ด้วย) หา category ที่กิน
+ // เวลามากที่สุด — ไม่ใช่แค่ Material vs รวม Loss อื่น เผื่อวันไหน Machine/Jig
+ // เป็นตัวการหลักแทน
+ let {entries:catEntries,total:totalLossAllCats,top:topCatShared,topMin:topMinShared}=topLossCategory();
+ // ตัวร้ายจริง: เฉพาะ Model/Door ที่ "มีแผน" (p>0) — ไม่เอาแถวที่ไม่ได้วางแผนไว้
+ // (ซึ่งเป็นของแถมที่ทีมงานผลิตเสริม ไม่ใช่ปัญหา) มาปนเป็นตัวร้ายอันดับ 1
+ let worst=use.map(x=>{
+  let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);
+  return {x,p,a,g:a-p,z:p?a/p*100:0};
+ }).filter(r=>r.p>0).sort((r1,r2)=>r1.z-r2.z)[0];
+ if(!catEntries.length&&!worst){host.innerHTML="";return}
+ let parts=[];
+ let topCat=topCatShared;
+ if(catEntries.length){
+  let pct=totalLossAllCats?Math.round(topMinShared/totalLossAllCats*100):0;
+  parts.push(`สาเหตุหลัก: <b>${esc(topCat)} ${topMinShared} นาที</b> (${pct}% ของเวลาที่เสียทั้งหมด)`);
+ }
+ if(worst){
+  let q=splitKey(worst.x);
+  parts.push(`รุ่นที่กระทบหนักสุด: <b>${esc(q.model)} ${esc(q.door)}</b> (${worst.g>0?"+":""}${worst.g.toLocaleString()} ชิ้น, ${worst.z.toFixed(0)}%)`);
+ }
+ let action=topCat&&CATEGORY_ACTIONS[topCat]?`<span class="dash-insight-action">${esc(CATEGORY_ACTIONS[topCat])}</span>`:"";
+ host.innerHTML=`<span class="dash-insight-icon">💡</span><span class="dash-insight-text">${parts.join(" · ")}${action}</span>`;
+}
 function performance(P,A,keys){
  if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
- // Worst-Achievement-first — so the thing most in need of attention is always
- // at the top, instead of a fixed Model order the reader has to scan through.
- let rows=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
- rows.sort((r1,r2)=>r1.z-r2.z);
+ let all=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
+ // แยก 2 กลุ่ม: มีแผน (p>0) เรียง Achievement ต่ำสุดก่อน = ตัวที่แย่จริงต้อง
+ // แก้ก่อน — กับ ไม่มีแผน (p=0) ที่ทำเพิ่มนอกแผน เรียง Actual มากสุดก่อน ไม่ให้
+ // มาปนอยู่บนสุดจนบังตัวร้ายจริง (เพราะ Achievement คำนวณไม่ได้เมื่อ Plan=0)
+ let planned=all.filter(r=>r.p>0).sort((r1,r2)=>r1.z-r2.z);
+ let unplanned=all.filter(r=>r.p===0).sort((r1,r2)=>r2.a-r1.a);
+ let rowHtml=r=>{let q=splitKey(r.x);return `<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.p?r.z.toFixed(1)+"%":"—"}</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`};
  let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
- rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.z.toFixed(1)}%</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`});
- let tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
+ planned.forEach(r=>h+=rowHtml(r));
+ if(unplanned.length){
+  h+=`<tr><td colspan="7" class="dash-perf-divider">นอกแผน (ผลิตเพิ่มนอกแผนวันนี้)</td></tr>`;
+  unplanned.forEach(r=>h+=rowHtml(r));
+ }
+ let rows=all,tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
  h+=`<tr class="dash-this-block-total"><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
  h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
@@ -226,6 +279,7 @@ function lossView(){
  groups.forEach((g,gi)=>{
   let pct=Math.round(g.total/max*100);
   h+=`<div class="loss-pareto-row loss-cat-toggle" data-idx="${gi}">
+   <span class="loss-pareto-chevron">▸</span>
    <div class="loss-pareto-label">${esc(g.c)}</div>
    <div class="loss-pareto-track"><div class="loss-pareto-fill" style="width:${pct}%"></div></div>
    <div class="loss-pareto-value">${g.total} min</div>
@@ -254,8 +308,70 @@ async function load(){
    ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get()
   ]);
   S.plan=p.exists?{id:p.id,...p.data()}:null;S.actual=a.exists?{id:a.id,...a.data()}:null;S.manual=loss.docs.map(x=>({id:x.id,...x.data()}));
-  if(!S.plan)note("ไม่พบ Saved Daily Plan สำหรับชุดนี้","plan-warn");render();stat("Loaded","ok")
+  if(!S.plan)note("ไม่พบ Saved Daily Plan สำหรับชุดนี้","plan-warn");render();stat("Loaded","ok");
+  trendCompare(d,l,sh);otherLinesToday(d,sh,l);
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
+}
+async function trendCompare(d,l,sh){
+ // ค่าเฉลี่ย Achievement / Material ของ 7 วันย้อนหลัง (ไม่รวมวันนี้) เทียบกับ
+ // ของวันนี้ — บอกว่าวันนี้แย่กว่าปกติจริง หรือเป็นสภาพปกติที่เกิดทุกสัปดาห์
+ // อยู่แล้ว ยิงแยกจาก render() หลัก เพราะต้องอ่านย้อนหลัง 7 วัน (ช้ากว่า) และ
+ // ไม่ควรบล็อกไม่ให้ตัวเลขหลักของวันนี้ขึ้นก่อน
+ let host=$("dashTrendLine");
+ if(!host)return;
+ host.innerHTML="";
+ try{
+  let days=[];for(let i=1;i<=7;i++)days.push(addDays(d,-i));
+  let rows=await Promise.all(days.map(async dt=>{
+   let [p,a,loss]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_lossLogs").where("date","==",dt).where("lineId","==",l).where("shift","==",sh).get()
+   ]);
+   if(!p.exists)return null;
+   let plan=(p.data().blocks||[]).reduce((s,b)=>s+(b.cells||[]).reduce((s2,c)=>s2+Number(c.plan||0),0),0);
+   let cells=a.exists?(a.data().actualByCell||{}):{};
+   let actual=Object.values(cells).reduce((s,v)=>s+Number(v||0),0);
+   let material=loss.docs.map(x=>x.data()).filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
+   return {plan,actual,material};
+  }));
+  let valid=rows.filter(Boolean);
+  if(!valid.length||S.todayAch==null)return;
+  let avgAch=valid.reduce((s,r)=>s+(r.plan?r.actual/r.plan*100:0),0)/valid.length;
+  let avgMaterial=valid.reduce((s,r)=>s+r.material,0)/valid.length;
+  let achDiff=S.todayAch-avgAch;
+  let achTxt=`Achievement เฉลี่ย 7 วัน <b>${avgAch.toFixed(1)}%</b> — วันนี้${achDiff>=0?"สูงกว่า":"ต่ำกว่า"}ค่าเฉลี่ย <b>${Math.abs(achDiff).toFixed(1)} pts</b>`;
+  let matTxt="";
+  if(avgMaterial>0){
+   let ratio=S.todayMaterial/avgMaterial;
+   matTxt=` · Material เฉลี่ย <b>${avgMaterial.toFixed(0)} นาที/วัน</b> — วันนี้${ratio>=1?`สูงกว่า ${ratio.toFixed(1)} เท่า`:`ต่ำกว่า ${(avgMaterial-S.todayMaterial).toFixed(0)} นาที`}`;
+  }
+  host.innerHTML=`เทียบค่าเฉลี่ย 7 วันย้อนหลัง (${valid.length} วันที่มีข้อมูล): ${achTxt}${matTxt}`;
+ }catch(e){console.error(e)}
+}
+async function otherLinesToday(d,sh,currentLineId){
+ // สรุป Achievement ของทุก Line วันเดียวกัน/กะเดียวกัน แบบย่อในหน้า Dashboard
+ // เอง กันต้องสลับไปหน้า Executive Summary เพื่อเทียบ Line ระหว่างพรีเซนต์สด
+ let host=$("dashOtherLines");
+ if(!host)return;
+ host.innerHTML="";
+ try{
+  let lines=S.lines.length?S.lines:(await all("prodV2_lines")).filter(x=>x.active!==false);
+  let rows=await Promise.all(lines.map(async ln=>{
+   let lid=(ln.lineId||ln.code||ln.id||"").toUpperCase();
+   let [p,a]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${lid}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${lid}_${sh}`).get()
+   ]);
+   if(!p.exists)return {lid,name:ln.lineName||ln.name||lid,plan:0,actual:0,ach:0};
+   let plan=(p.data().blocks||[]).reduce((s,b)=>s+(b.cells||[]).reduce((s2,c)=>s2+Number(c.plan||0),0),0);
+   let cells=a.exists?(a.data().actualByCell||{}):{};
+   let actual=Object.values(cells).reduce((s,v)=>s+Number(v||0),0);
+   return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
+  }));
+  if(!rows.length)return;
+  host.innerHTML=rows.map(r=>`<div class="dash-other-line-chip${r.lid===currentLineId?" current":""}"><span>${esc(r.name)}</span><b class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</b></div>`).join("");
+ }catch(e){console.error(e)}
 }
 async function init(){
  $("dashDate").value=localDate();$("dashModel").onchange=render;$("dashDoor").onchange=render;
