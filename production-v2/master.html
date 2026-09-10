@@ -36,6 +36,7 @@
     <button class="tab" data-tab="models">Model & Door</button>
     <button class="tab" data-tab="pallets">Pallet / Jig Layout</button>
     <button class="tab" data-tab="shifts">Shift & Time</button>
+    <button class="tab" data-tab="losscause">Loss Cause</button>
   </div></div>
 
   <section class="tabpane active" data-pane="lines">
@@ -117,6 +118,23 @@
     </div>
   </section>
 
+  <section class="tabpane" data-pane="losscause">
+    <div class="notice info-notice">Loss Cause Master กำหนดตัวเลือกที่ขึ้นในหน้า Loss / Downtime เท่านั้น (Category → Detail Cause) — ไม่แก้ Loss record เก่าที่บันทึกไปแล้ว Disable จะซ่อนจาก dropdown ของรายการใหม่ แต่ข้อมูลเก่าที่เคยใช้ค่านั้นยังแสดงผลถูกต้องเหมือนเดิม</div>
+    <div class="section-card">
+      <div class="pagehead">
+        <div><h2>Loss Category</h2><div class="sub">ลำดับที่ขึ้นใน dropdown ของหน้า Loss / Downtime</div></div>
+        <div class="toolbar"><button id="seedLossCauseV1">Initialize Loss Cause Master (V1)</button><button id="addLossCategory" class="primary">+ Add Category</button></div>
+      </div>
+      <table class="grid"><thead><tr><th>Category</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="lossCategoryRows"></tbody></table>
+    </div>
+    <div class="section-card">
+      <div class="pagehead">
+        <div><h2>Detail Cause</h2><div class="sub">ใต้แต่ละ Category — เลือก Category ด้านบนก่อนเพื่อดู/แก้ Detail Cause ของ Category นั้น</div></div>
+        <div class="toolbar"><label>Category <select id="lossDetailCategoryFilter"></select></label><button id="addLossDetailCause" class="primary">+ Add Detail Cause</button></div>
+      </div>
+      <table class="grid"><thead><tr><th>Detail Cause</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="lossDetailRows"></tbody></table>
+    </div>
+  </section>
   </main>
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>

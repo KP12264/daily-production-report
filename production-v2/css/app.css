@@ -593,6 +593,14 @@ input,select,textarea,.grid input,.grid select{
 .loss-detail-row span{min-width:110px;color:var(--muted);font-variant-numeric:tabular-nums}
 .loss-detail-row b{min-width:60px;color:var(--heading)}
 .loss-detail-row small{color:var(--muted)}
+/* Loss Cause Master — Category → Detail Cause breakdown inside the
+   Dashboard's expanded Loss Analysis panel, and the optional Top Detail
+   line under Main Loss */
+.loss-detail-breakdown{margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.loss-detail-cause-row{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;color:var(--text)}
+.loss-detail-cause-row b{color:var(--heading)}
+.dash-main-loss-detail{font-size:12.5px;color:var(--muted);margin-top:6px}
+.dash-main-loss-detail b{color:var(--text)}
 
 /* DASHBOARD — layout v2: full-width stacked charts, Performance 60% / Loss 40% */
 .chart-box-lg{height:400px}

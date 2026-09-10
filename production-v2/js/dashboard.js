@@ -234,11 +234,17 @@ function formatContextDate(dateStr){
 }
 // ข้อเสนอแนะสั้นๆ ต่อ Loss category — ใครควรถูกตามก่อนเมื่อ category นี้เป็นสาเหตุหลัก
 const CATEGORY_ACTIONS={
- "Material":"→ ติดต่อฝ่ายคลัง/จัดซื้อ ตรวจสอบ Lead Time วัตถุดิบ",
- "Machine":"→ แจ้งฝ่ายซ่อมบำรุง ตรวจเครื่องจักร",
- "Robot":"→ แจ้งทีม Automation ตรวจ Robot",
- "Jig":"→ ตรวจสอบ Jig/อุปกรณ์จับยึด",
- "Pallet Change":"→ ทบทวนแผนเปลี่ยน Pallet ระหว่างกะ กับหัวหน้าไลน์",
+ "Material":"→ Check material availability / supply status and confirm root cause",
+ "Machine":"→ Check machine condition and confirm cause of downtime",
+ "Robot":"→ Check robot condition / alarm and confirm root cause",
+ "Jig":"→ Check Jig condition / setup / alignment",
+ "Conveyor":"→ Check conveyor condition (jam / sensor / stopper) and confirm root cause",
+ "Pallet Change":"→ Review pallet change timing and production impact",
+ "Change Model":"→ Review changeover timing and setup process",
+ "Quality":"→ Check quality issue and confirm disposition",
+ "Manpower":"→ Review manpower allocation for this shift",
+ "Process / Method":"→ Review process/method and confirm adjustment needed",
+ "Waiting":"→ Check what was being waited on and confirm root cause",
 };
 function topLossCategory(){
  let byCat={};
@@ -308,8 +314,18 @@ function lossSummaryCard(loss,material){
  let [topName,topMin]=entries[0];
  let pct=total?Math.round(topMin/total*100):0;
  let top3=entries.slice(0,3);
+ // Top Detail — เสริมทางเลือก เฉพาะเมื่อมี detailCause จริงในข้อมูลของ
+ // Category อันดับ 1 เท่านั้น (ไม่ fabricate ให้ record เก่าที่ไม่มีข้อมูลนี้)
+ let topCatRows=lossRows().filter(x=>(x.category||"Other")===topName&&x.detailCause&&x.detailCause!=="Unspecified");
+ let topDetailHtml="";
+ if(topCatRows.length){
+  let byDetail={};
+  topCatRows.forEach(x=>{byDetail[x.detailCause]=(byDetail[x.detailCause]||0)+Number(x.minutes||0)});
+  let [dName,dMin]=Object.entries(byDetail).sort((a,b)=>b[1]-a[1])[0];
+  topDetailHtml=`<div class="dash-main-loss-detail">Top Detail: <b>${esc(dName)}</b> · ${dMin} min</div>`;
+ }
  host.innerHTML=`<h3>MAIN LOSS</h3>
-  <div class="dash-main-loss"><div class="dash-main-loss-name">${esc(topName)}</div><div class="dash-main-loss-num">${topMin} min <span>· ${pct}% of Total Loss</span></div></div>
+  <div class="dash-main-loss"><div class="dash-main-loss-name">${esc(topName)}</div><div class="dash-main-loss-num">${topMin} min <span>· ${pct}% of Total Loss</span></div>${topDetailHtml}</div>
   <div class="dash-loss-total">TOTAL LOSS: <b>${total} min</b></div>
   <div class="dash-loss-top3">${top3.map(([c,m],i)=>`<div class="dash-loss-top3-row"><span>${i+1}. ${esc(c)}</span><b>${m} min</b><small>${total?Math.round(m/total*100):0}%</small></div>`).join("")}</div>`;
 }
@@ -372,6 +388,15 @@ function lossView(){
  groups.forEach((g,gi)=>{
   let items=[...g.items].sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));
   h+=`<div class="loss-cat-detail" id="lossCatDetail${gi}" style="display:none">`;
+  // Detail Cause breakdown ก่อนรายการดิบ — Auto Pallet Change (ไม่มี
+  // detailCause เลย) และ record เก่าก่อนฟีเจอร์นี้ ถูกจัดเข้ากลุ่ม
+  // "Unspecified" เสมอ ผลรวมของกลุ่มยังคงเท่ากับ total เดิมของ Category
+  let byDetail={};
+  items.forEach(x=>{let dc=x.detailCause||"Unspecified";(byDetail[dc]??=[]).push(x)});
+  let detailGroups=Object.entries(byDetail).map(([name,arr])=>({name,total:arr.reduce((s,x)=>s+Number(x.minutes||0),0)})).sort((a,b)=>b.total-a.total);
+  if(detailGroups.length>1||detailGroups[0]?.name!=="Unspecified"){
+   h+='<div class="loss-detail-breakdown">'+detailGroups.map(d=>`<div class="loss-detail-cause-row"><span>${esc(d.name)}</span><b>${d.total} min</b></div>`).join("")+'</div>';
+  }
   items.forEach(x=>h+=`<div class="loss-detail-row"><span>${esc(x.start||"")}–${esc(x.end||"")}</span><b>${x.minutes} min</b>${x.remark?`<small>${esc(x.remark)}</small>`:""}</div>`);
   h+=`</div>`;
  });

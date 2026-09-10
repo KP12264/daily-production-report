@@ -13,6 +13,7 @@ document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click
   document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===btn));
   document.querySelectorAll('[data-pane]').forEach(x=>x.classList.toggle('active',x.dataset.pane===btn.dataset.tab));
   if(btn.dataset.tab==='models') loadModels();
+  if(btn.dataset.tab==='losscause') loadLossCategories();
 }));
 
 /* Lines */
@@ -820,4 +821,166 @@ document.getElementById('syncConfirmBtn')?.addEventListener('click',async()=>{
     syncState=null;
   }catch(e){resultEl.className='notice plan-warn';resultEl.textContent='Sync ไม่สำเร็จ: '+(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);}
   finally{btn.disabled=true;}
+});
+
+/* ===== Loss Cause Master — mirrors the Line/Model & Door pattern above:
+   flat parent (prodV2_lossCategories) + child scoped by parent (
+   prodV2_lossDetailCauses, resolved by categoryId per approved schema).
+   Soft-disable via active=false — disabled items disappear from Loss Entry's
+   dropdown but historical Loss records keep showing their saved value
+   unchanged, since loss.js never re-looks-up an old record's saved string
+   against this Master, it just displays what's already stored. */
+const LOSS_CAT_COLLECTION='prodV2_lossCategories';
+const LOSS_DETAIL_COLLECTION='prodV2_lossDetailCauses';
+const lossCategoryBody=document.getElementById('lossCategoryRows');
+const lossDetailBody=document.getElementById('lossDetailRows');
+const lossDetailCategoryFilter=document.getElementById('lossDetailCategoryFilter');
+
+function lossCategoryRowHtml(x={},docId='',isNew=false){
+  const name=x.name||'',order=Number(x.order||0);
+  return `<tr>
+    <td><input value="${esc(name)}" placeholder="Material" data-k="name"></td>
+    <td><input type="number" min="1" value="${order||''}" data-k="order"></td>
+    <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
+    <td class="right"><button ${isNew?'data-save-losscat-new':`data-save-losscat="${esc(docId)}"`}>Save</button> ${isNew?'':`<button data-delete-losscat="${esc(docId)}" class="danger">Delete</button>`}</td>
+  </tr>`;
+}
+async function loadLossCategories(){
+  lossCategoryBody.innerHTML='<tr><td colspan="4" class="empty">Loading…</td></tr>';
+  try{
+    const snap=await ProdV2DB.collection(LOSS_CAT_COLLECTION).get();
+    const rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    rows.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||String(a.name).localeCompare(String(b.name)));
+    lossCategoryBody.innerHTML=rows.length?rows.map(x=>lossCategoryRowHtml(x,x.id,false)).join(''):'<tr><td colspan="4" class="empty">ยังไม่มี Loss Category — กด Initialize Loss Cause Master (V1) หรือ + Add Category</td></tr>';
+    // เติม dropdown สำหรับตาราง Detail Cause ด้านล่าง — คงค่าที่เลือกไว้เดิมถ้ายังมีอยู่
+    const keep=lossDetailCategoryFilter.value;
+    lossDetailCategoryFilter.innerHTML=rows.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}${x.active===false?' (Inactive)':''}</option>`).join('');
+    if(rows.some(x=>x.id===keep))lossDetailCategoryFilter.value=keep;
+    if(lossDetailCategoryFilter.value)loadLossDetailCauses(); else lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">ยังไม่มี Category</td></tr>';
+  }catch(e){setStatus(e.message,'err');lossCategoryBody.innerHTML='<tr><td colspan="4" class="empty">โหลด Loss Category ไม่ได้</td></tr>'}
+}
+document.getElementById('addLossCategory')?.addEventListener('click',()=>{
+  lossCategoryBody.querySelector('.empty')?.closest('tr')?.remove();
+  const orders=[...lossCategoryBody.querySelectorAll('[data-k="order"]')].map(el=>Number(el.value)||0);
+  lossCategoryBody.insertAdjacentHTML('beforeend',lossCategoryRowHtml({order:Math.max(0,...orders,0)+1,active:true},'',true));
+  lossCategoryBody.lastElementChild.querySelector('[data-k="name"]').focus();
+  setStatus('New Loss Category ready');
+});
+lossCategoryBody?.addEventListener('click',async e=>{
+  const delBtn=e.target.closest('[data-delete-losscat]');
+  if(delBtn){
+    const docId=delBtn.dataset.deleteLosscat;
+    if(!confirm(`ลบ Loss Category นี้ทิ้ง?\n\nLoss record เก่าที่เคยใช้ Category นี้จะยังคงแสดง Category เดิมถูกต้อง (ไม่ได้ไปดึงจาก Master นี้ตอนแสดงผล) แต่ Detail Cause ที่อยู่ใต้ Category นี้ใน Master จะไม่มี Category แม่แล้ว — แนะนำให้ Disable แทนถ้าไม่แน่ใจ`))return;
+    try{setStatus('Deleting…');await ProdV2DB.delete(LOSS_CAT_COLLECTION,docId);setStatus('✓ Deleted','ok');await loadLossCategories();}
+    catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+    return;
+  }
+  const btn=e.target.closest('button');
+  if(!btn||(!btn.hasAttribute('data-save-losscat')&&!btn.hasAttribute('data-save-losscat-new')))return;
+  const tr=btn.closest('tr'),get=k=>tr.querySelector(`[data-k="${k}"]`).value;
+  const name=get('name').trim();
+  if(!name)return alert('กรุณาใส่ชื่อ Category');
+  const data={name,order:Number(get('order'))||0,active:get('active')==='true',updatedAt:Date.now()};
+  const id=btn.dataset.saveLosscat||`losscat_${safeKey(name)}`;
+  try{
+    setStatus('Saving…');btn.disabled=true;
+    await ProdV2DB.set(LOSS_CAT_COLLECTION,id,data,{merge:true});
+    setStatus('✓ Saved','ok');await loadLossCategories();
+  }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
+});
+
+function lossDetailRowHtml(x={},docId='',isNew=false){
+  const name=x.name||'',order=Number(x.order||0);
+  return `<tr>
+    <td><input value="${esc(name)}" placeholder="Material NG" data-k="name"></td>
+    <td><input type="number" min="1" value="${order||''}" data-k="order"></td>
+    <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
+    <td class="right"><button ${isNew?'data-save-lossdetail-new':`data-save-lossdetail="${esc(docId)}"`}>Save</button> ${isNew?'':`<button data-delete-lossdetail="${esc(docId)}" class="danger">Delete</button>`}</td>
+  </tr>`;
+}
+async function loadLossDetailCauses(){
+  const categoryId=lossDetailCategoryFilter.value;
+  if(!categoryId){lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">เลือก Category ก่อน</td></tr>';return}
+  lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">Loading…</td></tr>';
+  try{
+    const snap=await ProdV2DB.collection(LOSS_DETAIL_COLLECTION).where('categoryId','==',categoryId).get();
+    const rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    rows.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||String(a.name).localeCompare(String(b.name)));
+    lossDetailBody.innerHTML=rows.length?rows.map(x=>lossDetailRowHtml(x,x.id,false)).join(''):'<tr><td colspan="4" class="empty">ยังไม่มี Detail Cause สำหรับ Category นี้ — กด + Add Detail Cause</td></tr>';
+  }catch(e){setStatus(e.message,'err');lossDetailBody.innerHTML='<tr><td colspan="4" class="empty">โหลด Detail Cause ไม่ได้</td></tr>'}
+}
+lossDetailCategoryFilter?.addEventListener('change',loadLossDetailCauses);
+document.getElementById('addLossDetailCause')?.addEventListener('click',()=>{
+  const categoryId=lossDetailCategoryFilter.value;
+  if(!categoryId)return alert('กรุณาเลือก Category ก่อน');
+  lossDetailBody.querySelector('.empty')?.closest('tr')?.remove();
+  const orders=[...lossDetailBody.querySelectorAll('[data-k="order"]')].map(el=>Number(el.value)||0);
+  lossDetailBody.insertAdjacentHTML('beforeend',lossDetailRowHtml({order:Math.max(0,...orders,0)+1,active:true},'',true));
+  lossDetailBody.lastElementChild.querySelector('[data-k="name"]').focus();
+  setStatus('New Detail Cause ready');
+});
+lossDetailBody?.addEventListener('click',async e=>{
+  const delBtn=e.target.closest('[data-delete-lossdetail]');
+  if(delBtn){
+    const docId=delBtn.dataset.deleteLossdetail;
+    if(!confirm('ลบ Detail Cause นี้ทิ้ง?\n\nLoss record เก่าที่เคยใช้ Detail Cause นี้จะยังคงแสดงค่าเดิมถูกต้อง (ไม่ได้ไปดึงจาก Master นี้ตอนแสดงผล) — แนะนำให้ Disable แทนถ้าไม่แน่ใจ'))return;
+    try{setStatus('Deleting…');await ProdV2DB.delete(LOSS_DETAIL_COLLECTION,docId);setStatus('✓ Deleted','ok');await loadLossDetailCauses();}
+    catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+    return;
+  }
+  const btn=e.target.closest('button');
+  if(!btn||(!btn.hasAttribute('data-save-lossdetail')&&!btn.hasAttribute('data-save-lossdetail-new')))return;
+  const tr=btn.closest('tr'),get=k=>tr.querySelector(`[data-k="${k}"]`).value;
+  const categoryId=lossDetailCategoryFilter.value,name=get('name').trim();
+  if(!categoryId||!name)return alert('กรุณาเลือก Category และใส่ชื่อ Detail Cause');
+  const categoryName=lossDetailCategoryFilter.selectedOptions[0]?.textContent.replace(' (Inactive)','')||'';
+  const data={categoryId,categoryName,name,order:Number(get('order'))||0,active:get('active')==='true',updatedAt:Date.now()};
+  const id=btn.dataset.saveLossdetail||`lossdetail_${safeKey(categoryId)}_${safeKey(name)}`;
+  try{
+    setStatus('Saving…');btn.disabled=true;
+    await ProdV2DB.set(LOSS_DETAIL_COLLECTION,id,data,{merge:true});
+    setStatus('✓ Saved','ok');await loadLossDetailCauses();
+  }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
+});
+
+// V1 seed — final approved list. Deterministic doc IDs (losscat_{name},
+// lossdetail_{categoryId}_{name}) make this safe to press more than once:
+// re-running just re-merges the same known rows, it never touches any
+// Category/Detail Cause the user has since added themselves under a
+// different name, and never touches prodV2_lossLogs at all.
+const LOSS_CAUSE_SEED_V1=[
+  {cat:'Machine',details:['Machine Breakdown','Machine Alarm','Machine Adjustment','Setting or Parameter Adjustment','Maintenance','Utility Problem','Machine Not Ready','Other']},
+  {cat:'Robot',details:['Robot Alarm','Pick Failure','Position Error','Sensor Problem','Vacuum Problem','Robot Adjustment','Robot Reset or Recovery','Other']},
+  {cat:'Jig',details:['Jig Problem','Jig Adjustment','Jig Change','Jig Alignment','Jig Damage','Jig Cleaning','Jig Not Ready','Other']},
+  {cat:'Conveyor',details:['Conveyor Jam','Sensor Error','Stopper Problem','Motor / Drive Problem','Chain / Roller Problem','Conveyor Adjustment','Other']},
+  {cat:'Material',details:['Material Shortage','Material Not Ready','Waiting Material Delivery','Material NG','Wrong Material or Part','Waiting Replacement','Material Identification or Confirmation','Other']},
+  {cat:'Waiting',details:['Waiting Material','Waiting QC Confirmation','Waiting Engineering','Waiting Previous Process','Waiting Instruction','Waiting Tool / Equipment','Other']},
+  {cat:'Change Model',details:['Model Changeover','Jig Replacement','Parameter Setup','First Piece Verification','Trial Run','Other']},
+  {cat:'Quality',details:['Waiting Quality Confirmation','Inspection or Recheck','Quality Problem Adjustment','Trial or Verification','Waiting Disposition','Other']},
+  {cat:'Pallet Change',details:['Planned Pallet Change','Unplanned Pallet Change','Waiting Pallet','Pallet Not Ready','Pallet Setup or Adjustment','Pallet Problem','Other']},
+  {cat:'Manpower',details:['Operator Shortage','Waiting Operator','Manpower Allocation','Training or New Operator','Operator Change','Other']},
+  {cat:'Process / Method',details:['Process Adjustment','Parameter Adjustment','Model Changeover','Work Method Issue','Setup or Preparation','Trial Run','Other']},
+  {cat:'Other',details:['Other']},
+];
+document.getElementById('seedLossCauseV1')?.addEventListener('click',async()=>{
+  if(!confirm(`Initialize Loss Cause Master (V1)?\n\nจะสร้าง/อัปเดต ${LOSS_CAUSE_SEED_V1.length} Category และ Detail Cause ของแต่ละ Category ตามชุดที่ยืนยันไว้ (merge — ไม่ลบ/ไม่ทับ Category หรือ Detail Cause ที่คุณเพิ่มเองภายหลังถ้าใช้ชื่ออื่น) ไม่กระทบ Loss record เก่าเลย ดำเนินการต่อ?`))return;
+  const btn=document.getElementById('seedLossCauseV1');
+  btn.disabled=true;setStatus('Seeding Loss Cause Master…');
+  try{
+    let ci=0;
+    for(const {cat,details} of LOSS_CAUSE_SEED_V1){
+      ci++;
+      const catId=`losscat_${safeKey(cat)}`;
+      await ProdV2DB.set(LOSS_CAT_COLLECTION,catId,{name:cat,order:ci,active:true,updatedAt:Date.now()},{merge:true});
+      let di=0;
+      for(const d of details){
+        di++;
+        const detId=`lossdetail_${safeKey(catId)}_${safeKey(d)}`;
+        await ProdV2DB.set(LOSS_DETAIL_COLLECTION,detId,{categoryId:catId,categoryName:cat,name:d,order:di,active:true,updatedAt:Date.now()},{merge:true});
+      }
+    }
+    setStatus('✓ Loss Cause Master V1 seeded','ok');
+    await loadLossCategories();
+  }catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+  finally{btn.disabled=false;}
 });
