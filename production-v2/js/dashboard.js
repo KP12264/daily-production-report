@@ -1,7 +1,13 @@
-(()=>{const $=id=>document.getElementById(id);let S={lines:[],plan:null,actual:null,manual:[],hourly:null,cum:null,keys:[]};
+(()=>{const $=id=>document.getElementById(id);let S={lines:[],plan:null,actual:null,manual:[],hourly:null,cum:null,keys:[],multiDay:null};
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
 function addDays(dateStr,n){let d=new Date(dateStr+"T12:00:00");d.setDate(d.getDate()+n);return localDate(d)}
+// Monday–Sunday week containing dateStr, for VIEW=Week
+function weekRange(dateStr){
+ let d=new Date(dateStr+"T12:00:00");
+ let dow=(d.getDay()+6)%7; // 0=Mon .. 6=Sun
+ return {start:addDays(dateStr,-dow),end:addDays(dateStr,6-dow)};
+}
 function stat(t,c=""){$("dashStatus").textContent=t;$("dashStatus").className="hero-status "+c}
 function note(t,c=""){$("dashMessage").textContent=t;$("dashMessage").className="notice info-notice "+c}
 async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
@@ -51,6 +57,8 @@ function blocks(){
  return S.plan?.blocks||[];
 }
 function rowsFromPlan(){
+ // Week/Range view: P is already built per-day in load() (S.multiDay.P)
+ if(S.multiDay)return S.multiDay.P;
  // Read plan quantities directly from the same field entry.js already reads
  // (S.plan.blocks[bi].cells[].plan) so Dashboard can never diverge from Entry.
  let out={};
@@ -63,6 +71,7 @@ function rowsFromPlan(){
  return out;
 }
 function actualRows(){
+ if(S.multiDay)return S.multiDay.A;
  let out={},a=S.actual?.actualByCell||{};
  Object.entries(a).forEach(([cell,v])=>{let p=cell.split("|||"),bi=Number(p[0]),kk=k(p[1],p[2]);(out[kk]??=[])[bi]=Number(v||0)});
  return out;
@@ -75,11 +84,17 @@ function filters(keys){
 }
 function selected(keys){let m=$("dashModel").value,d=$("dashDoor").value;return keys.filter(x=>(!m||splitKey(x).model===m)&&(!d||splitKey(x).door===d))}
 function autoLoss(){return S.plan?.masterSnapshot?.palletChangeLosses||[]}
-function lossRows(){return [...autoLoss().map(x=>({...x,category:x.category||"Pallet Change"})),...S.manual]}
+function lossRows(){
+ if(S.multiDay)return S.multiDay.lossRows;
+ return [...autoLoss().map(x=>({...x,category:x.category||"Pallet Change"})),...S.manual];
+}
 function render(){
+ let agg=!!S.multiDay;
  let P=rowsFromPlan();let A=actualRows();let keys=[...new Set([...Object.keys(P),...Object.keys(A)])];S.keys=keys;filters(keys);let use=selected(keys);
  let n=Math.max(0,...use.flatMap(x=>[(P[x]||[]).length,(A[x]||[]).length])), labels=[];
- let bs=blocks();for(let i=0;i<n;i++)labels.push(bs[i]?(bs[i].label||`${bs[i].start||bs[i].startTime||""}–${bs[i].end||bs[i].endTime||""}`):`Block ${i+1}`);
+ let bs=agg?[]:blocks();
+ if(agg)labels=S.multiDay.labels.slice(0,n);
+ else for(let i=0;i<n;i++)labels.push(bs[i]?(bs[i].label||`${bs[i].start||bs[i].startTime||""}–${bs[i].end||bs[i].endTime||""}`):`Block ${i+1}`);
  let pb=Array(n).fill(0),ab=Array(n).fill(0);use.forEach(x=>{for(let i=0;i<n;i++){pb[i]+=Number(P[x]?.[i]||0);
   // นับ Actual เฉพาะ Model/Door ที่ยังอยู่ใน Plan ปัจจุบัน — กัน key เก่าที่
   // ค้างมาจากก่อนเปลี่ยนชื่อ Model ใน Master ไม่ให้บวกเข้าไปในยอดรวมซ้ำซ้อน
@@ -91,12 +106,20 @@ function render(){
  // ใน Header/Primary KPI ตามที่ยืนยันไว้ (spec §1 + §13 — สองค่านี้คนละความหมาย
  // กัน ไม่ได้แก้สูตร Plan/Actual/Expected เดิมเลย แค่เพิ่มค่าที่ derive จากของ
  // ที่มีอยู่แล้วและเปลี่ยนว่าตัวไหนโชว์เด่นกว่า)
+ // ในมุมมอง Week/Range ไม่มี "ตอนนี้" ของทั้งช่วง — Expected Now จึงหมายถึง
+ // Adjusted Plan เต็มช่วงตรงๆ (ไม่ prorate ตามเวลาเหมือนโหมด Day)
  let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gapPlan=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0),material=lossRows().filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
- let expected=expectedByNow(pb,bs,$("dashDate").value);
+ let expectedRaw=agg?plan:expectedByNow(pb,bs,$("dashDate").value);
+ // ปัดเศษ Expected Now เป็นจำนวนเต็มครั้งเดียวตรงนี้ — ทุกที่ที่ใช้ต่อจากนี้
+ // (Gap, สถานะ ON TARGET/BEHIND PLAN, การ์ดที่โชว์) ใช้ค่าเดียวกันนี้เสมอ กัน
+ // ไม่ให้ Gap ที่โชว์ขัดกับ Expected Now ที่โชว์ (เช่น 939 กับ -667.25)
+ let expected=Math.round(expectedRaw);
  let gapExpected=actual-expected;
  let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
  let lineName=S.lines.find(x=>(x.lineId||x.code||x.id||"").toUpperCase()===$("dashLine").value.toUpperCase())?.lineName||$("dashLine").value;
- let contextLine=`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate($("dashDate").value)}`;
+ let contextLine=agg
+  ?`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate(S.multiDay.days[0])} – ${formatContextDate(S.multiDay.days[S.multiDay.days.length-1])}`
+  :`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate($("dashDate").value)}`;
  statusBanner(status,actual,expected,gapExpected,ach,contextLine);
  insightBanner(P,A,use,loss,material);
  primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan);
@@ -105,8 +128,19 @@ function render(){
  actionCard();
  top3BehindPlanCard(P,A,use);
  achievementBar(plan,actual,ach);
- thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
- charts(labels,pb,ab); performance(P,A,use); lossView(); S.hourlyArgs={labels,bs,P,A,use}; S.todayAch=ach;S.todayMaterial=material; hourlySummary(); note(`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+ // This Block / Hourly Summary / 7-Day Avg ไม่มีความหมายเมื่อดูมากกว่า 1 วัน —
+ // ซ่อนไว้แทนที่จะโชว์ข้อมูลที่ตีความผิดได้
+ $("dashThisBlock").style.display=agg?"none":"";
+ $("dashThisBlockTable").style.display=agg?"none":($("dashThisBlockTable").style.display);
+ $("dashHourlySection").style.display=agg?"none":"";
+ $("dashTrendCard").style.display=agg?"none":"";
+ $("hourlyChartH2").textContent=agg?"Plan vs Actual by Day":"Plan vs Actual by Time Block";
+ $("hourlyChartP").textContent=agg?"Adjusted Plan เทียบกับยอดผลิตจริง รายวัน · วันไหนเริ่มหลุดแผน":"Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน";
+ if(!agg)thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
+ charts(labels,pb,ab); performance(P,A,use); lossView();
+ if(!agg){S.hourlyArgs={labels,bs,P,A,use};hourlySummary()}
+ S.todayAch=ach;S.todayMaterial=material;
+ note(agg?`Dashboard loaded · ${S.multiDay.days[0]} → ${S.multiDay.days[S.multiDay.days.length-1]} · Line ${$("dashLine").value} / ${$("dashShift").value} (${S.multiDay.days.length} วัน)`:`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
 function achievementBar(plan,actual,ach){
  let host=$("dashAchievementBar");
@@ -152,7 +186,7 @@ function statusBanner(status,actual,expected,gapExpected,ach,contextLine){
  if(!host)return;
  host.className="dash-status-banner "+(ok?"kpi-good-bg":"kpi-bad-bg");
  let ctx=contextLine?`<div class="dash-status-context">${esc(contextLine)}</div>`:"";
- host.innerHTML=`${ctx}<div class="dash-status-main"><span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span></div><div class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${Math.round(expected).toLocaleString()}</div>`;
+ host.innerHTML=`${ctx}<div class="dash-status-main"><span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span></div><div class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${expected.toLocaleString()}</div>`;
 }
 function currentBlockIndex(bs,viewDate){
  // "Current block" only makes sense when looking at TODAY — a past/future
@@ -319,11 +353,11 @@ function performance(P,A,keys){
 }
 function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan){
  let host=$("dashPrimaryKpis");
- if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${Math.round(expected).toLocaleString()}</b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()}</b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div>`;
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()}</b><span class="dash-pkpi-unit">pcs</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()}</b><span class="dash-pkpi-unit">pcs</span></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div>`;
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");
- if(sec)sec.innerHTML=`<span>Adjusted Plan (full shift): <b>${plan.toLocaleString()}</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${gapPlan.toLocaleString()}</b></span>`;
+ if(sec)sec.innerHTML=`<span>Adjusted Plan (full shift): <b>${Math.round(plan).toLocaleString()} pcs</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${Math.round(gapPlan).toLocaleString()} pcs</b></span>`;
 }
 let mainLossState={cat:null,detail:null};
 function biLabel(en,th){return th?`${esc(th)} (${esc(en)})`:esc(en)}
@@ -447,17 +481,59 @@ function lossView(){
  });
 }
 async function load(){
- let d=$("dashDate").value,l=$("dashLine").value.toUpperCase(),sh=$("dashShift").value;ProdV2Context.set({date:d,lineId:l,shift:sh});stat("Loading...");
+ let mode=$("dashViewMode").value,l=$("dashLine").value.toUpperCase(),sh=$("dashShift").value;
  mainLossState={cat:null,detail:null};
+ if(mode==="day"){
+  let d=$("dashDate").value;
+  ProdV2Context.set({date:d,lineId:l,shift:sh,viewMode:mode});stat("Loading...");
+  S.multiDay=null;
+  try{
+   let [p,a,loss]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get()
+   ]);
+   S.plan=p.exists?{id:p.id,...p.data()}:null;S.actual=a.exists?{id:a.id,...a.data()}:null;S.manual=loss.docs.map(x=>({id:x.id,...x.data()}));
+   if(!S.plan)note("ไม่พบ Saved Daily Plan สำหรับชุดนี้","plan-warn");render();stat("Loaded","ok");
+   trendCompare(d,l,sh);otherLinesToday([d],sh,l);
+  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
+  return;
+ }
+ // Week / Custom Range — aggregate across every date in the range
+ let startD,endD;
+ if(mode==="week"){let r=weekRange($("dashDate").value);startD=r.start;endD=r.end;$("dashDateEnd").value=endD}
+ else{startD=$("dashDate").value;endD=$("dashDateEnd").value||startD}
+ if(endD<startD){note("วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม","plan-warn");return}
+ let days=[];for(let dt=startD;dt<=endD;dt=addDays(dt,1))days.push(dt);
+ if(days.length>31){note("ช่วงเวลายาวเกินไป (สูงสุด 31 วัน)","plan-warn");return}
+ ProdV2Context.set({date:startD,lineId:l,shift:sh,viewMode:mode});
+ stat(`Loading ${days.length} days...`);
  try{
-  let [p,a,loss]=await Promise.all([
-   ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${l}_${sh}`).get(),
-   ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${l}_${sh}`).get(),
-   ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get()
-  ]);
-  S.plan=p.exists?{id:p.id,...p.data()}:null;S.actual=a.exists?{id:a.id,...a.data()}:null;S.manual=loss.docs.map(x=>({id:x.id,...x.data()}));
-  if(!S.plan)note("ไม่พบ Saved Daily Plan สำหรับชุดนี้","plan-warn");render();stat("Loaded","ok");
-  trendCompare(d,l,sh);otherLinesToday(d,sh,l);
+  let results=await Promise.all(days.map(async dt=>{
+   let [p,a,loss]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_lossLogs").where("date","==",dt).where("lineId","==",l).where("shift","==",sh).get()
+   ]);
+   return {plan:p.exists?{id:p.id,...p.data()}:null,actual:a.exists?{id:a.id,...a.data()}:null,manual:loss.docs.map(x=>({id:x.id,...x.data()}))};
+  }));
+  let P={},A={},lossAll=[];
+  results.forEach((r,di)=>{
+   let dayP={};
+   (r.plan?.blocks||[]).forEach(b=>(b.cells||[]).forEach(c=>{let kk=k(c.model,c.door);dayP[kk]=(dayP[kk]||0)+Number(c.plan||0)}));
+   let cells=r.actual?.actualByCell||{},dayA={};
+   Object.entries(cells).forEach(([cell,v])=>{let parts=cell.split("|||"),kk=k(parts[1],parts[2]);dayA[kk]=(dayA[kk]||0)+Number(v||0)});
+   Object.keys(dayP).forEach(kk=>{(P[kk]??=[])[di]=dayP[kk]});
+   // นับ Actual เฉพาะ key ที่มีอยู่ใน Plan ของ "วันนั้นๆ" เอง (เหมือน guard
+   // เดิมของโหมด Day กันชื่อ Model เก่าค้างที่เคย rename ไปแล้ว)
+   Object.keys(dayA).forEach(kk=>{if(dayP[kk]!=null)(A[kk]??=[])[di]=dayA[kk]});
+   let autoRows=(r.plan?.masterSnapshot?.palletChangeLosses||[]).map(x=>({...x,category:x.category||"Pallet Change"}));
+   lossAll.push(...autoRows,...r.manual);
+  });
+  S.multiDay={P,A,lossRows:lossAll,labels:days.map(dt=>{let[,m,dd]=dt.split("-");return `${dd}/${m}`}),days};
+  S.plan=null;S.actual=null;S.manual=[];
+  render();stat(`Loaded ${days.length} days`,"ok");
+  otherLinesToday(days,sh,l);
  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
 }
 async function trendCompare(d,l,sh){
@@ -498,9 +574,10 @@ async function trendCompare(d,l,sh){
   host.innerHTML=`${achTxt}${matTxt}`;
  }catch(e){console.error(e)}
 }
-async function otherLinesToday(d,sh,currentLineId){
- // สรุป Achievement ของทุก Line วันเดียวกัน/กะเดียวกัน แบบย่อในหน้า Dashboard
- // เอง กันต้องสลับไปหน้า Executive Summary เพื่อเทียบ Line ระหว่างพรีเซนต์สด
+async function otherLinesToday(dateList,sh,currentLineId){
+ // สรุป Achievement ของทุก Line ในช่วงวันที่เดียวกับที่ Dashboard กำลังแสดงอยู่
+ // (วันเดียวหรือหลายวันก็ได้) แบบย่อในหน้า Dashboard เอง กันต้องสลับไปหน้า
+ // Executive Summary เพื่อเทียบ Line ระหว่างพรีเซนต์สด
  let host=$("dashOtherLines");
  if(!host)return;
  host.innerHTML="";
@@ -508,14 +585,18 @@ async function otherLinesToday(d,sh,currentLineId){
   let lines=S.lines.length?S.lines:(await all("prodV2_lines")).filter(x=>x.active!==false);
   let rows=await Promise.all(lines.map(async ln=>{
    let lid=(ln.lineId||ln.code||ln.id||"").toUpperCase();
-   let [p,a]=await Promise.all([
-    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${lid}_${sh}`).get(),
-    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${lid}_${sh}`).get()
-   ]);
-   if(!p.exists)return {lid,name:ln.lineName||ln.name||lid,plan:0,actual:0,ach:0};
-   let plan=(p.data().blocks||[]).reduce((s,b)=>s+(b.cells||[]).reduce((s2,c)=>s2+Number(c.plan||0),0),0);
-   let cells=a.exists?(a.data().actualByCell||{}):{};
-   let actual=Object.values(cells).reduce((s,v)=>s+Number(v||0),0);
+   let perDate=await Promise.all(dateList.map(async d=>{
+    let [p,a]=await Promise.all([
+     ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${lid}_${sh}`).get(),
+     ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${lid}_${sh}`).get()
+    ]);
+    if(!p.exists)return {plan:0,actual:0};
+    let plan=(p.data().blocks||[]).reduce((s,b)=>s+(b.cells||[]).reduce((s2,c)=>s2+Number(c.plan||0),0),0);
+    let cells=a.exists?(a.data().actualByCell||{}):{};
+    let actual=Object.values(cells).reduce((s,v)=>s+Number(v||0),0);
+    return {plan,actual};
+   }));
+   let plan=perDate.reduce((s,x)=>s+x.plan,0),actual=perDate.reduce((s,x)=>s+x.actual,0);
    return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
   }));
   if(!rows.length)return;
@@ -527,12 +608,19 @@ async function init(){
  // เปลี่ยน Date/Line/Shift แล้วโหลดใหม่ทันที ไม่ต้องกด Load Dashboard เอง —
  // ปุ่มยังอยู่เผื่ออยากรีเฟรชข้อมูลซ้ำที่ตัวกรองเดิม (เช่น มีคนกรอก Actual เพิ่มระหว่างเปิดหน้าไว้)
  $("dashDate").onchange=load;$("dashLine").onchange=load;$("dashShift").onchange=load;
+ $("dashDateEnd").onchange=load;
+ $("dashViewMode").onchange=()=>{
+  let mode=$("dashViewMode").value;
+  $("dashDateEndWrap").style.display=mode==="range"?"":"none";
+  if(mode==="week"){let r=weekRange($("dashDate").value);$("dashDateEnd").value=r.end}
+  load();
+ };
  $("dashHourlyToggle")?.addEventListener("click",()=>{
   let open=$("dashHourly").style.display!=="none";
   $("dashHourly").style.display=open?"none":"block";
   $("dashHourlyToggle").textContent=open?"ดูสรุปรายชั่วโมง":"ซ่อนสรุปรายชั่วโมง";
  });
  $("dashHourlySelect")?.addEventListener("change",hourlySummary);
- try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if($("dashDate").value&&$("dashLine").value&&$("dashShift").value)load()}catch(e){note(e.message,"plan-warn")}
+ try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.viewMode&&[...$("dashViewMode").options].some(o=>o.value===c.viewMode)){$("dashViewMode").value=c.viewMode;$("dashDateEndWrap").style.display=c.viewMode==="range"?"":"none"}if($("dashDate").value&&$("dashLine").value&&$("dashShift").value)load()}catch(e){note(e.message,"plan-warn")}
 }
 addEventListener("DOMContentLoaded",init)})();

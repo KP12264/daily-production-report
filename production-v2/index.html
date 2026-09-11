@@ -11,7 +11,9 @@
 <section class="hero"><div><div class="eyebrow">STEP 8 · LIVE PRODUCTION OVERVIEW</div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div></section>
 <main class="content">
 <section class="filter-card dash-filters">
+<label><span>VIEW</span><select id="dashViewMode"><option value="day">Day</option><option value="week">Week</option><option value="range">Custom Range</option></select></label>
 <label><span>DATE</span><input id="dashDate" type="date"></label>
+<label id="dashDateEndWrap" style="display:none"><span>TO</span><input id="dashDateEnd" type="date"></label>
 <label><span>LINE</span><select id="dashLine"></select></label>
 <label><span>SHIFT</span><select id="dashShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
 <label><span>MODEL</span><select id="dashModel"><option value="">All Models</option></select></label>
@@ -32,7 +34,7 @@
 <section id="dashActionCard" class="section-card exec-card"></section>
 <section class="dash-exec-grid-2col">
 <div class="section-card exec-card"><h3>LINE PERFORMANCE</h3><div id="dashOtherLines" class="dash-other-lines"></div></div>
-<div class="section-card exec-card"><h3>VS 7-DAY AVG</h3><div id="dashTrendLine" class="dash-trend-line"></div></div>
+<div id="dashTrendCard" class="section-card exec-card"><h3>VS 7-DAY AVG</h3><div id="dashTrendLine" class="dash-trend-line"></div></div>
 </section>
 <section id="dashTop3" class="section-card exec-card"></section>
 
@@ -41,13 +43,13 @@
 <section id="dashThisBlock" class="dash-this-block"></section>
 <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
 <section id="dashAchievementBar" class="dash-ach-bar"></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Plan vs Actual by Time Block</h2><p>Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
+<section class="section-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
 <section class="dash-grid-6040">
 <div class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement · เรียงตามที่หลุดแผนมากสุดก่อน</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
 <div class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
 </section>
-<section class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
+<section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
 </main></div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
