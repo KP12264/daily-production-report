@@ -190,10 +190,23 @@ function events(){
 function orderedPallets(){let r=new Map((S.palletOrder||[]).map((id,i)=>[id,i]));return [...S.pallets].sort((a,b)=>(r.get(a.id)??9999)-(r.get(b.id)??9999))}
 function movePallet(id,dir){let a=[...S.palletOrder],i=a.indexOf(id),j=i+dir;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];S.palletOrder=a;pallets();$("snapshotBadge").textContent="NOT SAVED"}
 function setPalletPosition(id,n){let a=[...S.palletOrder],i=a.indexOf(id),to=Math.max(0,Math.min(a.length-1,Number(n)-1));if(i<0||Number.isNaN(to))return;a.splice(i,1);a.splice(to,0,id);S.palletOrder=a;pallets();$("snapshotBadge").textContent="NOT SAVED"}
+function eventBadgeFor(palletId){
+ // อ่านจาก S.events ที่มีอยู่แล้วเฉยๆ ไม่แตะ event calculation/effective-from
+ // ใดๆ — แค่หา event แรกที่อ้างถึง Pallet นี้เพื่อสรุปเป็น badge สั้นๆ
+ let e=(S.events||[]).find(ev=>ev.palletId===palletId);
+ if(!e)return null;
+ let label=e.action==="REMOVE"?"REMOVED":e.action==="ADD"?"ADDED":"CHANGED";
+ return {label,time:e.effectiveFrom||e.actualTime||""};
+}
 function pallets(){
  if(!S.pallets.length){$("palletArea").innerHTML='<div class="empty-state compact-empty">ไม่พบ Pallet/Jig Layout</div>';return}
  let arr=orderedPallets();
- $("palletArea").innerHTML='<div class="pallet-order-note">Daily Pallet Order — ปรับลำดับเฉพาะวันนี้ ไม่แก้ Physical Master</div><div class="pallet-grid">'+arr.map((p,i)=>{let ch=S.active.has(p.id),comp=posOf(p).map(q=>`${q.model} ${q.door} ×${q.qty}`).join(" + ");return `<div class="pallet-card order-card ${ch?"selected":""}"><input type="checkbox" data-p="${p.id}" ${ch?"checked":""}><div class="pallet-body"><div class="pallet-top"><b>Position ${i+1}</b><span class="physical-id">Pallet ${p.palletName||p.palletCode||p.palletNo||p.name||p.id}</span></div><span>${comp||"No composition"}</span></div><div class="order-tools"><button data-up="${p.id}">↑</button><button data-down="${p.id}">↓</button><input type="number" min="1" max="${arr.length}" value="${i+1}" data-pos="${p.id}"></div></div>`}).join("")+"</div>";
+ $("palletArea").innerHTML='<div class="pallet-order-note">Daily Pallet Order — ปรับลำดับเฉพาะวันนี้ ไม่แก้ Physical Master</div><div class="pallet-grid">'+arr.map((p,i)=>{
+  let ch=S.active.has(p.id),comp=posOf(p).map(q=>`${q.model} ${q.door} ×${q.qty}`).join(" + ");
+  let badge=eventBadgeFor(p.id);
+  let badgeHtml=badge?`<span class="pallet-event-badge">${badge.label}${badge.time?" · "+badge.time:""}</span>`:"";
+  return `<div class="pallet-card order-card ${ch?"selected":""} ${badge?"pallet-changed":""}"><input type="checkbox" data-p="${p.id}" ${ch?"checked":""}><div class="pallet-body"><div class="pallet-top"><b>Position ${i+1}</b><span class="physical-id">Pallet ${p.palletName||p.palletCode||p.palletNo||p.name||p.id}</span>${badgeHtml}</div><span>${comp||"No composition"}</span></div><div class="order-tools"><button data-up="${p.id}">↑</button><button data-down="${p.id}">↓</button><input type="number" min="1" max="${arr.length}" value="${i+1}" data-pos="${p.id}"></div></div>`
+ }).join("")+"</div>";
  $("palletArea").querySelectorAll("[data-p]").forEach(e=>e.onchange=()=>{e.checked?S.active.add(e.dataset.p):S.active.delete(e.dataset.p);S.baseActive=new Set(S.active);S.events=[];build();pallets();table();kpis();events();$("snapshotBadge").textContent="NOT SAVED"});
  $("palletArea").querySelectorAll("[data-up]").forEach(e=>e.onclick=()=>movePallet(e.dataset.up,-1));
  $("palletArea").querySelectorAll("[data-down]").forEach(e=>e.onclick=()=>movePallet(e.dataset.down,1));

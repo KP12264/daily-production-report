@@ -353,7 +353,7 @@ function performance(P,A,keys){
 }
 function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan){
  let host=$("dashPrimaryKpis");
- if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()}</b><span class="dash-pkpi-unit">pcs</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()}</b><span class="dash-pkpi-unit">pcs</span></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div>`;
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div>`;
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");

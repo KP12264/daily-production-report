@@ -45,6 +45,7 @@ async function loadToday(){
  try{
   let [dayDocs,lossDocs]=await Promise.all([fetchDay(date,S.lines),fetchLoss(date,S.lines)]);
   renderHero(dayDocs);
+  renderWorstLine(dayDocs);
   renderLineCards(dayDocs);
   renderLoss(dayDocs,lossDocs);
   renderDetail(dayDocs);
@@ -70,6 +71,23 @@ function renderHero(dayDocs){
   </div>`;
 }
 
+function renderWorstLine(dayDocs){
+ let host=$("execWorstLine");
+ if(!host)return;
+ let byLine={};
+ S.lines.forEach(l=>{let id=l.lineId||l.code||l.id;byLine[id]={label:lineLabel(l),plan:0,actual:0}});
+ dayDocs.forEach(d=>{if(!byLine[d.lineId])return;byLine[d.lineId].plan+=Number(d.plan?.adjustedPlan||0);byLine[d.lineId].actual+=actualTotalOf(d.actual)});
+ // เฉพาะ Line ที่มี Plan จริง (plan>0) — Line ที่ยังไม่มี Saved Plan ไม่ควร
+ // ถูกตัดสินว่า "แย่ที่สุด" ทั้งที่ยังไม่มีอะไรให้เทียบ
+ let withPlan=Object.values(byLine).filter(x=>x.plan>0).map(x=>({...x,ach:x.actual/x.plan*100,gap:x.actual-x.plan}));
+ if(!withPlan.length){host.innerHTML="";return}
+ let worst=withPlan.sort((a,b)=>a.ach-b.ach)[0];
+ if(worst.ach>=100){
+  host.innerHTML=`<div class="exec-worst-line exec-worst-line-ok"><span>🟢</span><span>ทุก Line เป็นไปตามเป้าวันนี้</span></div>`;
+ }else{
+  host.innerHTML=`<div class="exec-worst-line"><div class="exec-worst-label">NEEDS ATTENTION</div><div class="exec-worst-name">${esc(worst.label)}</div><div class="exec-worst-nums"><span>${worst.ach.toFixed(1)}% Achievement</span><span>Gap: ${worst.gap>0?"+":""}${worst.gap.toLocaleString()} pcs</span></div></div>`;
+ }
+}
 function renderLineCards(dayDocs){
  let byLine={};
  S.lines.forEach(l=>{let id=l.lineId||l.code||l.id;byLine[id]={label:lineLabel(l),plan:0,actual:0}});
@@ -90,7 +108,10 @@ function renderLoss(dayDocs,lossDocs){
  dayDocs.forEach(d=>{(d.plan?.masterSnapshot?.palletChangeLosses||[]).forEach(x=>{let c=x.category||"Pallet Change";totals[c]=(totals[c]||0)+Number(x.minutes||0)})});
  lossDocs.forEach(d=>{(d.manual||[]).forEach(x=>{let c=x.category||"Other";totals[c]=(totals[c]||0)+Number(x.minutes||0)})});
  let arr=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
- $("execLoss").innerHTML=arr.length?'<div class="loss-category-summary">'+arr.map(([c,m])=>`<div class="loss-cat"><span>${esc(c)}</span><b>${m} min</b></div>`).join("")+'</div>':'<div class="empty-state">ไม่มี Loss</div>';
+ if(!arr.length){$("execLoss").innerHTML='<div class="empty-state">ไม่มี Loss</div>';return}
+ let total=arr.reduce((s,[,v])=>s+v,0),[topCat,topMin]=arr[0],pct=total?Math.round(topMin/total*100):0;
+ let topHtml=`<div class="exec-top-loss"><div class="exec-top-loss-label">TOP LOSS</div><div class="exec-top-loss-cat">${esc(topCat)}</div><div class="exec-top-loss-num">${topMin} min · ${pct}% of Total Loss</div></div>`;
+ $("execLoss").innerHTML=topHtml+'<div class="loss-category-summary">'+arr.map(([c,m])=>`<div class="loss-cat"><span>${esc(c)}</span><b>${m} min</b></div>`).join("")+'</div>';
 }
 
 function renderDetail(dayDocs){

@@ -77,6 +77,29 @@ function updateRowSummary(model,door){
  if(achCell)achCell.textContent=`${ach.toFixed(1)}%`;
 }
 function isMobileView(){return window.matchMedia("(max-width:640px)").matches}
+// Current Time Block highlight — same logic pattern as Dashboard's
+// currentBlockIndex(), so "now" is interpreted identically everywhere in
+// Production V2. Only ever active for today + a block whose window
+// actually contains the current time; a Night shift crossing midnight is
+// handled by unwrapping block times into a monotonic timeline first.
+function mins(t){let [h,m]=String(t||"00:00").split(":").map(Number);return (h||0)*60+(m||0)}
+function nowMinutes(){let d=new Date();return d.getHours()*60+d.getMinutes()}
+function unwrapBlockTimes(bs){
+ let out=[],prevEnd=null;
+ bs.forEach(b=>{
+  let s=mins(b.start),e=mins(b.end);
+  if(prevEnd!=null){while(s<prevEnd)s+=1440;while(e<=s)e+=1440}
+  out.push({startU:s,endU:e});prevEnd=e;
+ });
+ return out;
+}
+function currentBlockIndex(blocks,viewDate){
+ if(viewDate!==localDate()||!blocks.length)return -1;
+ let u=unwrapBlockTimes(blocks),now=nowMinutes();
+ if(now<u[0].startU)now+=1440;
+ for(let i=0;i<u.length;i++)if(now>=u[i].startU&&now<u[i].endU)return i;
+ return -1;
+}
 function wireActualInput(el){
  el.addEventListener("input",()=>{let n=el.value===""?"":Math.max(0,Math.floor(Number(el.value)||0));S.actual[el.dataset.key]=n;let parts=el.dataset.key.split("|||");updateRowSummary(parts[1],parts[2]);renderKpis();$("saveBadge").textContent="SAVING...";scheduleSave()});
 }
@@ -87,8 +110,9 @@ function render(){
  renderKpis()
 }
 function renderDesktopMatrix(ps,blocks){
+ let curBi=currentBlockIndex(blocks,$("entryDate").value);
  let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
- blocks.forEach(b=>h+=`<th>${esc(b.start)}–${esc(b.end)}<br><small>${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}</small></th>`);
+ blocks.forEach((b,bi)=>h+=`<th class="${bi===curBi?"current-block-col":""}">${esc(b.start)}–${esc(b.end)}<br><small>${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}</small></th>`);
  h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
  ps.forEach(p=>{
    let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div></td>`;
@@ -96,7 +120,7 @@ function renderDesktopMatrix(ps,blocks){
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
      let disabled=pl===0?"":"";
-     h+=`<td class="actual-cell"><div class="cell-plan">${b.type==="BREAK"?"BREAK":"P "+pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
+     h+=`<td class="actual-cell ${bi===curBi?"current-block-col":""}"><div class="cell-plan">${b.type==="BREAK"?"BREAK":"P "+pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
    });
    let diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
    h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
@@ -114,9 +138,10 @@ function renderMobileMatrix(ps,blocks){
  if(S.mobileBlock==null)S.mobileBlock=0;
  S.mobileBlock=Math.max(0,Math.min(blocks.length-1,S.mobileBlock));
  let bi=S.mobileBlock,b=blocks[bi];
+ let curBi=currentBlockIndex(blocks,$("entryDate").value);
  let h=`<div class="mobile-entry"><div class="mobile-block-nav">
   <button id="mbPrev" ${bi===0?"disabled":""}>‹</button>
-  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · ${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}</small></div>
+  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · ${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}${bi===curBi?' · <span class="current-block-tag">ตอนนี้</span>':""}</small></div>
   <button id="mbNext" ${bi===blocks.length-1?"disabled":""}>›</button>
  </div><div class="mobile-entry-rows">`;
  ps.forEach((p,ri)=>{

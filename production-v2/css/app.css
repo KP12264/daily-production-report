@@ -274,6 +274,12 @@ input,select,textarea,.grid input,.grid select{
 /* Step 5.4 Daily Pallet Order */
 .pallet-order-note{grid-column:1/-1;padding:9px 11px;margin-bottom:10px;border-radius:8px;background:#f3f8ff;color:#4f6f8e;font-size:11px}
 .order-card{display:grid;grid-template-columns:auto 1fr auto;align-items:start}.pallet-body{min-width:0}.pallet-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
+/* Mid-shift Pallet change badge — quick visual reference, log below still
+   has the full detail. Amber, not red: a mid-shift change isn't inherently
+   bad, just something worth noticing. */
+.pallet-card.pallet-changed{border-color:#f59e0b}
+.pallet-event-badge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.03em;color:#92400e;background:#fef3c7;border-radius:6px;padding:2px 7px}
+[data-theme="dark"] .pallet-event-badge{color:#fcd34d;background:#3a2e0f}
 .pallet-top b{margin:0;color:var(--blue-deep)}.physical-id{font-size:10px!important;color:var(--muted)!important}
 .order-tools{display:grid;grid-template-columns:30px 30px 48px;gap:4px}.order-tools button{padding:4px 6px;min-width:0;background:var(--card);color:#315b85;border:1px solid var(--line)}
 .order-tools input{width:48px;padding:4px;text-align:center;border:1px solid var(--line);border-radius:6px;font-size:11px}
@@ -306,6 +312,13 @@ input,select,textarea,.grid input,.grid select{
 .actual-grid .sum-actual{right:172px;min-width:92px}
 .actual-grid .sum-plan{right:264px;min-width:92px;box-shadow:-5px 0 9px rgba(15,39,71,.06)}
 .actual-grid tr.entry-active-row .sum-col{background:#eef6ff}
+/* Current Time Block — subtle, no animation, always loses to the focused
+   row's blue if a cell happens to be both (explicit override below) */
+.actual-grid th.current-block-col,.actual-grid td.current-block-col{background:#fffbeb}
+[data-theme="dark"] .actual-grid th.current-block-col,[data-theme="dark"] .actual-grid td.current-block-col{background:#2b2210}
+.actual-grid tr.entry-active-row td.current-block-col{background:#eef6ff}
+.current-block-tag{color:#92400e;font-weight:800}
+[data-theme="dark"] .current-block-tag{color:#fcd34d}
 .table-scroll{scrollbar-gutter:stable}
 @media(max-width:1100px){.actual-grid .sum-plan,.actual-grid .sum-diff{position:static}.actual-grid .sum-actual{right:86px}.actual-grid .sum-ach{right:0}}
 
@@ -496,6 +509,20 @@ input,select,textarea,.grid input,.grid select{
 .exec-hero-label{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
 .exec-hero-num{font-size:64px;font-weight:800;line-height:1.05}
 .exec-hero-status{font-size:16px;font-weight:800;letter-spacing:.04em}
+/* Worst Line / Needs Attention callout */
+.exec-worst-line{background:#fffbeb;border:1px solid #fde68a;border-radius:14px;padding:16px 22px;margin:0 0 16px;display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+[data-theme="dark"] .exec-worst-line{background:#2b2210;border-color:#78350f}
+.exec-worst-label{font-size:11px;font-weight:800;letter-spacing:.06em;color:#92400e}
+[data-theme="dark"] .exec-worst-label{color:#fcd34d}
+.exec-worst-name{font-size:20px;font-weight:800;color:var(--heading)}
+.exec-worst-nums{display:flex;gap:14px;font-size:13px;color:var(--text)}
+.exec-worst-line-ok{background:var(--green-soft,#f0fdf4);border-color:#bbf7d0;color:#15803d;font-weight:700;font-size:14px}
+[data-theme="dark"] .exec-worst-line-ok{background:#0f2417;border-color:#166534;color:#4ade80}
+/* Top Loss headline, above the existing category breakdown */
+.exec-top-loss{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.exec-top-loss-label{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.exec-top-loss-cat{font-size:18px;font-weight:800;color:var(--heading);margin-top:4px}
+.exec-top-loss-num{font-size:13px;color:#dc2626;font-weight:700;margin-top:2px}
 .exec-hero-side{display:flex;gap:28px;flex-wrap:wrap}
 .exec-hero-side div{display:flex;flex-direction:column;gap:4px}
 .exec-hero-side small{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
@@ -784,7 +811,7 @@ input,select,textarea,.grid input,.grid select{
 .dash-pkpi small{display:block;font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
 .dash-pkpi b{display:block;font-size:34px;font-weight:800;color:var(--heading);margin-top:8px;line-height:1}
 .dash-pkpi-actual b{font-size:38px}
-.dash-pkpi-unit{font-size:13px;font-weight:600;color:var(--muted);margin-left:6px}
+.dash-pkpi-unit{font-size:15px;font-weight:600;color:var(--muted)}
 @media(max-width:1100px){.dash-primary-kpis{grid-template-columns:repeat(2,1fr)}}
 
 /* Adjusted Plan demoted to a single small muted caption line, not a card */
