@@ -1,1 +1,0 @@
-Hotfix: restores the pallets() renderer accidentally omitted in Step 5.3. No Firebase schema or planning logic changes.
