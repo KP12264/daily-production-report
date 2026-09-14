@@ -1,1 +1,0 @@
-Fixes 'kpis is not defined'. Data loaded correctly before the UI refresh call failed. No Firebase/data schema changes.
