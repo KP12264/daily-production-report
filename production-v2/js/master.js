@@ -1075,10 +1075,10 @@ function doorMappingRowHtml(x={},docId='',isNew=false){
   const mf=x.matchFields||{};
   const status=x.status||'mapping_required';
   return `<tr data-doormap-id="${esc(docId)}">
-    <td><input value="${esc(mf.excelModel||'')}" placeholder="BM T-Door 23 Café" data-k="excelModel"></td>
-    <td><input value="${esc(mf.excelCab||'')}" placeholder="BM T-Door" data-k="excelCab"></td>
+    <td><input value="${esc(mf.excelModel||'')}" placeholder="e.g. Model Name X" data-k="excelModel"></td>
+    <td><input value="${esc(mf.excelCab||'')}" placeholder="e.g. Cab X" data-k="excelCab"></td>
     <td><select data-k="status"><option value="mapped" ${status==='mapped'?'selected':''}>mapped</option><option value="mapping_required" ${status==='mapping_required'?'selected':''}>mapping_required</option></select></td>
-    <td><textarea rows="3" placeholder="RR | 1 | BM 23 29 | RR&#10;F | 1 | EHRT 2070 NL | F | TM545_F_COMMON&#10;F | 1 | TM10/12 | F | TM10_12_F | TM1012:F" data-k="positions">${esc(doorPositionsToText(x.positions))}</textarea></td>
+    <td><textarea rows="3" placeholder="Door | Qty | ActualModel | ActualDoor&#10;(optional) | CanonicalKey&#10;(optional) | LegacyModel:LegacyDoor" data-k="positions">${esc(doorPositionsToText(x.positions))}</textarea></td>
     <td><input value="${esc(x.mappingRequiredReason||'')}" placeholder="เช่น Café ไม่สามารถแยก Glass/Normal ได้จาก Excel" data-k="reason"></td>
     <td><input type="number" min="1" value="${x.order||''}" data-k="order" style="width:60px"></td>
     <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
