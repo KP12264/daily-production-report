@@ -1,0 +1,40 @@
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cabinet Plan Import · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260902-fix55">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn current" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html" class="active">Cabinet Plan Import</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
+
+<section class="hero"><div><div class="eyebrow">CABINET PLAN IMPORT</div><h1>Cabinet Plan Import</h1><p>นำเข้า Cabinet Daily Plan จาก Excel (sheet "Plan Daily...") · ไม่ผูกกับชื่อไฟล์/เดือน/แถวตายตัว</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="ciStatus" class="hero-status">Ready</div></div></section>
+<div id="authGateHost"></div>
+<main class="content" id="appMain">
+
+<section class="section-card">
+<div class="section-title-row"><div><h2>1. Choose Excel File</h2><p>ระบบจะหา sheet ที่ชื่อขึ้นต้นด้วย "Plan Daily" เองอัตโนมัติ ตรวจสอบโครงสร้างจริงก่อนยอมรับ ไม่เดา</p></div></div>
+<div class="loss-form">
+<label><span>PLAN FILE (.xlsx)</span><input id="ciFile" type="file" accept=".xlsx,.xls"></label>
+<div class="loss-actions"><button id="ciDetectBtn" class="primary">Detect &amp; Preview</button></div>
+</div>
+<div id="ciDetectMessage" class="notice info-notice">เลือกไฟล์แล้วกด Detect &amp; Preview</div>
+</section>
+
+<section id="ciPreviewSection" class="section-card" style="display:none">
+<div class="section-title-row"><div><h2>2. Preview</h2><p>ตรวจสอบก่อน Import จริง — ยังไม่มีการบันทึกอะไรลง Firebase ในขั้นตอนนี้</p></div></div>
+<div id="ciPreviewSummary"></div>
+<div id="ciPreviewTable"></div>
+<div id="ciExistingWarning" class="notice" style="display:none"></div>
+<div class="loss-actions" style="margin-top:14px">
+<button id="ciImportBtn" class="primary" style="display:none">Import This Plan</button>
+<button id="ciReplaceBtn" class="primary" style="display:none">Replace Existing Plan for This Date</button>
+</div>
+<div id="ciImportMessage" class="notice info-notice" style="display:none"></div>
+</section>
+
+</main></div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/cabinet-import.js?v=20260911-fix1"></script>
+<script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
+</body></html>

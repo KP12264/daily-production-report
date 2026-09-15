@@ -14,7 +14,7 @@
 <div class="site-wrap">
   <header class="app-nav">
     <div class="app-name">Production System <span>V2</span></div>
-    <nav class="app-links"><div class="nav-group"><button class="nav-group-btn" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a></div></div><a href="master.html" class="active">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button>
+    <nav class="app-links"><div class="nav-group"><button class="nav-group-btn" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html">Cabinet Plan Import</a></div></div><a href="master.html" class="active">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button>
     <a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span>
   </header>
 
@@ -37,6 +37,7 @@
     <button class="tab" data-tab="pallets">Pallet / Jig Layout</button>
     <button class="tab" data-tab="shifts">Shift & Time</button>
     <button class="tab" data-tab="losscause">Loss Cause</button>
+    <button class="tab" data-tab="doormapping">Cabinet-Door Mapping</button>
   </div></div>
 
   <section class="tabpane active" data-pane="lines">
@@ -133,6 +134,17 @@
         <div class="toolbar"><label>Category <select id="lossDetailCategoryFilter"></select></label><button id="addLossDetailCause" class="primary">+ Add Detail Cause</button></div>
       </div>
       <table class="grid"><thead><tr><th>Detail Cause (EN)</th><th>Thai Name</th><th>Order</th><th>Status</th><th></th></tr></thead><tbody id="lossDetailRows"></tbody></table>
+    </div>
+  </section>
+
+  <section class="tabpane" data-pane="doormapping">
+    <div class="notice info-notice">Cabinet-Door Mapping กำหนดว่า Cabinet Model จาก Plan Daily แต่ละตัวต้องใช้ Door อะไรบ้าง และ Door นั้นตรงกับ Model/Door ใน Production V2 (Actual) ตัวไหน — Cabinet Plan Coverage จะคำนวณจาก Mapping นี้แบบ Real-time ทุกครั้งที่เปิดหน้า ไม่ต้อง Import Excel ใหม่เมื่อแก้ Mapping · ถ้า Model/Door ของ Actual ที่ระบุไม่มีจริงใน Production Model Master ระบบจะไม่ยอมบันทึกเป็น "mapped" และจะเตือนให้แก้</div>
+    <div class="section-card">
+      <div class="pagehead">
+        <div><h2>Cabinet-Door Mapping</h2><div class="sub">1 แถว = 1 Cabinet Variant จาก Plan Daily (Excel Model + Cab) → Door Position ที่ต้องใช้จริง</div></div>
+        <div class="toolbar"><button id="addDoorMapping" class="primary">+ Add Mapping</button></div>
+      </div>
+      <table class="grid"><thead><tr><th>Excel Model</th><th>Excel Cab</th><th>Status</th><th>Positions (Door | Qty/Cabinet | Actual Model | Actual Door)</th><th>Reason (ถ้า Mapping Required)</th><th>Order</th><th>Active</th><th></th></tr></thead><tbody id="doorMappingRows"></tbody></table>
     </div>
   </section>
   </main>

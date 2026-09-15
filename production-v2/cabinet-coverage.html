@@ -1,0 +1,40 @@
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cabinet Plan Coverage · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260902-fix55">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head><body><div class="site-wrap">
+<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn current" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html" class="active">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html">Cabinet Plan Import</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
+
+<section class="hero"><div><div class="eyebrow">CABINET PLAN COVERAGE</div><h1>Cabinet Plan Coverage</h1><p>Door Foam ผลิตฝาพอสำหรับ Cabinet Daily Plan หรือยัง — Required มาจาก Cabinet-Door Mapping, Actual มาจาก Production V2 จริง</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="ccStatus" class="hero-status">Ready</div></div></section>
+<div id="authGateHost"></div>
+<main class="content" id="appMain">
+
+<section class="filter-card">
+<label><span>PRODUCTION DATE</span><input id="ccDate" type="date"></label>
+</section>
+<div id="ccMessage" class="notice info-notice">เลือก Production Date เพื่อโหลด Coverage</div>
+
+<section id="ccStatusBanner" class="dash-status-banner"></section>
+<section id="ccMappingStatus"></section>
+
+<section id="ccPrimaryKpis" class="dash-primary-kpis"></section>
+
+<section class="section-card">
+<div class="section-title-row"><div><h2 id="ccTableTitle">Door Coverage</h2><p>เรียงตาม Remaining มาก → น้อย — Door ตัวไหนต้องเร่งผลิตก่อน</p></div>
+<div class="toolbar"><button id="ccToggleDoor" class="primary">Door Coverage</button><button id="ccToggleCabinet">Cabinet Coverage</button></div>
+</div>
+<div id="ccTableArea" class="empty-state">ยังไม่ได้โหลดข้อมูล</div>
+</section>
+
+<section id="ccUnmappedSection" class="section-card" style="display:none">
+<div class="section-title-row"><div><h2>⚠ Mapping Required</h2><p>Cabinet Variant เหล่านี้ยังไม่มี Mapping ที่ใช้ได้ — Qty ของรุ่นนี้ไม่ถูกนับใน Required เลย จนกว่าจะเพิ่ม Mapping ที่ Master Setup</p></div></div>
+<div id="ccUnmappedTable"></div>
+</section>
+
+</main></div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/cabinet-coverage.js?v=20260911-fix1"></script>
+<script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
+</body></html>
