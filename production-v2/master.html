@@ -142,9 +142,10 @@
     <div class="section-card">
       <div class="pagehead">
         <div><h2>Cabinet-Door Mapping</h2><div class="sub">1 แถว = 1 Cabinet Variant จาก Plan Daily (Excel Model + Cab) → Door Position ที่ต้องใช้จริง</div></div>
-        <div class="toolbar"><button id="addDoorMapping" class="primary">+ Add Mapping</button></div>
+        <div class="toolbar"><button id="seedDoorMappingBtn">Auto Seed Cabinet-Door Mapping</button><button id="addDoorMapping" class="primary">+ Add Mapping</button></div>
       </div>
-      <table class="grid"><thead><tr><th>Excel Model</th><th>Excel Cab</th><th>Status</th><th>Positions (Door | Qty/Cabinet | Actual Model | Actual Door)</th><th>Reason (ถ้า Mapping Required)</th><th>Order</th><th>Active</th><th></th></tr></thead><tbody id="doorMappingRows"></tbody></table>
+      <table class="grid"><thead><tr><th>Excel Model</th><th>Excel Cab</th><th>Status</th><th>Positions (Door | Qty/Cabinet | Actual Model | Actual Door | CanonicalKey [optional] | LegacyAliasModel:Door [optional])</th><th>Reason (ถ้า Mapping Required)</th><th>Order</th><th>Active</th><th></th></tr></thead><tbody id="doorMappingRows"></tbody></table>
+      <div id="doorMappingSeedResult" style="margin-top:14px"></div>
     </div>
   </section>
   </main>
