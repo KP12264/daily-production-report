@@ -14,6 +14,7 @@ document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click
   document.querySelectorAll('[data-pane]').forEach(x=>x.classList.toggle('active',x.dataset.pane===btn.dataset.tab));
   if(btn.dataset.tab==='models') loadModels();
   if(btn.dataset.tab==='losscause') loadLossCategories();
+  if(btn.dataset.tab==='doormapping') loadDoorMappings();
 }));
 
 /* Lines */
@@ -984,4 +985,124 @@ document.getElementById('seedLossCauseV1')?.addEventListener('click',async()=>{
     await loadLossCategories();
   }catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
   finally{btn.disabled=false;}
+});
+
+/* ===== Cabinet-Door Mapping (prodV2_doorMapping) =====
+   Auto-generated doc IDs — match identity lives entirely inside matchFields
+   (currently excelModel+excelCab; extensible to add more fields later
+   without ever redesigning a doc ID). positions[] routes each Cabinet
+   Variant's Door requirement to an exact actualModel+actualDoor — the
+   coverageKey used for Common-door aggregation is DERIVED from these two
+   fields at calculation time in cabinet-coverage.js, never stored here.
+   Saving as status="mapped" is blocked unless every actualModel+actualDoor
+   in positions[] resolves to exactly one active prodV2_models doc — this
+   mirrors the same resolveLineId() fail-safes Cabinet Coverage itself uses,
+   so a mapping can never be saved pointing at a Model/Door that doesn't
+   really exist in Production V2. */
+const DOOR_MAPPING_COLLECTION='prodV2_doorMapping';
+const doorMappingBody=document.getElementById('doorMappingRows');
+
+function doorPositionsToText(positions){return (positions||[]).map(p=>`${p.door} | ${p.qtyPerCabinet} | ${p.actualModel} | ${p.actualDoor}`).join('\n')}
+function parseDoorPositionsText(text){
+  return String(text||'').split('\n').map(line=>{
+    let parts=line.split('|').map(s=>s.trim());
+    if(parts.length<4||!parts[0]||!parts[2])return null;
+    return {door:parts[0],qtyPerCabinet:Number(parts[1])||1,actualModel:parts[2],actualDoor:parts[3]||''};
+  }).filter(Boolean);
+}
+// Resolver: actualModel+actualDoor → active prodV2_models → lineId.
+// Same fail-safe contract Cabinet Coverage uses: 0 matches = unresolved,
+// >1 matches = ambiguous — never guessed, never silently accepted.
+async function resolveActualTargets(positions){
+  const snap=await ProdV2DB.collection(MODEL_COLLECTION).get();
+  const active=snap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false);
+  const results=[];
+  for(const p of positions){
+    const matches=active.filter(m=>m.modelName===p.actualModel&&m.doorCode===p.actualDoor);
+    if(matches.length===0)results.push({...p,resolveStatus:'UNRESOLVED ACTUAL TARGET',lineId:null});
+    else if(matches.length>1)results.push({...p,resolveStatus:'AMBIGUOUS ACTUAL TARGET',lineId:null});
+    else results.push({...p,resolveStatus:'ok',lineId:matches[0].lineId});
+  }
+  return results;
+}
+
+function doorMappingRowHtml(x={},docId='',isNew=false){
+  const mf=x.matchFields||{};
+  const status=x.status||'mapping_required';
+  return `<tr data-doormap-id="${esc(docId)}">
+    <td><input value="${esc(mf.excelModel||'')}" placeholder="BM T-Door 23 Café" data-k="excelModel"></td>
+    <td><input value="${esc(mf.excelCab||'')}" placeholder="BM T-Door" data-k="excelCab"></td>
+    <td><select data-k="status"><option value="mapped" ${status==='mapped'?'selected':''}>mapped</option><option value="mapping_required" ${status==='mapping_required'?'selected':''}>mapping_required</option></select></td>
+    <td><textarea rows="3" placeholder="RR | 1 | BM 23 29 | RR" data-k="positions">${esc(doorPositionsToText(x.positions))}</textarea></td>
+    <td><input value="${esc(x.mappingRequiredReason||'')}" placeholder="เช่น Café ไม่สามารถแยก Glass/Normal ได้จาก Excel" data-k="reason"></td>
+    <td><input type="number" min="1" value="${x.order||''}" data-k="order" style="width:60px"></td>
+    <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
+    <td class="right"><button ${isNew?'data-save-doormap-new':`data-save-doormap="${esc(docId)}"`}>Save</button> ${isNew?'':`<button data-delete-doormap="${esc(docId)}" class="danger">Delete</button>`}</td>
+  </tr>`;
+}
+async function loadDoorMappings(){
+  doorMappingBody.innerHTML='<tr><td colspan="8" class="empty">Loading…</td></tr>';
+  try{
+    const snap=await ProdV2DB.collection(DOOR_MAPPING_COLLECTION).get();
+    const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    rows.sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||String(a.matchFields?.excelModel||'').localeCompare(String(b.matchFields?.excelModel||'')));
+    doorMappingBody.innerHTML=rows.length?rows.map(x=>doorMappingRowHtml(x,x.id,false)).join(''):'<tr><td colspan="8" class="empty">ยังไม่มี Mapping — กด + Add Mapping</td></tr>';
+  }catch(e){setStatus(e.message,'err');doorMappingBody.innerHTML='<tr><td colspan="8" class="empty">โหลด Mapping ไม่ได้</td></tr>'}
+}
+document.getElementById('addDoorMapping')?.addEventListener('click',()=>{
+  doorMappingBody.querySelector('.empty')?.closest('tr')?.remove();
+  const orders=[...doorMappingBody.querySelectorAll('[data-k="order"]')].map(el=>Number(el.value)||0);
+  doorMappingBody.insertAdjacentHTML('beforeend',doorMappingRowHtml({status:'mapping_required',active:true,order:Math.max(0,...orders,0)+1},'',true));
+  doorMappingBody.lastElementChild.querySelector('[data-k="excelModel"]').focus();
+  setStatus('New mapping ready — กรอกแล้วกด Save');
+});
+doorMappingBody?.addEventListener('click',async e=>{
+  const delBtn=e.target.closest('[data-delete-doormap]');
+  if(delBtn){
+    const docId=delBtn.dataset.deleteDoormap;
+    if(!confirm('ลบ Mapping นี้ทิ้ง?\n\nCabinet Variant นี้จะกลายเป็น Unmapped ทันทีในหน้า Cabinet Plan Coverage (แบบ Real-time ไม่ต้อง Import Excel ใหม่) — ไม่กระทบ Cabinet Plan ที่ Import ไว้แล้ว หรือ Actual ใดๆ เลย'))return;
+    try{setStatus('Deleting…');await ProdV2DB.delete(DOOR_MAPPING_COLLECTION,docId);setStatus('✓ Deleted','ok');await loadDoorMappings();}
+    catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+    return;
+  }
+  const btn=e.target.closest('button');
+  if(!btn||(!btn.hasAttribute('data-save-doormap')&&!btn.hasAttribute('data-save-doormap-new')))return;
+  const tr=btn.closest('tr'),get=k=>tr.querySelector(`[data-k="${k}"]`).value;
+  const excelModel=get('excelModel').trim(),excelCab=get('excelCab').trim();
+  if(!excelModel)return alert('กรุณาใส่ Excel Model');
+  const status=get('status');
+  const positions=parseDoorPositionsText(get('positions'));
+  const reason=get('reason').trim();
+  if(status==='mapped'){
+    if(!positions.length)return alert('status=mapped ต้องมี Positions อย่างน้อย 1 บรรทัด (Door | Qty | Actual Model | Actual Door)');
+    btn.disabled=true;setStatus('กำลังตรวจสอบ Actual Model/Door กับ Production Master…');
+    const resolved=await resolveActualTargets(positions);
+    const bad=resolved.filter(p=>p.resolveStatus!=='ok');
+    if(bad.length){
+      btn.disabled=false;
+      alert('บันทึกเป็น mapped ไม่ได้ — Actual Target ต่อไปนี้ตรวจสอบกับ Production Model Master ไม่ผ่าน:\n\n'
+        +bad.map(p=>`${p.door} → ${p.actualModel} / ${p.actualDoor} : ${p.resolveStatus}`).join('\n')
+        +'\n\nตรวจสอบว่าสะกด Model/Door ตรงกับ Master เป๊ะ (ดูได้ที่แท็บ Model & Door) หรือเปลี่ยน Status เป็น mapping_required ไปก่อน');
+      setStatus('Save ถูกยกเลิก — Actual Target ไม่ผ่านการตรวจสอบ','err');
+      return;
+    }
+  }else if(!reason){
+    return alert('status=mapping_required ควรระบุ Reason สั้นๆ ว่าติดตรงไหน (เช่น Café ไม่สามารถแยก Glass/Normal ได้จาก Excel)');
+  }
+  const data={
+    matchFields:{excelModel,excelCab},
+    status,
+    positions:status==='mapped'?positions:[],
+    mappingRequiredReason:reason,
+    order:Number(get('order'))||0,
+    active:get('active')==='true',
+    updatedAt:Date.now()
+  };
+  const id=btn.dataset.saveDoormap; // undefined for new → let Firestore auto-generate
+  try{
+    btn.disabled=true;setStatus('Saving…');
+    if(id) await ProdV2DB.set(DOOR_MAPPING_COLLECTION,id,data,{merge:true});
+    else await ProdV2DB.add(DOOR_MAPPING_COLLECTION,data);
+    setStatus('✓ Saved','ok');await loadDoorMappings();
+  }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
 });
