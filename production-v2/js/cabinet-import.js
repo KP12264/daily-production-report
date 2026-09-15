@@ -101,6 +101,10 @@ function extractSectionBlocks(ws,range,labelHeader,dateCols){
   return blocks.filter(b=>b.rows.length);
 }
 function detectPlanDaily(wb){
+  // Scan EVERY candidate sheet, not just the first valid one — a workbook
+  // may have several "Plan Daily..." sheets (different periods). Collect
+  // all that pass structural validation.
+  const validSheets=[];
   for(const sheetName of findCandidateSheets(wb)){
     const ws=wb.Sheets[sheetName];
     const range=XLSX.utils.decode_range(ws['!ref']);
@@ -110,9 +114,32 @@ function detectPlanDaily(wb){
     if(!labelHdr)continue;
     const blocks=extractSectionBlocks(ws,range,labelHdr,dateHdr.cols);
     if(!blocks.length)continue;
-    return {sheetName,dateCols:dateHdr.cols,blocks};
+    validSheets.push({sheetName,dateCols:dateHdr.cols,blocks});
   }
-  return null;
+  if(!validSheets.length)return null;
+
+  // Build date -> [sheetName,...] map to find overlaps across sheets.
+  // A date with exactly one source is auto-owned by that sheet. A date
+  // found in MORE THAN ONE valid sheet is a CONFLICT — left unresolved
+  // (no owner assigned) until the user explicitly picks a source sheet in
+  // Preview. Never auto-picked by workbook/sheet order.
+  const dateOwners={}; // date -> sheetName (only set for non-conflicted dates, until user resolves conflicts)
+  const dateSources={}; // date -> [sheetName,...] that contain it
+  validSheets.forEach(vs=>{
+    vs.dateCols.forEach(dc=>{
+      const d=localDateFromJs(dc.date);
+      (dateSources[d]??=[]).push(vs.sheetName);
+    });
+  });
+  Object.entries(dateSources).forEach(([d,srcs])=>{
+    if(srcs.length===1)dateOwners[d]=srcs[0]; // unambiguous — auto-own
+    // srcs.length>1 → leave dateOwners[d] unset; resolved only by explicit user selection
+  });
+  const conflicts=Object.entries(dateSources).filter(([d,srcs])=>srcs.length>1)
+    .map(([d,srcs])=>({date:d,sources:srcs}))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+  return {validSheets,dateOwners,conflicts,allDates:Object.keys(dateSources).sort()};
 }
 
 let S={detected:null,existingDates:[]};
@@ -133,92 +160,144 @@ async function handleDetect(){
     S.detected=result;
     S.fileName=f.name;
     await renderPreview();
-    detectNote(`ตรวจพบ sheet "${result.sheetName}" ถูกต้อง — ตรวจสอบ Preview ด้านล่างก่อน Import`,"plan-ok");
+    const conflictNote=result.conflicts.length?` · ⚠ พบวันที่ซ้อนกันระหว่าง sheet ${result.conflicts.length} วัน (ดู Preview)`:"";
+    detectNote(`ตรวจพบ ${result.validSheets.length} sheet ที่มีโครงสร้าง Plan Daily ถูกต้อง (${result.validSheets.map(v=>v.sheetName).join(", ")}) — ตรวจสอบ Preview ด้านล่างก่อน Import${conflictNote}`,result.conflicts.length?"plan-warn":"plan-ok");
   }catch(e){console.error(e);detectNote("อ่านไฟล์ไม่สำเร็จ: "+e.message,"plan-warn")}
 }
 
 async function renderPreview(){
-  const {sheetName,dateCols,blocks}=S.detected;
-  const dates=dateCols.map(dc=>localDateFromJs(dc.date));
-  const startDate=dates[0],endDate=dates[dates.length-1];
+  const {validSheets,dateOwners,conflicts,allDates}=S.detected;
+  const startDate=allDates[0],endDate=allDates[allDates.length-1];
 
-  // unique cabinet models across all blocks (by excelModel+excelCab)
+  // unique cabinet models + total qty, counting ONLY each date's WINNING
+  // sheet contribution (never double-counting a conflicted date across
+  // more than one sheet)
   let uniqueKeys=new Set();
   let totalQty=0;
-  blocks.forEach(b=>b.rows.forEach(r=>{
-    uniqueKeys.add(r.excelModel+"|||"+r.excelCab);
-    Object.values(r.qtyByDate).forEach(v=>totalQty+=Number(v)||0);
-  }));
+  validSheets.forEach(vs=>{
+    vs.blocks.forEach(b=>b.rows.forEach(r=>{
+      uniqueKeys.add(r.excelModel+"|||"+r.excelCab);
+      Object.entries(r.qtyByDate).forEach(([d,v])=>{
+        if(dateOwners[d]===vs.sheetName)totalQty+=Number(v)||0; // only count if this sheet owns that date
+      });
+    }));
+  });
 
   $("ciPreviewSummary").innerHTML=`<table class="grid"><tbody>
-    <tr><td>Plan Sheet</td><td><b>${esc(sheetName)}</b></td></tr>
-    <tr><td>Date Range</td><td><b>${startDate} → ${endDate}</b> (${dates.length} วัน)</td></tr>
-    <tr><td>Cabinet Blocks Found</td><td><b>${blocks.length}</b> (${blocks.map(b=>esc(b.lineMarker)).join(", ")})</td></tr>
+    <tr><td>Plan Sheets Found</td><td><b>${validSheets.length}</b> (${validSheets.map(v=>esc(v.sheetName)).join(", ")})</td></tr>
+    <tr><td>Date Range (รวมทุก sheet)</td><td><b>${startDate} → ${endDate}</b> (${allDates.length} วัน)</td></tr>
+    <tr><td>Date Conflicts</td><td>${conflicts.length?`<b class="kpi-bad">${conflicts.length} วัน</b> — ดูตารางด้านล่าง`:'<b class="kpi-good">ไม่มี</b>'}</td></tr>
     <tr><td>Unique Cabinet Model/Cab combos</td><td><b>${uniqueKeys.size}</b></td></tr>
-    <tr><td>Total Cabinet Plan Qty (ทั้งช่วง)</td><td><b>${Math.round(totalQty).toLocaleString()} pcs</b></td></tr>
+    <tr><td>Total Cabinet Plan Qty (หลังแก้ Conflict แล้ว)</td><td><b>${Math.round(totalQty).toLocaleString()} pcs</b></td></tr>
   </tbody></table>`;
 
-  // per-block row table (sample)
-  let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Line Marker (Excel — ไม่ใช่ Production V2 Line)</th><th>Excel Model</th><th>Cab</th><th>Active Days</th><th>Example Qty</th></tr></thead><tbody>';
-  blocks.forEach(b=>b.rows.forEach(r=>{
-    let activeDays=Object.values(r.qtyByDate).filter(v=>v).length;
-    let exampleQty=Object.values(r.qtyByDate).find(v=>v)??0;
-    h+=`<tr><td>${esc(b.lineMarker)}</td><td>${esc(r.excelModel)}</td><td>${esc(r.excelCab)}</td><td>${activeDays} / ${dates.length}</td><td>${exampleQty}</td></tr>`;
-  }));
+  // Explicit conflict table — never auto-resolved. Each conflicted date
+  // gets a dropdown; the user MUST pick a source sheet before that date
+  // can be imported. Total Qty/summary above only counts dates that
+  // currently have an owner (auto-owned non-conflicted + already-resolved
+  // conflicts), so the number on screen never silently includes an
+  // unresolved date under an assumed sheet.
+  if(conflicts.length){
+    let ch='<div class="notice plan-warn" style="margin:12px 0">⚠ พบวันที่เดียวกันอยู่ในมากกว่า 1 Plan Daily sheet — ต้องเลือก Sheet ที่จะใช้ให้ครบทุกวันก่อนถึงจะ Import ได้ (Import จะถูกปิดใช้งานจนกว่าจะเลือกครบ) ระบบจะไม่เดาให้ตามลำดับ sheet ในไฟล์</div>';
+    ch+='<div class="table-scroll"><table class="grid"><thead><tr><th>Date</th><th>Found In</th><th>Use</th></tr></thead><tbody>';
+    conflicts.forEach(c=>{
+      const current=dateOwners[c.date]||"";
+      ch+=`<tr data-cc-conflict="${c.date}"><td>${c.date}</td><td>${c.sources.map(esc).join(" และ ")}</td><td><select data-conflict-date="${c.date}"><option value="" ${!current?"selected":""}>-- เลือก Sheet --</option>${c.sources.map(s=>`<option value="${esc(s)}" ${current===s?"selected":""}>${esc(s)}</option>`).join("")}</select></td></tr>`;
+    });
+    ch+='</tbody></table></div>';
+    $("ciConflictTable").innerHTML=ch;
+    $("ciConflictTable").style.display="";
+    $("ciConflictTable").querySelectorAll("[data-conflict-date]").forEach(sel=>{
+      sel.onchange=async()=>{
+        const d=sel.dataset.conflictDate;
+        if(sel.value)dateOwners[d]=sel.value; else delete dateOwners[d];
+        await renderPreview();
+      };
+    });
+  }else{
+    $("ciConflictTable").style.display="none";
+  }
+
+  // per-sheet, per-block row table (sample) — only counts a sheet's OWN
+  // dates, and only for dates that currently have an owner at all
+  let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Plan Sheet</th><th>Line Marker (Excel — ไม่ใช่ Production V2 Line)</th><th>Excel Model</th><th>Cab</th><th>Active Days (นับเฉพาะวันที่ sheet นี้เป็นเจ้าของอยู่ตอนนี้)</th><th>Example Qty</th></tr></thead><tbody>';
+  validSheets.forEach(vs=>vs.blocks.forEach(b=>b.rows.forEach(r=>{
+    let ownedDates=Object.keys(r.qtyByDate).filter(d=>dateOwners[d]===vs.sheetName&&r.qtyByDate[d]);
+    let exampleQty=ownedDates.length?r.qtyByDate[ownedDates[0]]:0;
+    h+=`<tr><td>${esc(vs.sheetName)}</td><td>${esc(b.lineMarker)}</td><td>${esc(r.excelModel)}</td><td>${esc(r.excelCab)}</td><td>${ownedDates.length}</td><td>${exampleQty}</td></tr>`;
+  })));
   h+="</tbody></table></div>";
   $("ciPreviewTable").innerHTML=h;
 
   // check existing prodV2_cabinetPlan docs for this date range
   stat("Checking existing plan...");
   let existing=[];
-  await Promise.all(dates.map(async d=>{
+  await Promise.all(allDates.map(async d=>{
     let doc=await ProdV2DB.collection("prodV2_cabinetPlan").doc(`cabinetplan_${d}`).get();
     if(doc.exists)existing.push(d);
   }));
   S.existingDates=existing;
   stat("Ready","ok");
-
-  if(existing.length){
-    $("ciExistingWarning").style.display="";
-    $("ciExistingWarning").className="notice plan-warn";
-    $("ciExistingWarning").innerHTML=`⚠️ พบ Cabinet Plan ที่เคย Import ไว้แล้วสำหรับ ${existing.length} วันในช่วงนี้ (${existing[0]} ถึง ${existing[existing.length-1]}) — การ Import จะ <b>แทนที่ (Replace)</b> ข้อมูลเดิมของวันเหล่านั้นทั้งหมด ไม่ใช่บวกเพิ่ม`;
-    $("ciImportBtn").style.display="none";
-    $("ciReplaceBtn").style.display="";
-  }else{
-    $("ciExistingWarning").style.display="none";
-    $("ciImportBtn").style.display="";
-    $("ciReplaceBtn").style.display="none";
-  }
+  updateImportAvailability();
   $("ciPreviewSection").style.display="";
 }
 
+function updateImportAvailability(){
+  const {conflicts,dateOwners}=S.detected;
+  const unresolvedCount=conflicts.filter(c=>!dateOwners[c.date]).length;
+  const hasExisting=S.existingDates.length>0;
+  const btn=hasExisting?$("ciReplaceBtn"):$("ciImportBtn");
+  const otherBtn=hasExisting?$("ciImportBtn"):$("ciReplaceBtn");
+  btn.style.display="";
+  otherBtn.style.display="none";
+  if(hasExisting){
+    $("ciExistingWarning").style.display="";
+    $("ciExistingWarning").className="notice plan-warn";
+    $("ciExistingWarning").innerHTML=`⚠️ พบ Cabinet Plan ที่เคย Import ไว้แล้วสำหรับ ${S.existingDates.length} วันในช่วงนี้ (${S.existingDates[0]} ถึง ${S.existingDates[S.existingDates.length-1]}) — การ Import จะ <b>แทนที่ (Replace)</b> ข้อมูลเดิมของวันเหล่านั้นทั้งหมด ไม่ใช่บวกเพิ่ม`;
+  }else{
+    $("ciExistingWarning").style.display="none";
+  }
+  // Import stays disabled until every conflicted date has an explicit
+  // selection — never gated only on workbook/sheet order.
+  btn.disabled=unresolvedCount>0;
+  btn.title=unresolvedCount>0?`ยังมี ${unresolvedCount} วันที่ยังไม่ได้เลือก Sheet ในตาราง Date Conflicts ด้านบน`:"";
+}
+
 async function doImport(){
-  const {sheetName,dateCols,blocks}=S.detected;
-  const dates=dateCols.map(dc=>localDateFromJs(dc.date));
+  const {validSheets,dateOwners,conflicts}=S.detected;
+  const unresolved=conflicts.filter(c=>!dateOwners[c.date]);
+  if(unresolved.length){
+    importNote(`Import ถูกระงับ — ยังมี ${unresolved.length} วันที่ยังไม่ได้เลือก Sheet ในตาราง Date Conflicts (${unresolved.map(c=>c.date).join(", ")})`,"plan-warn");
+    return;
+  }
+  const allDates=Object.keys(dateOwners).sort();
   const btn=S.existingDates.length?$("ciReplaceBtn"):$("ciImportBtn");
   btn.disabled=true;
   try{
-    stat(`Importing ${dates.length} days...`);
-    for(const d of dates){
+    stat(`Importing ${allDates.length} days...`);
+    for(const d of allDates){
+      const ownerSheet=dateOwners[d];
+      const vs=validSheets.find(v=>v.sheetName===ownerSheet);
       let rows=[];
-      blocks.forEach(b=>b.rows.forEach(r=>{
+      vs.blocks.forEach(b=>b.rows.forEach(r=>{
         if(Object.prototype.hasOwnProperty.call(r.qtyByDate,d)){
           rows.push({excelModel:r.excelModel,excelCab:r.excelCab,excelLineRaw:r.excelLineRaw,qty:r.qtyByDate[d]});
         }
       }));
       if(!rows.length)continue;
       // Plain set() (no merge) — a re-import fully REPLACES this date's doc,
-      // never appends/duplicates, per the approved spec.
+      // never appends/duplicates. Rows come ONLY from this date's owning
+      // sheet — a conflicted date never merges rows from more than one sheet.
       await ProdV2DB.set("prodV2_cabinetPlan",`cabinetplan_${d}`,{
         date:d,
         importedAt:Date.now(),
         sourceFile:S.fileName,
-        sourceSheet:sheetName,
+        sourceSheet:ownerSheet,
         rows,
-        importSnapshot:{note:"audit snapshot only — Cabinet Plan Coverage re-evaluates mapping live, does not read this"}
+        importSnapshot:{note:"audit snapshot only — Cabinet Plan Coverage / Plan Achievement Tracking re-evaluate mapping live, do not read this"}
       });
     }
-    importNote(`✓ Import สำเร็จ ${dates.length} วัน (${dates[0]} → ${dates[dates.length-1]})`,"plan-ok");
+    importNote(`✓ Import สำเร็จ ${allDates.length} วัน (${allDates[0]} → ${allDates[allDates.length-1]})`,"plan-ok");
     stat("Imported","ok");
   }catch(e){console.error(e);importNote("Import ไม่สำเร็จ: "+e.message,"plan-warn");stat("Import failed","err")}
   finally{btn.disabled=false}
