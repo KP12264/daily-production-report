@@ -4,7 +4,6 @@ function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${
 function achClass(z){return z===null?"":z>=100?"kpi-good":z>=95?"kpi-watch":"kpi-bad"}
 function stat(t,c=""){$("ccStatus").textContent=t;$("ccStatus").className="hero-status "+c}
 function note(t,c=""){$("ccMessage").textContent=t;$("ccMessage").className="notice info-notice "+c}
-function splitKey(k){let [model,door]=String(k).split("|||");return {model,door}}
 
 let S={view:"door",data:null,expanded:null};
 
@@ -18,21 +17,42 @@ async function computeCoverage(date){
   const mapSnap=await ProdV2DB.collection("prodV2_doorMapping").get();
   const mappings=mapSnap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.active!==false);
 
-  // 3) Live Model Master — resolver ground truth
-  const modelSnap=await ProdV2DB.collection("prodV2_models").get();
+  // 3) Union resolver ground truth: active prodV2_jigLayouts (current
+  //    production-key source — what Entry/Plan actually write into
+  //    actualByCell) UNION active prodV2_models (secondary/metadata).
+  //    Read-only against both — neither is written to anywhere in this file.
+  const [modelSnap,jigSnap]=await Promise.all([
+    ProdV2DB.collection("prodV2_models").get(),
+    ProdV2DB.collection("prodV2_jigLayouts").get()
+  ]);
   const activeModels=modelSnap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.active!==false);
+  const jigDocs=jigSnap.docs.map(d=>({id:d.id,...d.data()})).filter(j=>j.active!==false);
+  const jigFlat=[];
+  jigDocs.forEach(j=>{
+    const arr=j.positions||j.composition||j.items||[];
+    (Array.isArray(arr)?arr:[]).forEach(q=>{
+      const model=String(q.model||q.modelName||q.name||'').trim();
+      const door=String(q.door||q.doorType||q.doorCode||q.position||q.positionCode||q.slot||'').trim();
+      if(model)jigFlat.push({lineId:j.lineId,model,door});
+    });
+  });
   function resolveLine(actualModel,actualDoor){
-    const matches=activeModels.filter(m=>m.modelName===actualModel&&m.doorCode===actualDoor);
-    if(matches.length===0)return {status:"UNRESOLVED ACTUAL TARGET",lineId:null};
-    if(matches.length>1)return {status:"AMBIGUOUS ACTUAL TARGET",lineId:null};
-    return {status:"ok",lineId:matches[0].lineId};
+    const modelMatches=activeModels.filter(m=>m.modelName===actualModel&&m.doorCode===actualDoor);
+    const jigMatches=jigFlat.filter(j=>j.model===actualModel&&j.door===actualDoor);
+    const lineIds=new Set([...modelMatches.map(m=>m.lineId),...jigMatches.map(j=>j.lineId)]);
+    if(lineIds.size===0)return {status:"UNRESOLVED ACTUAL TARGET",lineId:null};
+    if(lineIds.size>1)return {status:"AMBIGUOUS ACTUAL TARGET",lineId:null};
+    return {status:"ok",lineId:[...lineIds][0]};
   }
 
-  // 4) Cabinet Plan row → Mapping lookup (exact match on every field present
-  //    in matchFields — extensible without redesign) → coverageKey aggregation
-  const requirementByKey={}; // coverageKey -> raw (unrounded) sum
-  const contributionsByKey={}; // coverageKey -> [{excelModel,excelCab,qty,qtyPerCabinet,requiredQty}]
-  const cabinetRows=[]; // per-row info for Cabinet Coverage view
+  // 4) Cabinet Plan row → Mapping lookup → effectiveKey aggregation.
+  //    effectiveKey = canonicalCoverageKey || actualModel|||actualDoor —
+  //    this single rule is what makes legacy mapping docs (no canonical
+  //    key at all) keep working identically to before, unchanged.
+  const requirementByKey={};
+  const contributionsByKey={};
+  const keyMeta={}; // effectiveKey -> {pairs:Set("model|||door"), legacyAlias:{current,legacy}|null, displayModel, displayDoor}
+  const cabinetRows=[];
   const unmapped=[];
 
   rows.forEach(row=>{
@@ -47,43 +67,109 @@ async function computeCoverage(date){
     }
     const keys=[];
     mapDoc.positions.forEach(p=>{
-      const coverageKey=p.actualModel+"|||"+p.actualDoor;
+      const effectiveKey=p.canonicalCoverageKey||(p.actualModel+"|||"+p.actualDoor);
       const requiredQty=Number(row.qty||0)*Number(p.qtyPerCabinet||1);
-      requirementByKey[coverageKey]=(requirementByKey[coverageKey]||0)+requiredQty;
-      (contributionsByKey[coverageKey]??=[]).push({excelModel:row.excelModel,excelCab:row.excelCab,qty:row.qty,qtyPerCabinet:p.qtyPerCabinet,requiredQty,door:p.door});
-      keys.push(coverageKey);
+      requirementByKey[effectiveKey]=(requirementByKey[effectiveKey]||0)+requiredQty;
+      (contributionsByKey[effectiveKey]??=[]).push({excelModel:row.excelModel,excelCab:row.excelCab,qty:row.qty,qtyPerCabinet:p.qtyPerCabinet,requiredQty,door:p.door});
+      keys.push(effectiveKey);
+
+      if(!keyMeta[effectiveKey])keyMeta[effectiveKey]={
+        pairs:new Set(), legacyAlias:null,
+        displayModel: p.legacyAlias?p.actualModel:(p.canonicalCoverageKey||p.actualModel),
+        displayDoor: p.legacyAlias?p.actualDoor:p.door
+      };
+      // SUM-style pair collection (TM545 Common F uses this — one pair per
+      // contributing position, deduplicated by the Set so re-seeding or two
+      // positions declaring the identical pair never double counts)
+      if(p.actualSources&&p.actualSources.length)p.actualSources.forEach(s=>keyMeta[effectiveKey].pairs.add(s.actualModel+"|||"+s.actualDoor));
+      else keyMeta[effectiveKey].pairs.add(p.actualModel+"|||"+p.actualDoor);
+      // ALIAS/FALLBACK mechanism (TM10/12 uses this) — deliberately kept
+      // separate from the SUM path above, never blended per instruction
+      if(p.legacyAlias)keyMeta[effectiveKey].legacyAlias={current:{model:p.actualModel,door:p.actualDoor},legacy:{model:p.legacyAlias.actualModel,door:p.legacyAlias.actualDoor}};
     });
     cabinetRows.push({...row,mapped:true,coverageKeys:keys});
   });
 
-  // 5) Resolve each coverageKey to a Line, collect resolver failures separately
-  //    from "mapping_required" — these mean the Mapping itself points at a
-  //    Model/Door that doesn't exist in Production V2, a stricter problem
-  const resolverIssues=[];
-  const keyToLine={};
-  Object.keys(requirementByKey).forEach(k=>{
-    const {model,door}=splitKey(k);
-    const r=resolveLine(model,door);
-    if(r.status!=="ok")resolverIssues.push({coverageKey:k,model,door,status:r.status});
-    else keyToLine[k]=r.lineId;
+  // 5) Resolve every effectiveKey. Alias keys only require the CURRENT pair
+  //    to resolve (blocking) — the legacy pair failing to resolve in
+  //    current Jig/Master is expected (it's legacy) and never blocks.
+  //    Pair-set keys require EVERY pair to resolve (first failure reported).
+  const resolverIssues={};
+  const keyLineInfo={};
+  Object.entries(keyMeta).forEach(([key,meta])=>{
+    if(meta.legacyAlias){
+      const cur=meta.legacyAlias.current;
+      const r=resolveLine(cur.model,cur.door);
+      if(r.status!=="ok"){resolverIssues[key]={model:cur.model,door:cur.door,status:r.status};return}
+      const legR=resolveLine(meta.legacyAlias.legacy.model,meta.legacyAlias.legacy.door); // non-blocking
+      keyLineInfo[key]={currentLine:r.lineId,legacyLine:legR.status==="ok"?legR.lineId:null};
+    }else{
+      const pairLines=new Map();
+      for(const pairStr of meta.pairs){
+        const [m,d]=pairStr.split("|||");
+        const r=resolveLine(m,d);
+        if(r.status!=="ok"){resolverIssues[key]={model:m,door:d,status:r.status};pairLines.clear();break}
+        pairLines.set(pairStr,r.lineId);
+      }
+      if(pairLines.size)keyLineInfo[key]={pairLines};
+      else if(!resolverIssues[key])resolverIssues[key]={model:meta.displayModel,door:meta.displayDoor,status:"UNRESOLVED ACTUAL TARGET"};
+    }
   });
 
   // 6) Actual — read-only, existing prodV2_actualLogs, DAY+NIGHT for this
-  //    Production Date exactly as already stored (no new midnight logic)
-  const neededLines=[...new Set(Object.values(keyToLine))];
-  const actualByKey={};
-  await Promise.all(neededLines.flatMap(lineId=>["DAY","NIGHT"].map(async shift=>{
-    const doc=await ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${date}_${lineId}_${shift}`).get();
-    if(!doc.exists)return;
-    const cells=doc.data().actualByCell||{};
-    Object.entries(cells).forEach(([cellKey,v])=>{
-      const parts=cellKey.split("|||"); // blockIndex|||model|||door
-      const k=parts[1]+"|||"+parts[2];
-      if(requirementByKey[k]!=null)actualByKey[k]=(actualByKey[k]||0)+Number(v||0);
-    });
-  })));
+  //    Production Date exactly as already stored (no new midnight logic).
+  //    Cells kept blockIndex-aware (not pre-summed) so the alias fallback
+  //    can compare current-vs-legacy at the correct per-block granularity.
+  const neededLines=new Set();
+  Object.values(keyLineInfo).forEach(info=>{
+    if(info.currentLine)neededLines.add(info.currentLine);
+    if(info.legacyLine)neededLines.add(info.legacyLine);
+    if(info.pairLines)info.pairLines.forEach(l=>neededLines.add(l));
+  });
+  const rawCellsByLine={};
+  await Promise.all([...neededLines].map(async lineId=>{
+    rawCellsByLine[lineId]=[];
+    await Promise.all(["DAY","NIGHT"].map(async shift=>{
+      const doc=await ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${date}_${lineId}_${shift}`).get();
+      if(!doc.exists)return;
+      const cells=doc.data().actualByCell||{};
+      Object.entries(cells).forEach(([cellKey,v])=>{
+        const parts=cellKey.split("|||"); // blockIndex|||model|||door
+        rawCellsByLine[lineId].push({blockIndex:Number(parts[0]),model:parts[1],door:parts[2],qty:Number(v||0)});
+      });
+    }));
+  }));
 
-  // 7) Final per-coverageKey figures — ONE rounding point (Required), Gap/
+  const actualByKey={};
+  Object.entries(keyLineInfo).forEach(([key,info])=>{
+    let total=0;
+    if(info.pairLines){
+      // SUM every distinct {model,door} pair contributing to this key —
+      // each pair counted exactly once (Set-deduped above), so no risk of
+      // double counting between pairs sharing a key.
+      info.pairLines.forEach((lineId,pairStr)=>{
+        const [m,d]=pairStr.split("|||");
+        total+=(rawCellsByLine[lineId]||[]).filter(c=>c.model===m&&c.door===d).reduce((s,c)=>s+c.qty,0);
+      });
+    }else{
+      // ALIAS fallback — per blockIndex: current wins if present for that
+      // exact block, legacy used only when current is absent for that
+      // block. Never both counted for the same block.
+      const meta=keyMeta[key];
+      const curCells=(rawCellsByLine[info.currentLine]||[]).filter(c=>c.model===meta.legacyAlias.current.model&&c.door===meta.legacyAlias.current.door);
+      const legCells=info.legacyLine?(rawCellsByLine[info.legacyLine]||[]).filter(c=>c.model===meta.legacyAlias.legacy.model&&c.door===meta.legacyAlias.legacy.door):[];
+      const blockIndices=new Set([...curCells.map(c=>c.blockIndex),...legCells.map(c=>c.blockIndex)]);
+      blockIndices.forEach(bi=>{
+        const cur=curCells.find(c=>c.blockIndex===bi);
+        if(cur&&cur.qty){total+=cur.qty;return}
+        const leg=legCells.find(c=>c.blockIndex===bi);
+        if(leg)total+=leg.qty;
+      });
+    }
+    actualByKey[key]=total;
+  });
+
+  // 7) Final per-key figures — ONE rounding point (Required), Gap/
   //    Remaining/Coverage all derive from that same rounded value
   const doorRows=Object.keys(requirementByKey).map(k=>{
     const requiredRounded=Math.round(requirementByKey[k]);
@@ -91,21 +177,24 @@ async function computeCoverage(date){
     const gap=actual-requiredRounded;
     const remaining=Math.max(requiredRounded-actual,0);
     const coveragePct=requiredRounded>0?(actual/requiredRounded*100):null;
-    const resolverIssue=resolverIssues.find(ri=>ri.coverageKey===k);
+    const meta=keyMeta[k];
+    const issue=resolverIssues[k];
     return {
-      coverageKey:k, ...splitKey(k),
+      coverageKey:k, model:meta.displayModel, door:meta.displayDoor,
+      isCommonBucket: !!(meta.pairs.size>1||meta.legacyAlias),
       required:requiredRounded, actual, gap, remaining, coveragePct,
-      status: resolverIssue ? resolverIssue.status : (actual>=requiredRounded?"covered":"short"),
+      status: issue?issue.status:(actual>=requiredRounded?"covered":"short"),
       contributions: contributionsByKey[k]||[]
     };
   }).sort((a,b)=>b.remaining-a.remaining);
 
+  const resolverIssuesList=Object.entries(resolverIssues).map(([coverageKey,v])=>({coverageKey,...v}));
   const totalRequired=doorRows.reduce((s,r)=>s+r.required,0);
   const totalActual=doorRows.reduce((s,r)=>s+r.actual,0);
   const totalRemaining=doorRows.reduce((s,r)=>s+r.remaining,0);
   const totalCabinetPlan=rows.reduce((s,r)=>s+Number(r.qty||0),0);
 
-  return {date,rows,doorRows,cabinetRows,unmapped,resolverIssues,totalRequired,totalActual,totalRemaining,totalCabinetPlan};
+  return {date,rows,doorRows,cabinetRows,unmapped,resolverIssues:resolverIssuesList,totalRequired,totalActual,totalRemaining,totalCabinetPlan};
 }
 
 function renderStatusBanner(data){

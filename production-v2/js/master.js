@@ -76,8 +76,8 @@ lineBody.addEventListener('click',async e=>{
    This creates/merges only prodV2_models. Existing matching IDs are not duplicated. */
 const INITIAL_MODEL_DOORS = [
   // Line A — confirmed/historical model-door names from the production workbook.
-  ['A','620/550 หน้าเรียบ','R'],
-  ['A','620/550 ก๊อกน้ำ','R'],
+  ['A','620 550 หน้าเรียบ','R'],
+  ['A','620 550 ก๊อกน้ำ','R'],
   ['A','636','F'],
   ['A','520 หน้าเรียบ','RR'],
   ['A','520 ก๊อกน้ำ','RR'],
@@ -1002,26 +1002,71 @@ document.getElementById('seedLossCauseV1')?.addEventListener('click',async()=>{
 const DOOR_MAPPING_COLLECTION='prodV2_doorMapping';
 const doorMappingBody=document.getElementById('doorMappingRows');
 
-function doorPositionsToText(positions){return (positions||[]).map(p=>`${p.door} | ${p.qtyPerCabinet} | ${p.actualModel} | ${p.actualDoor}`).join('\n')}
+function doorPositionsToText(positions){return (positions||[]).map(p=>{
+  let line=`${p.door} | ${p.qtyPerCabinet} | ${p.actualModel} | ${p.actualDoor}`;
+  if(p.canonicalCoverageKey||p.legacyAlias){
+    line+=` | ${p.canonicalCoverageKey||''}`;
+    if(p.legacyAlias)line+=` | ${p.legacyAlias.actualModel}:${p.legacyAlias.actualDoor}`;
+  }
+  return line;
+}).join('\n')}
 function parseDoorPositionsText(text){
   return String(text||'').split('\n').map(line=>{
     let parts=line.split('|').map(s=>s.trim());
     if(parts.length<4||!parts[0]||!parts[2])return null;
-    return {door:parts[0],qtyPerCabinet:Number(parts[1])||1,actualModel:parts[2],actualDoor:parts[3]||''};
+    const pos={door:parts[0],qtyPerCabinet:Number(parts[1])||1,actualModel:parts[2],actualDoor:parts[3]||''};
+    if(parts[4])pos.canonicalCoverageKey=parts[4]; // optional — shared coverage bucket (e.g. TM545 Common F)
+    if(parts[5]){ // optional — LEGACY alias "Model:Door" (e.g. TM10/12 vs legacy TM1012)
+      const [am,ad]=parts[5].split(':').map(s=>s.trim());
+      if(am)pos.legacyAlias={actualModel:am,actualDoor:ad||pos.actualDoor};
+    }
+    return pos;
   }).filter(Boolean);
 }
 // Resolver: actualModel+actualDoor → active prodV2_models → lineId.
 // Same fail-safe contract Cabinet Coverage uses: 0 matches = unresolved,
 // >1 matches = ambiguous — never guessed, never silently accepted.
+// Union resolver: active prodV2_jigLayouts (current production-key ground
+// truth — what Entry/Plan actually write into actualByCell) UNION active
+// prodV2_models (secondary/metadata validation). Neither collection is
+// written to here — read-only, same as before. A name found in EITHER
+// source resolves; disagreement on lineId between the two sources is
+// AMBIGUOUS (never silently picked).
+async function fetchProductionTargetSources(){
+  const [modelSnap,jigSnap]=await Promise.all([
+    ProdV2DB.collection(MODEL_COLLECTION).get(),
+    ProdV2DB.collection(LAYOUT_COLLECTION).get()
+  ]);
+  const models=modelSnap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false);
+  const jigDocs=jigSnap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false);
+  const jigFlat=[];
+  jigDocs.forEach(j=>{
+    const arr=j.positions||j.composition||j.items||[];
+    (Array.isArray(arr)?arr:[]).forEach(q=>{
+      const model=String(q.model||q.modelName||q.name||'').trim();
+      const door=String(q.door||q.doorType||q.doorCode||q.position||q.positionCode||q.slot||'').trim();
+      if(model)jigFlat.push({lineId:j.lineId,model,door});
+    });
+  });
+  return {models,jigFlat};
+}
+function resolveAgainstSources(model,door,sources){
+  const modelMatches=sources.models.filter(m=>m.modelName===model&&m.doorCode===door);
+  const jigMatches=sources.jigFlat.filter(j=>j.model===model&&j.door===door);
+  const lineIds=new Set([...modelMatches.map(m=>m.lineId),...jigMatches.map(j=>j.lineId)]);
+  if(lineIds.size===0)return {status:'UNRESOLVED ACTUAL TARGET',lineId:null};
+  if(lineIds.size>1)return {status:'AMBIGUOUS ACTUAL TARGET',lineId:null};
+  return {status:'ok',lineId:[...lineIds][0]};
+}
 async function resolveActualTargets(positions){
-  const snap=await ProdV2DB.collection(MODEL_COLLECTION).get();
-  const active=snap.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false);
+  const sources=await fetchProductionTargetSources();
   const results=[];
   for(const p of positions){
-    const matches=active.filter(m=>m.modelName===p.actualModel&&m.doorCode===p.actualDoor);
-    if(matches.length===0)results.push({...p,resolveStatus:'UNRESOLVED ACTUAL TARGET',lineId:null});
-    else if(matches.length>1)results.push({...p,resolveStatus:'AMBIGUOUS ACTUAL TARGET',lineId:null});
-    else results.push({...p,resolveStatus:'ok',lineId:matches[0].lineId});
+    const r=resolveAgainstSources(p.actualModel,p.actualDoor,sources);
+    results.push({...p,resolveStatus:r.status,lineId:r.lineId});
+    // legacyAlias is informational only — a legacy name failing to resolve
+    // in CURRENT Jig/Master is expected (it's legacy), never blocks saving
+    // this position as mapped. Not pushed into resolveStatus at all.
   }
   return results;
 }
@@ -1033,7 +1078,7 @@ function doorMappingRowHtml(x={},docId='',isNew=false){
     <td><input value="${esc(mf.excelModel||'')}" placeholder="BM T-Door 23 Café" data-k="excelModel"></td>
     <td><input value="${esc(mf.excelCab||'')}" placeholder="BM T-Door" data-k="excelCab"></td>
     <td><select data-k="status"><option value="mapped" ${status==='mapped'?'selected':''}>mapped</option><option value="mapping_required" ${status==='mapping_required'?'selected':''}>mapping_required</option></select></td>
-    <td><textarea rows="3" placeholder="RR | 1 | BM 23 29 | RR" data-k="positions">${esc(doorPositionsToText(x.positions))}</textarea></td>
+    <td><textarea rows="3" placeholder="RR | 1 | BM 23 29 | RR&#10;F | 1 | EHRT 2070 NL | F | TM545_F_COMMON&#10;F | 1 | TM10/12 | F | TM10_12_F | TM1012:F" data-k="positions">${esc(doorPositionsToText(x.positions))}</textarea></td>
     <td><input value="${esc(x.mappingRequiredReason||'')}" placeholder="เช่น Café ไม่สามารถแยก Glass/Normal ได้จาก Excel" data-k="reason"></td>
     <td><input type="number" min="1" value="${x.order||''}" data-k="order" style="width:60px"></td>
     <td><select data-k="active"><option value="true" ${x.active!==false?'selected':''}>Active</option><option value="false" ${x.active===false?'selected':''}>Inactive</option></select></td>
@@ -1105,4 +1150,139 @@ doorMappingBody?.addEventListener('click',async e=>{
     else await ProdV2DB.add(DOOR_MAPPING_COLLECTION,data);
     setStatus('✓ Saved','ok');await loadDoorMappings();
   }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
+});
+
+/* ===== Auto Seed Cabinet-Door Mapping =====
+   Generates prodV2_doorMapping records from the confirmed business rules,
+   using exact Excel Model/Cab strings verified against the real Plan Daily
+   file (not assumed from display name). Idempotent: skips any (excelModel,
+   excelCab) pair that already has a doc, NEVER overwrites — existing
+   user-edited mappings always win. Every "mapped" candidate is validated
+   live against active prodV2_models via the same resolveActualTargets()
+   used for manual Add/Save — never written as mapped if unresolved/ambiguous. */
+const AUTO_SEED_MAPPED=[
+  {excelModel:'159C',excelCab:'159',positions:[{door:'R',qtyPerCabinet:1,actualModel:'Door 5.3 Cu.(159) C',actualDoor:'R'}]},
+  {excelModel:'159F',excelCab:'159',positions:[{door:'R',qtyPerCabinet:1,actualModel:'Door 5.3 Cu.(159) F',actualDoor:'R'}]},
+  {excelModel:'199C',excelCab:'199',positions:[{door:'R',qtyPerCabinet:1,actualModel:'Door 6.6 Cu.(199) C',actualDoor:'R'}]},
+  {excelModel:'199F',excelCab:'199',positions:[{door:'R',qtyPerCabinet:1,actualModel:'Door 6.6 Cu.(199) F',actualDoor:'R'}]},
+  {excelModel:'TM545#212',excelCab:'TM545 #212',positions:[{door:'F',qtyPerCabinet:1,actualModel:'EHRT 2070 NL',actualDoor:'F',canonicalCoverageKey:'TM545_F_COMMON'},{door:'R',qtyPerCabinet:1,actualModel:'EHRT 2070 NL',actualDoor:'R'}]},
+  {excelModel:'TM545#235',excelCab:'TM545 #235',positions:[{door:'F',qtyPerCabinet:1,actualModel:'EHRT 2570 NL',actualDoor:'F',canonicalCoverageKey:'TM545_F_COMMON'},{door:'R',qtyPerCabinet:1,actualModel:'EHRT 2570 NL',actualDoor:'R'}]},
+  {excelModel:'G3 ECO 320',excelCab:'G3 ECO 320',positions:[{door:'F',qtyPerCabinet:1,actualModel:'G3 320',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'G3 320',actualDoor:'R'}]},
+  {excelModel:'G3 ECO 350',excelCab:'G3 ECO 350',positions:[{door:'F',qtyPerCabinet:1,actualModel:'G3 350',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'G3 350',actualDoor:'R'}]},
+  {excelModel:'TM10',excelCab:'TM10',positions:[
+    {door:'F',qtyPerCabinet:1,actualModel:'TM10/12',actualDoor:'F',legacyAlias:{actualModel:'TM1012',actualDoor:'F'}},
+    {door:'R',qtyPerCabinet:1,actualModel:'TM10/12',actualDoor:'R',legacyAlias:{actualModel:'TM1012',actualDoor:'R'}}
+  ]},
+  {excelModel:'TM12',excelCab:'TM12',positions:[
+    {door:'F',qtyPerCabinet:1,actualModel:'TM10/12',actualDoor:'F',legacyAlias:{actualModel:'TM1012',actualDoor:'F'}},
+    {door:'R',qtyPerCabinet:1,actualModel:'TM10/12',actualDoor:'R',legacyAlias:{actualModel:'TM1012',actualDoor:'R'}}
+  ]},
+  {excelModel:'FUF14 D',excelCab:'FUF14 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF14',actualDoor:'R'}]},
+  {excelModel:'FUF14 L',excelCab:'FUF14 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF14',actualDoor:'R'}]},
+  {excelModel:'FUF14 Q',excelCab:'',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF14',actualDoor:'R'}]},
+  {excelModel:'FUF14 S',excelCab:'FUF14 S New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF14',actualDoor:'R'}]},
+  {excelModel:'FUF18 D',excelCab:'FUF18 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF18 L',excelCab:'FUF18 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF18 Q',excelCab:'',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF18 S',excelCab:'FUF18 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF22 D',excelCab:'FUF22 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF22 L',excelCab:'',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF22 Q',excelCab:'',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'FUF22 S',excelCab:'FUF22 New',positions:[{door:'R',qtyPerCabinet:1,actualModel:'FUF18/22',actualDoor:'R'}]},
+  {excelModel:'TM14',excelCab:'TM14 New model*',positions:[{door:'F',qtyPerCabinet:1,actualModel:'TM14',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'TM14',actualDoor:'R'}]},
+  {excelModel:'TM-19 K',excelCab:'TM-19',positions:[{door:'F',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'R'}]},
+  {excelModel:'TM-19 L',excelCab:'',positions:[{door:'F',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'R'}]},
+  {excelModel:'TM-21 K',excelCab:'TM-21',positions:[{door:'F',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'R'}]},
+  {excelModel:'TM-21 T',excelCab:'',positions:[{door:'F',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'F'},{door:'R',qtyPerCabinet:1,actualModel:'TM19/21',actualDoor:'R'}]},
+  {excelModel:'T DOOR H Metal',excelCab:'TD 469',positions:['RR','RL','FR','FL'].map(d=>({door:d,qtyPerCabinet:1,actualModel:'T-Door Horizontal เรียบ',actualDoor:d}))},
+  {excelModel:'T DOOR H Glass',excelCab:'TD 469',positions:['RR','RL','FR','FL'].map(d=>({door:d,qtyPerCabinet:1,actualModel:'T-Door Horizontal เรียบ',actualDoor:d}))},
+  {excelModel:'T DOOR H Metal WD',excelCab:'TD 469',positions:['RR','RL','FR','FL'].map(d=>({door:d,qtyPerCabinet:1,actualModel:'T-Door Horizontal ก๊อก',actualDoor:d}))},
+  {excelModel:'T DOOR H Glass WD',excelCab:'TD 469',positions:['RR','RL','FR','FL'].map(d=>({door:d,qtyPerCabinet:1,actualModel:'T-Door Horizontal ก๊อก',actualDoor:d}))},
+  {excelModel:'SBS 550',excelCab:'SBS 550',positions:[{door:'R',qtyPerCabinet:1,actualModel:'620 550 หน้าเรียบ',actualDoor:'R'},{door:'F',qtyPerCabinet:1,actualModel:'636',actualDoor:'F'}]},
+  {excelModel:'SBS 620',excelCab:'SBS 620',positions:[{door:'R',qtyPerCabinet:1,actualModel:'620 550 หน้าเรียบ',actualDoor:'R'},{door:'F',qtyPerCabinet:1,actualModel:'636',actualDoor:'F'}]},
+  {excelModel:'SBS 550 WD',excelCab:'SBS 550',positions:[{door:'R',qtyPerCabinet:1,actualModel:'620 550 ก๊อกน้ำ',actualDoor:'R'},{door:'F',qtyPerCabinet:1,actualModel:'636',actualDoor:'F'}]},
+  {excelModel:'SBS 620 WD',excelCab:'SBS 620',positions:[{door:'R',qtyPerCabinet:1,actualModel:'620 550 ก๊อกน้ำ',actualDoor:'R'},{door:'F',qtyPerCabinet:1,actualModel:'636',actualDoor:'F'}]},
+  {excelModel:'SBS 620 Glass',excelCab:'SBS 620',positions:[{door:'R',qtyPerCabinet:1,actualModel:'620 550 หน้าเรียบ',actualDoor:'R'},{door:'F',qtyPerCabinet:1,actualModel:'636',actualDoor:'F'}]},
+  {excelModel:'SBS 620 Glass WD',excelCab:'SBS 620',positions:[{door:'R',qtyPerCabinet:1,actualModel:'620 550 ก๊อกน้ำ',actualDoor:'R'},{door:'F',qtyPerCabinet:1,actualModel:'636',actualDoor:'F'}]},
+];
+// Known-ambiguous per business rules A/B/C — seeded as mapping_required
+// PLACEHOLDERS (with the reason pre-filled) rather than left invisible,
+// so whoever resolves them later sees exactly why, without guessing.
+const AUTO_SEED_MAPPING_REQUIRED=[
+  {excelModel:'T DOOR',excelCab:'TD 456',reason:'Rule 21 คาดว่ามี Normal/Tap 2 แบบ แต่ Plan Daily มีแถวเดียว ไม่มี field แยก Normal/Tap — ห้ามเดาว่าควรไปที่ T-Door Horizontal เรียบ หรือ ก๊อก'},
+  {excelModel:'BM23',excelCab:'BM23',reason:'Rule B: Café ไม่ได้แปลว่า Glass — ต้องยืนยันก่อนว่า BM23 (เปล่า ไม่มีคำต่อท้าย) หมายถึง Normal หรือ Glass'},
+  {excelModel:'BM23 Café',excelCab:'BM23',reason:'Rule B: Café มีได้ทั้ง Normal และ Glass — Plan Daily ไม่มี field แยก ห้ามเดา'},
+  {excelModel:'BM23 DND',excelCab:'BM23',reason:'Rule B: ไม่มี field แยก Normal/Glass สำหรับ DND — ห้ามเดา'},
+  {excelModel:'BM29',excelCab:'BM29',reason:'Rule B: ต้องยืนยันก่อนว่า BM29 (เปล่า) หมายถึง Normal หรือ Glass'},
+  {excelModel:'BM29 Café',excelCab:'BM29',reason:'Rule B: Café มีได้ทั้ง Normal และ Glass — ห้ามเดา'},
+  {excelModel:'BM29 DND',excelCab:'BM29',reason:'Rule B: ไม่มี field แยก Normal/Glass สำหรับ DND — ห้ามเดา'},
+  {excelModel:'BM T-Door 23',excelCab:'BM T-Door',reason:'Rule C: ต้องยืนยันก่อนว่า Normal หรือ Glass ก่อนจะ route ไป BM 23 29/BM28 FL FR หรือ BM 23 29 Glass/BM28 Glass'},
+  {excelModel:'BM T-Door 23 Café',excelCab:'BM T-Door',reason:'Rule C: Café ไม่ได้ใช้แยก Normal/Glass — ห้ามเดา'},
+  {excelModel:'BM T-Door 28',excelCab:'BM T-Door',reason:'Rule C: ต้องยืนยันก่อนว่า Normal หรือ Glass'},
+  {excelModel:'BM T-Door 28 Café',excelCab:'BM T-Door',reason:'Rule C: Café ไม่ได้ใช้แยก Normal/Glass — ห้ามเดา'},
+];
+function mappingKeyMatches(doc,excelModel,excelCab){
+  const mf=doc.matchFields||{};
+  return mf.excelModel===excelModel && (mf.excelCab||'')===(excelCab||'');
+}
+document.getElementById('seedDoorMappingBtn')?.addEventListener('click',async()=>{
+  if(!confirm(`Auto Seed Cabinet-Door Mapping?\n\nจะสร้าง Mapping ใหม่จาก Business Rules ที่ยืนยันแล้ว (${AUTO_SEED_MAPPED.length} รายการ mapped + ${AUTO_SEED_MAPPING_REQUIRED.length} รายการ mapping_required placeholder)\n\n- ข้ามรายการที่มี Mapping อยู่แล้ว (ไม่ทับของเดิมที่แก้เองไว้)\n- Validate ทุก Actual Target กับ Production Model Master ก่อนบันทึกเป็น mapped\n\nดำเนินการต่อ?`))return;
+  const btn=document.getElementById('seedDoorMappingBtn');
+  btn.disabled=true;setStatus('Seeding Cabinet-Door Mapping…');
+  const result={added:[],skipped:[],mappingRequired:[],invalidTarget:[],ambiguousTarget:[]};
+  try{
+    const existingSnap=await ProdV2DB.collection(DOOR_MAPPING_COLLECTION).get();
+    const existing=existingSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+    for(const item of AUTO_SEED_MAPPED){
+      if(existing.some(doc=>mappingKeyMatches(doc,item.excelModel,item.excelCab))){
+        result.skipped.push(`${item.excelModel} (${item.excelCab||'-'})`);
+        continue;
+      }
+      const resolved=await resolveActualTargets(item.positions);
+      const unresolved=resolved.filter(p=>p.resolveStatus!=='ok');
+      if(unresolved.length){
+        const label=`${item.excelModel} (${item.excelCab||'-'}) — ${unresolved.map(p=>`${p.door}→${p.actualModel}/${p.actualDoor}: ${p.resolveStatus}`).join('; ')}`;
+        if(unresolved.some(p=>p.resolveStatus==='AMBIGUOUS ACTUAL TARGET'))result.ambiguousTarget.push(label);
+        else result.invalidTarget.push(label);
+        continue; // never written — per "ห้ามบันทึกเป็น mapped"
+      }
+      await ProdV2DB.add(DOOR_MAPPING_COLLECTION,{
+        matchFields:{excelModel:item.excelModel,excelCab:item.excelCab},
+        status:'mapped',
+        positions:item.positions,
+        mappingRequiredReason:'',
+        order:0,active:true,updatedAt:Date.now(),
+        seededBy:'AUTO_SEED_V1'
+      });
+      result.added.push(`${item.excelModel} (${item.excelCab||'-'})`);
+    }
+
+    for(const item of AUTO_SEED_MAPPING_REQUIRED){
+      if(existing.some(doc=>mappingKeyMatches(doc,item.excelModel,item.excelCab))){
+        result.skipped.push(`${item.excelModel} (${item.excelCab||'-'})`);
+        continue;
+      }
+      await ProdV2DB.add(DOOR_MAPPING_COLLECTION,{
+        matchFields:{excelModel:item.excelModel,excelCab:item.excelCab},
+        status:'mapping_required',
+        positions:[],
+        mappingRequiredReason:item.reason,
+        order:0,active:true,updatedAt:Date.now(),
+        seededBy:'AUTO_SEED_V1'
+      });
+      result.mappingRequired.push(`${item.excelModel} (${item.excelCab||'-'})`);
+    }
+
+    const rh=(title,cls,arr)=>arr.length?`<div class="notice ${cls}" style="margin-top:8px"><b>${title} (${arr.length})</b><br>${arr.map(esc).join('<br>')}</div>`:'';
+    document.getElementById('doorMappingSeedResult').innerHTML=
+      rh('✓ Added (mapped, validated against Production Master)','plan-ok',result.added)+
+      rh('⚠ Mapping Required (placeholder created)','plan-warn',result.mappingRequired)+
+      rh('– Already Exists / Skipped (ไม่ทับของเดิม)','',result.skipped)+
+      rh('🔴 Invalid Target (Actual Model/Door ไม่พบใน Production Master — ไม่ได้บันทึก)','plan-warn',result.invalidTarget)+
+      rh('🔴 Ambiguous Target (พบ Actual Model/Door มากกว่า 1 รายการ — ไม่ได้บันทึก)','plan-warn',result.ambiguousTarget);
+    setStatus(`✓ Seed เสร็จ — Added ${result.added.length} · Mapping Required ${result.mappingRequired.length} · Skipped ${result.skipped.length} · Failed ${result.invalidTarget.length+result.ambiguousTarget.length}`,'ok');
+    await loadDoorMappings();
+  }catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');}
+  finally{btn.disabled=false}
 });
