@@ -3,13 +3,21 @@ function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&l
 function stat(t,c=""){$("ciStatus").textContent=t;$("ciStatus").className="hero-status "+c}
 function detectNote(t,c=""){$("ciDetectMessage").textContent=t;$("ciDetectMessage").className="notice info-notice "+c}
 function importNote(t,c=""){let el=$("ciImportMessage");el.style.display="";el.textContent=t;el.className="notice info-notice "+c}
-function excelDateToStr(v){
-  if(v instanceof Date)return localDateFromJs(v);
-  if(typeof v==="number"){let d=new Date(Math.round((v-25569)*86400*1000));return localDateFromJs(d)}
-  return null;
+// SheetJS (cellDates:true) constructs Date objects using LOCAL-time
+// semantics (internally: new Date(y,m,d,...)) — so they must be read back
+// via LOCAL getters, not UTC ones. Reading via getUTC* shifts the result by
+// the runtime's UTC offset (e.g. -1 day for a UTC+7 browser), which was the
+// exact cause of the reported 2026-06-24/2026-10-30 off-by-one. Reading via
+// local getters makes the construct→read round-trip timezone-neutral: the
+// stored 'YYYY-MM-DD' key always equals the exact Excel calendar date,
+// regardless of which timezone the browser running this is in.
+function localDateFromJs(d){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
+function addDaysStr(dateStr,n){
+  let [y,m,dd]=dateStr.split("-").map(Number);
+  let d=new Date(y,m-1,dd+n); // local constructor, rolls over month/year correctly
+  const z=v=>String(v).padStart(2,"0");
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
 }
-function localDateFromJs(d){const z=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${z(d.getUTCMonth()+1)}-${z(d.getUTCDate())}`}
-function addDaysStr(dateStr,n){let d=new Date(dateStr+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return localDateFromJs(d)}
 
 // ===== Plan Daily detection — no hardcoded sheet name suffix or row range =====
 // Per approved spec: a sheet name starting with "Plan Daily" is only a
@@ -46,7 +54,10 @@ function findDateHeaderRow(ws,range){
   }
   return null;
 }
-function isNextDay(a,b){let d1=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),a.getUTCDate()));let d2=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()));return (d2-d1)===86400000}
+function isNextDay(a,b){
+  let next=new Date(a.getFullYear(),a.getMonth(),a.getDate()+1);
+  return next.getFullYear()===b.getFullYear()&&next.getMonth()===b.getMonth()&&next.getDate()===b.getDate();
+}
 function cellText(ws,r,c){let cell=ws[XLSX.utils.encode_cell({r,c})];return cell?String(cell.v??"").trim():""}
 function findLabelHeader(ws,range,dateHeaderRow){
   // Anchor on the "Line" header cell — a reliable, explicit structural
@@ -109,7 +120,7 @@ function extractSectionBlocks(ws,range,labelHeader,dateCols){
     dateCols.forEach(dc=>{
       let cell=ws[XLSX.utils.encode_cell({r,c:dc.c})];
       let v=cell?cell.v:null;
-      if(typeof v==="number"){qtyByDate[localDateFromJs(dc.date)]=v;hasNumeric=true}
+      if(typeof v==="number"){qtyByDate[localDateFromJs(dc.date)]=Math.round(v);hasNumeric=true}
     });
     if(hasNumeric){
       current.rows.push({excelModel:modelTxt,excelCab:cabTxt,excelLineRaw:lineTxt||current.lineMarker,qtyByDate});
