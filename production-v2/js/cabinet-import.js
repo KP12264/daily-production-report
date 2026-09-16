@@ -18,6 +18,11 @@ function addDaysStr(dateStr,n){
   const z=v=>String(v).padStart(2,"0");
   return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
 }
+function formatDatePretty(dateStr){
+  const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  let [y,m,d]=dateStr.split("-").map(Number);
+  return `${d} ${MONTHS[m-1]} ${y}`;
+}
 
 // ===== Plan Daily detection — no hardcoded sheet name suffix or row range =====
 // Per approved spec: a sheet name starting with "Plan Daily" is only a
@@ -171,7 +176,7 @@ function detectPlanDaily(wb){
   return {validSheets,dateOwners,conflicts,allDates:Object.keys(dateSources).sort()};
 }
 
-let S={detected:null,existingDates:[]};
+let S={detected:null,existingDates:[],previewDate:null};
 
 async function handleDetect(){
   let f=$("ciFile").files?.[0];
@@ -194,6 +199,27 @@ async function handleDetect(){
   }catch(e){console.error(e);detectNote("อ่านไฟล์ไม่สำเร็จ: "+e.message,"plan-warn")}
 }
 
+// Sample table — Plan Qty column reads directly from the already-extracted,
+// already-normalized qtyByDate for the selected Preview Date. Never
+// recomputes or re-derives a quantity — same values doImport() would write.
+function renderSampleTable(){
+  const {validSheets,dateOwners}=S.detected;
+  const selDate=S.previewDate;
+  let h=`<div class="table-scroll"><table class="grid"><thead><tr><th>Plan Sheet</th><th>Line Marker (Excel — ไม่ใช่ Production V2 Line)</th><th>Excel Model</th><th>Cab</th><th>Active Days (นับเฉพาะวันที่ sheet นี้เป็นเจ้าของอยู่ตอนนี้)</th><th>Plan Qty · ${formatDatePretty(selDate)}</th></tr></thead><tbody>`;
+  validSheets.forEach(vs=>vs.blocks.forEach(b=>b.rows.forEach(r=>{
+    let ownedDates=Object.keys(r.qtyByDate).filter(d=>dateOwners[d]===vs.sheetName&&r.qtyByDate[d]);
+    // Plan Qty for the selected date — only shown if THIS row's sheet
+    // actually owns that date (post conflict-resolution) and the date has
+    // a real entry; otherwise "-" (never fabricated as 0).
+    let qtyForSelDate="-";
+    if(dateOwners[selDate]===vs.sheetName&&Object.prototype.hasOwnProperty.call(r.qtyByDate,selDate)){
+      qtyForSelDate=r.qtyByDate[selDate];
+    }
+    h+=`<tr><td>${esc(vs.sheetName)}</td><td>${esc(b.lineMarker)}</td><td>${esc(r.excelModel)}</td><td>${esc(r.excelCab)}</td><td>${ownedDates.length}</td><td>${qtyForSelDate}</td></tr>`;
+  })));
+  h+="</tbody></table></div>";
+  $("ciPreviewTable").innerHTML=h;
+}
 async function renderPreview(){
   const {validSheets,dateOwners,conflicts,allDates}=S.detected;
   const startDate=allDates[0],endDate=allDates[allDates.length-1];
@@ -247,16 +273,15 @@ async function renderPreview(){
     $("ciConflictTable").style.display="none";
   }
 
-  // per-sheet, per-block row table (sample) — only counts a sheet's OWN
-  // dates, and only for dates that currently have an owner at all
-  let h='<div class="table-scroll"><table class="grid"><thead><tr><th>Plan Sheet</th><th>Line Marker (Excel — ไม่ใช่ Production V2 Line)</th><th>Excel Model</th><th>Cab</th><th>Active Days (นับเฉพาะวันที่ sheet นี้เป็นเจ้าของอยู่ตอนนี้)</th><th>Example Qty</th></tr></thead><tbody>';
-  validSheets.forEach(vs=>vs.blocks.forEach(b=>b.rows.forEach(r=>{
-    let ownedDates=Object.keys(r.qtyByDate).filter(d=>dateOwners[d]===vs.sheetName&&r.qtyByDate[d]);
-    let exampleQty=ownedDates.length?r.qtyByDate[ownedDates[0]]:0;
-    h+=`<tr><td>${esc(vs.sheetName)}</td><td>${esc(b.lineMarker)}</td><td>${esc(r.excelModel)}</td><td>${esc(r.excelCab)}</td><td>${ownedDates.length}</td><td>${exampleQty}</td></tr>`;
-  })));
-  h+="</tbody></table></div>";
-  $("ciPreviewTable").innerHTML=h;
+  // Preview Date selector — populated from the exact detected date union,
+  // read-only display only. Defaults to the first date, or keeps the
+  // previously selected date if it's still valid for this file.
+  if(!S.previewDate||!allDates.includes(S.previewDate))S.previewDate=allDates[0];
+  const dsel=$("ciPreviewDateSelect");
+  dsel.innerHTML=allDates.map(d=>`<option value="${d}" ${d===S.previewDate?"selected":""}>${d}</option>`).join("");
+  dsel.onchange=()=>{S.previewDate=dsel.value;renderSampleTable()};
+
+  renderSampleTable();
 
   // check existing prodV2_cabinetPlan docs for this date range
   stat("Checking existing plan...");
