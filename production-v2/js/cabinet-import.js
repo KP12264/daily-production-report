@@ -49,32 +49,37 @@ function findDateHeaderRow(ws,range){
 function isNextDay(a,b){let d1=new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth(),a.getUTCDate()));let d2=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth(),b.getUTCDate()));return (d2-d1)===86400000}
 function cellText(ws,r,c){let cell=ws[XLSX.utils.encode_cell({r,c})];return cell?String(cell.v??"").trim():""}
 function findLabelHeader(ws,range,dateHeaderRow){
-  // scan a few rows at/above the date header for Model/Cab + Line column markers
-  for(let r=Math.max(range.s.r,dateHeaderRow-3);r<=dateHeaderRow;r++){
-    let modelCol=null,lineCol=null;
+  // Anchor on the "Line" header cell — a reliable, explicit structural
+  // signal. Model column is the LEFTMOST column of the row (confirmed
+  // structural position in the real workbook): its own header cell may
+  // just be a section label like "A line", not literally "Model" — so
+  // matching by header TEXT is unreliable and was the actual bug. We still
+  // require the explicit "Line" header to exist — this isn't a free pass
+  // for arbitrary sheets, just a correction of which column is Model.
+  // Search BOTH above and below the date-header row — the real workbook
+  // has the label row AFTER the date row (dates row 3, labels row 4), not
+  // necessarily above it.
+  for(let r=Math.max(range.s.r,dateHeaderRow-3);r<=Math.min(range.e.r,dateHeaderRow+3);r++){
+    let lineCol=null;
     for(let c=range.s.c;c<=range.e.c;c++){
       let t=cellText(ws,r,c).toLowerCase();
-      if(!t)continue;
-      if(modelCol===null&&/model|cab|product/.test(t))modelCol=c;
-      if(/^line$/.test(t))lineCol=c;
+      if(t&&/^line$/.test(t)){lineCol=c;break}
     }
-    if(modelCol!==null&&lineCol!==null)return {headerRow:r,modelCol,cabCol:modelCol+1,lineCol};
+    if(lineCol!==null){
+      let modelCol=range.s.c;
+      return {headerRow:r,modelCol,cabCol:modelCol+1,lineCol};
+    }
   }
   return null;
 }
 const NON_CABINET_MARKERS=/door foam|press|machine|^sum$|^total|new total|average/i;
 function extractSectionBlocks(ws,range,labelHeader,dateCols){
-  let blocks=[],r=labelHeader.headerRow+1,blankRun=0,current=null;
+  let blocks=[],r=labelHeader.headerRow+1,blankRun=0,current=null,currentTag=null;
   while(r<=range.e.r){
     let modelTxt=cellText(ws,r,labelHeader.modelCol);
     let cabTxt=cellText(ws,r,labelHeader.cabCol);
     let lineTxt=cellText(ws,r,labelHeader.lineCol);
     let combined=`${modelTxt} ${cabTxt} ${lineTxt}`;
-    if(/ line$/i.test(modelTxt.trim())){
-      current={lineMarker:modelTxt.trim(),rows:[]};
-      blocks.push(current);
-      blankRun=0;r++;continue;
-    }
     if(NON_CABINET_MARKERS.test(combined)){
       // hit a non-cabinet section (Door foam / Press / SUM / etc.) — stop entirely,
       // everything below belongs to capacity/summary sections, never Cabinet Plan
@@ -82,11 +87,24 @@ function extractSectionBlocks(ws,range,labelHeader,dateCols){
     }
     if(!modelTxt){
       blankRun++;
-      if(blankRun>=3){r++;continue}
+      if(blankRun>=3){current=null;currentTag=null}
       r++;continue;
     }
     blankRun=0;
-    if(!current){r++;continue} // rows before the first "<x> line" marker aren't part of any block
+    // Group consecutive rows by the Line column's own per-row value (e.g.
+    // "A"/"B") into a pseudo-block for Preview display — a blank Line cell
+    // means "still the same context as the row above" (sub-variant rows
+    // like Café/DND continuing under their parent), not a new block. This
+    // is descriptive only (excelLineRaw / "Line Marker" shown in Preview)
+    // — NEVER used to infer Production V2 Line, per the architecture rule.
+    if(lineTxt&&lineTxt!==currentTag){
+      current={lineMarker:lineTxt,rows:[]};
+      blocks.push(current);
+      currentTag=lineTxt;
+    }else if(!current){
+      current={lineMarker:"(unlabeled)",rows:[]};
+      blocks.push(current);
+    }
     let qtyByDate={},hasNumeric=false;
     dateCols.forEach(dc=>{
       let cell=ws[XLSX.utils.encode_cell({r,c:dc.c})];
