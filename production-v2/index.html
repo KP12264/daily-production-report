@@ -25,8 +25,13 @@
 <div class="dv2-main">
 <div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></div>
 <div class="dv2-page-header">
-  <div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div>
-  <div class="dv2-header-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div>
+  <div><h1>Production V2 <span class="dv2-header-sep">|</span> Door Foam</h1><p>Plan · Produce · Achieve Together</p></div>
+  <div class="dv2-header-right">
+    <div class="dv2-last-updated"><span>Last Updated</span><b id="dashLastUpdated">—</b></div>
+    <div class="dv2-realtime-dot"><span class="dv2-dot-green"></span>Real-time</div>
+    <div class="isolation-pill">ISOLATED V2 · READ ONLY</div>
+    <div id="dashStatus" class="hero-status">Ready</div>
+  </div>
 </div>
 <section class="dash-filters dv2-filter-chips">
 <label><span>VIEW</span><select id="dashViewMode"><option value="day">Day</option><option value="week">Week</option><option value="range">Custom Range</option></select></label>
@@ -36,43 +41,42 @@
 <label><span>SHIFT</span><select id="dashShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
 <label><span>MODEL</span><select id="dashModel"><option value="">All Models</option></select></label>
 <label><span>DOOR</span><select id="dashDoor"><option value="">All Doors</option></select></label>
+<button id="dashRefreshBtn" class="dv2-refresh-btn">↻ Refresh</button>
 <div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
 </section>
 
-<!-- ===== EXECUTIVE SUMMARY — status/KPI + the 2-column grid below answer
-     the situation in 5-10 seconds without scrolling. Detailed/engineering
-     drill-down lives below the light transition label. ===== -->
-<section id="dashStatusBanner" class="dash-status-banner"></section>
-<section id="dashPrimaryKpis" class="dash-primary-kpis"></section>
-<section id="dashKpis" class="dash-secondary-caption"></section>
+<!-- ===== MANAGEMENT DASHBOARD — STATUS → KPI → WHY → WHERE → ACTION ===== -->
+<section class="section-card dv2-overview-card">
+  <div class="section-title-row"><div><h2>Production Overview</h2><p>Today's performance against production plan</p></div></div>
+  <section id="dashPrimaryKpis" class="dash-primary-kpis dv2-kpi-6"></section>
+  <section id="dashKpis" class="dash-secondary-caption"></section>
+</section>
 
-<div class="dv2-exec-grid">
-  <div class="dv2-exec-left">
-    <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
-    <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
-  </div>
-  <div class="dv2-exec-right">
-    <div class="section-card exec-card"><h3>LINE PERFORMANCE</h3><div id="dashOtherLines" class="dash-other-lines"></div></div>
-    <section id="dashTop3" class="section-card exec-card"></section>
-    <section class="dash-exec-grid-2col dv2-right-2up">
-      <div id="dashLossSummary" class="section-card exec-card"></div>
-      <div id="dashMostAffected" class="section-card exec-card"></div>
-    </section>
-    <div id="dashTrendCard" class="section-card exec-card"><h3>VS 7-DAY AVG</h3><div id="dashTrendLine" class="dash-trend-line"></div></div>
-    <section id="dashActionCard" class="section-card exec-card"></section>
-  </div>
+<div class="dv2-two-col dv2-col-60-40">
+  <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
+  <section class="section-card"><div class="section-title-row"><div><h3>LINE PERFORMANCE</h3></div></div><div id="dashOtherLines" class="dash-other-lines"></div></section>
 </div>
 
-<div class="dv2-detail-transition"><span>Detailed Production Analysis</span></div>
+<section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
 
-<section id="dashThisBlock" class="dash-this-block"></section>
-<section id="dashThisBlockTable" class="section-card" style="display:none"></section>
-<section id="dashAchievementBar" class="dash-ach-bar"></section>
-<section class="dash-grid-6040">
-<div class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement · เรียงตามที่หลุดแผนมากสุดก่อน</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
-<div class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
-</section>
-<section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
+<section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement · เรียงตามที่หลุดแผนมากสุดก่อน</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+
+<div class="dv2-two-col dv2-col-52-48">
+  <section class="section-card"><div class="section-title-row"><div><h2>Loss Time Analysis</h2></div></div><div id="dashLossBars"></div></section>
+  <section class="section-card"><div class="section-title-row"><div><h2>Recent Issues</h2></div></div><div id="dashRecentIssues"></div></section>
+</div>
+
+<!-- ===== DETAILED / ENGINEERING VIEW — existing sections, unchanged
+     calculations/data/drill-down behavior, just relocated + collapsed by
+     default so the management flow above stays clean. ===== -->
+<details class="dv2-detail-section">
+  <summary>Detailed / Engineering View</summary>
+  <section id="dashThisBlock" class="dash-this-block"></section>
+  <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
+  <section id="dashAchievementBar" class="dash-ach-bar"></section>
+  <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+  <section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
+</details>
 </div>
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
