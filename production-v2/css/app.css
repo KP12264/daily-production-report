@@ -899,88 +899,155 @@ input,select,textarea,.grid input,.grid select{
 }
 
 /* ============================================================
-   DASHBOARD V2 SHELL — Phase 1 (index.html ONLY)
+   DASHBOARD V2 SHELL — Revised Phase 1 (index.html ONLY)
    Every rule below is scoped under .dv2-shell / .dv2-main so it can
    NEVER affect any other page. cabinet-coverage.html reuses .dash-pkpi/
-   .dash-status-banner/.dash-primary-kpis; exec.html and others reuse
-   .chart-box/table.grid — none of those pages carry the .dv2-main
-   wrapper, so they render with their exact current spacing, untouched,
-   until their own migration phase.
+   .dash-status-banner/.dash-primary-kpis; exec.html/master.html/etc reuse
+   .chart-box/table.grid/.section-card — none of those pages carry the
+   .dv2-main wrapper, so they keep rendering with their exact current
+   spacing until their own migration phase.
    ============================================================ */
-.dv2-shell{display:flex;align-items:flex-start;min-height:100vh;background:var(--bg)}
+.dv2-shell{display:flex;align-items:flex-start;min-height:100vh;background:#f4f7fb}
+[data-theme="dark"] .dv2-shell{background:var(--bg)}
+
+/* ---------- Sidebar — 180px, dark navy, full height ---------- */
 .dv2-sidebar{
-  width:190px;flex:0 0 190px;background:var(--navy);color:#c3ceE0;
+  width:180px;flex:0 0 180px;background:var(--navy);color:#c3ceE0;
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
-  padding:16px 0 14px;box-shadow:2px 0 10px rgba(15,23,42,.08)
+  padding:16px 0 14px;box-shadow:2px 0 10px rgba(15,23,42,.10)
 }
-.dv2-sidebar-brand{padding:0 18px 14px;font-size:14.5px;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:10px;letter-spacing:-.01em}
+.dv2-sidebar-brand{padding:0 16px 14px;font-size:14px;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:10px;letter-spacing:-.01em}
 .dv2-sidebar-brand span{color:#60a5fa}
-.dv2-sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 10px}
+.dv2-sidebar-nav{display:flex;flex-direction:column;gap:3px;padding:0 10px}
 .dv2-nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;color:#a9b7cc;text-decoration:none;font-size:12.5px;font-weight:600;transition:background .12s,color .12s}
 .dv2-nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
-.dv2-nav-item.active{background:var(--blue);color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.35)}
+.dv2-nav-item.active{background:var(--blue);color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.4)}
 .dv2-nav-icon{width:16px;text-align:center;font-size:13px;opacity:.9;flex:0 0 auto}
-.dv2-sidebar-more{margin-top:8px;padding:8px 10px 0}
-.dv2-sidebar-more summary{cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:#7d8fac;list-style:none;padding:6px 8px}
-.dv2-sidebar-more summary::-webkit-details-marker{display:none}
-.dv2-sidebar-more a{display:block;padding:6px 8px 6px 28px;font-size:12px;color:#a9b7cc;text-decoration:none;border-radius:6px}
-.dv2-sidebar-more a:hover{color:#fff;background:rgba(255,255,255,.06)}
-.dv2-sidebar-footer{margin-top:auto;padding:14px 18px 0;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#7d8fac;line-height:1.6}
+.dv2-sidebar-footer{margin-top:auto;padding:14px 16px 0;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#7d8fac;line-height:1.6}
 
-.dv2-main{flex:1 1 0;min-width:0;padding:12px 18px 24px;max-width:1400px}
+/* ---------- Main column ---------- */
+.dv2-main{flex:1 1 0;min-width:0;padding:12px 18px 26px}
 .dv2-topbar{display:flex;justify-content:flex-end;gap:10px;margin-bottom:6px}
+
+/* ---------- Page header — ~50px, plain text, no card ---------- */
 .dv2-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
-.dv2-page-header h1{margin:0 0 3px;font-size:18px;font-weight:800;color:var(--heading);letter-spacing:-.01em}
-.dv2-page-header p{margin:0;font-size:11.5px;color:var(--muted)}
+.dv2-page-header h1{margin:0 0 2px;font-size:18px;font-weight:800;color:var(--heading);letter-spacing:-.01em;line-height:1.2}
+.dv2-page-header p{margin:0;font-size:11px;color:var(--muted)}
 .dv2-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
 .dv2-header-right .isolation-pill{font-size:9.5px;padding:2px 8px}
 .dv2-header-right .hero-status{font-size:10.5px}
 
-/* Compact filter toolbar */
-.dv2-main .dash-filters{padding:9px 12px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 1px 4px rgba(15,23,42,.04);margin-bottom:8px}
-.dv2-main .dash-filters input,.dv2-main .dash-filters select{height:33px;font-size:12.5px;border-radius:7px}
-.dv2-main .dash-filters label span{font-size:9px}
+/* ---------- Filter row — compact auto-width chips, left-aligned ---------- */
+.dv2-filter-chips{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;
+  margin-bottom:8px;padding:0
+}
+.dv2-filter-chips label{
+  display:flex;flex-direction:column;gap:3px;flex:0 0 auto;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:5px 10px;box-shadow:0 1px 3px rgba(15,23,42,.04)
+}
+.dv2-filter-chips label span{font-size:8.5px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.dv2-filter-chips input,.dv2-filter-chips select{
+  height:24px;font-size:12.5px;border:0;padding:0;background:transparent;
+  color:var(--heading);font-weight:600;min-width:0
+}
+.dv2-filter-chips input:focus,.dv2-filter-chips select:focus{outline:none}
 
-/* Compact status banner + KPI row */
-.dv2-main .dash-status-banner{padding:9px 16px;border-radius:9px;margin-bottom:8px}
-.dv2-main .dash-status-icon{font-size:19px}
-.dv2-main .dash-status-text{font-size:16px}
-.dv2-main .dash-status-sub{font-size:11.5px}
-.dv2-main .dash-primary-kpis{gap:9px;margin:0 0 8px}
-.dv2-main .dash-pkpi{padding:11px 13px;border-radius:9px}
-.dv2-main .dash-pkpi small{font-size:10.5px}
-.dv2-main .dash-pkpi b{font-size:22px;margin-top:3px}
-.dv2-main .dash-pkpi-actual b{font-size:25px}
-.dv2-main .dash-pkpi-ref{font-size:11px;margin-top:4px}
-.dv2-main .dash-pkpi-unit{font-size:12px}
-.dv2-main .dash-secondary-caption{font-size:11.5px;margin:0 0 8px}
+/* ---------- Status banner — slim strip ---------- */
+.dv2-main .dash-status-banner{padding:8px 16px;border-radius:9px;margin-bottom:8px}
+.dv2-main .dash-status-icon{font-size:18px}
+.dv2-main .dash-status-text{font-size:15px}
+.dv2-main .dash-status-sub{font-size:11px}
 
-/* Compact section cards + tables (scoped — cabinet-coverage.html, exec.html,
-   master.html etc. reuse these same class names but never carry .dv2-main) */
-.dv2-main .section-card,.dv2-main .card{padding:11px 14px;margin-bottom:9px;border-radius:10px}
-.dv2-main .exec-card{padding:11px 14px}
-.dv2-main .exec-card h3,.dv2-main h3{font-size:11px;margin:0 0 7px}
-.dv2-main .section-title-row h2{font-size:13.5px}
-.dv2-main .section-title-row p{font-size:11px}
-.dv2-main table.grid td,.dv2-main table.grid th{padding:6px 8px;font-size:12px}
+/* ---------- KPI row — restrained pastel tint per metric, visually
+   reordered to Expected Now → Actual → Achievement → Gap via CSS `order`
+   only (DOM/source order from dashboard.js is untouched: Expected, Actual,
+   Gap, Achievement — nth-child selectors below key off that real source
+   order, so tinting always follows the correct card regardless of the
+   visual reorder). Color reacts to the SAME kpi-good/kpi-bad/kpi-watch
+   classes dashboard.js already sets on the number — no JS change needed. */
+.dv2-main .dash-primary-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:0 0 8px}
+.dv2-main .dash-pkpi{padding:10px 12px;border-radius:9px;border:1px solid transparent;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+.dv2-main .dash-pkpi small{font-size:10px}
+.dv2-main .dash-pkpi b{font-size:21px;margin-top:3px}
+.dv2-main .dash-pkpi-actual b{font-size:23px}
+.dv2-main .dash-pkpi-ref{font-size:10.5px;margin-top:3px}
+.dv2-main .dash-pkpi-unit{font-size:11.5px}
+.dv2-main .dash-secondary-caption{font-size:11px;margin:0 0 8px}
+/* 1st card = Expected Now: soft blue */
+.dv2-main .dash-pkpi:nth-child(1){background:#eef4ff;border-color:#dbe7fe;order:1}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(1){background:#152238;border-color:#1e3a63}
+/* 2nd card = Actual: soft blue-green */
+.dv2-main .dash-pkpi:nth-child(2){background:#eefbf4;border-color:#d5f2e3;order:2}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(2){background:#0f2417;border-color:#1e4030}
+/* 3rd card = Gap: soft green/red depending on sign, order:4 puts it AFTER Achievement visually */
+.dv2-main .dash-pkpi:nth-child(3){background:#f6f8fb;border-color:var(--line);order:4}
+.dv2-main .dash-pkpi:nth-child(3):has(.kpi-good){background:#eefbf4;border-color:#d5f2e3}
+.dv2-main .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fef2f2;border-color:#fbd8d8}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(3){background:#171f2b}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(3):has(.kpi-good){background:#0f2417;border-color:#1e4030}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(3):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
+/* 4th card = Achievement: soft green/amber/red by status, order:3 puts it
+   BEFORE Gap visually (Expected, Actual, Achievement, Gap, Loss) */
+.dv2-main .dash-pkpi:nth-child(4){background:#f6f8fb;border-color:var(--line);order:3}
+.dv2-main .dash-pkpi:nth-child(4):has(.kpi-good){background:#eefbf4;border-color:#d5f2e3}
+.dv2-main .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffaeb;border-color:#fde9b8}
+.dv2-main .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fef2f2;border-color:#fbd8d8}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(4){background:#171f2b}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(4):has(.kpi-good){background:#0f2417;border-color:#1e4030}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(4):has(.kpi-watch){background:#2a2210;border-color:#4a3d1e}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(4):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
+/* 5th card = Loss: soft amber, always — no dynamic threshold/status rule,
+   per explicit instruction not to invent a new Loss status concept */
+.dv2-main .dash-pkpi:nth-child(5){background:#fffaeb;border-color:#fde9b8;order:5}
+[data-theme="dark"] .dv2-main .dash-pkpi:nth-child(5){background:#2a2210;border-color:#4a3d1e}
 
-/* Charts — stacked by default (1366px is the priority target); only pair
-   up side-by-side on genuinely wide screens where a half-width canvas
-   chart stays legible */
-.dv2-chart-grid{display:flex;flex-direction:column;gap:9px}
-.dv2-main .chart-box{height:220px;margin-top:6px}
-.dv2-main .chart-box-lg{height:230px}
+/* ---------- Executive 2-column grid: LEFT 63-65% charts / RIGHT 35-37%
+   summary rail. Stacks to 1 column below 1200px. ---------- */
+.dv2-exec-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
+@media(min-width:1200px){
+  .dv2-exec-grid{grid-template-columns:1.75fr 1fr;gap:12px}
+}
+.dv2-exec-left,.dv2-exec-right{display:flex;flex-direction:column;gap:9px;min-width:0}
+
+/* Charts — 210-230px body at the 1366 priority breakpoint, a bit taller
+   only at >=1600px. Card padding/typography reused from the compact
+   section-card rules below. */
+.dv2-chart-card .chart-box{height:205px;margin-top:6px}
 @media(min-width:1600px){
-  .dv2-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .dv2-chart-card .chart-box{height:250px}
 }
 
-/* Narrow screens: collapse sidebar to a horizontal top bar rather than a
-   fixed 190px column eating into a small laptop's width */
+/* Right-rail cards — compact, minimal separation between stacked panels */
+.dv2-exec-right .exec-card{padding:10px 12px}
+.dv2-exec-right .exec-card h3{font-size:10.5px;margin:0 0 6px}
+.dv2-right-2up{display:flex;flex-direction:column;gap:8px;margin:0}
+@media(min-width:1600px){
+  .dv2-right-2up{display:grid;grid-template-columns:1fr 1fr}
+}
+
+/* ---------- Compact section cards + tables generally (scoped —
+   cabinet-coverage.html, exec.html, master.html etc. reuse these same
+   class names but never carry .dv2-main) ---------- */
+.dv2-main .section-card,.dv2-main .card{padding:10px 13px;margin-bottom:9px;border-radius:10px;border-color:#e4e9f2;box-shadow:0 1px 4px rgba(15,23,42,.04)}
+.dv2-main .exec-card{padding:10px 13px}
+.dv2-main .exec-card h3,.dv2-main h3{font-size:10.5px;margin:0 0 6px}
+.dv2-main .section-title-row h2{font-size:13px}
+.dv2-main .section-title-row p{font-size:10.5px}
+.dv2-main table.grid td,.dv2-main table.grid th{padding:5px 8px;font-size:11.5px;border-color:#eef1f6}
+.dv2-main table.grid th{font-weight:700;background:#f7f9fc}
+[data-theme="dark"] .dv2-main table.grid th{background:#1c2532}
+
+/* ---------- Light transition into the Detailed/Engineering section
+   (replaces the old heavy divider — just a small label, no big card) ---------- */
+.dv2-detail-transition{margin:16px 0 8px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--line);padding-top:10px}
+
+/* ---------- Narrow screens: collapse sidebar to a horizontal top bar ---------- */
 @media(max-width:900px){
   .dv2-shell{flex-direction:column}
   .dv2-sidebar{width:100%;flex:0 0 auto;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px}
   .dv2-sidebar-brand{border-bottom:0;padding:0 12px 0 0;margin-bottom:0}
   .dv2-sidebar-nav{flex-direction:row;flex-wrap:wrap;padding:0}
-  .dv2-sidebar-more,.dv2-sidebar-footer{display:none}
-  .dv2-main{max-width:100%}
+  .dv2-sidebar-footer{display:none}
 }
