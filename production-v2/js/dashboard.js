@@ -364,7 +364,7 @@ function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss){
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");
- if(sec)sec.innerHTML=`<span>Adjusted Plan (full shift): <b>${Math.round(plan).toLocaleString()} pcs</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${Math.round(gapPlan).toLocaleString()} pcs</b></span>`;
+ if(sec)sec.innerHTML=`<span>Shift Plan: <b>${Math.round(plan).toLocaleString()} pcs</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${Math.round(gapPlan).toLocaleString()} pcs</b></span>`;
 }
 let mainLossState={cat:null,detail:null};
 function biLabel(en,th){return th?`${esc(th)} (${esc(en)})`:esc(en)}
