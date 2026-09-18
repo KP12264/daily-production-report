@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260918-dv2-1">
+<link rel="stylesheet" href="css/app.css?v=20260918-dv2-2">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -17,14 +17,6 @@
     <a href="loss.html" class="dv2-nav-item"><span class="dv2-nav-icon">⚠️</span>Loss / Downtime</a>
     <a href="master.html" class="dv2-nav-item"><span class="dv2-nav-icon">⚙️</span>Master Setup</a>
   </nav>
-  <details class="dv2-sidebar-more">
-    <summary>MORE ▾</summary>
-    <a href="exec.html">Executive</a>
-    <a href="order.html">Order Tracking</a>
-    <a href="cabinet-coverage.html">Cabinet Plan Coverage</a>
-    <a href="cabinet-import.html">Cabinet Plan Import</a>
-    <a href="assembly.html">Assembly</a>
-  </details>
   <div class="dv2-sidebar-footer">
     <div>Door Foam Production</div>
     <div>Kabinburi Plant</div>
@@ -36,7 +28,7 @@
   <div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div>
   <div class="dv2-header-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div>
 </div>
-<section class="filter-card dash-filters">
+<section class="dash-filters dv2-filter-chips">
 <label><span>VIEW</span><select id="dashViewMode"><option value="day">Day</option><option value="week">Week</option><option value="range">Custom Range</option></select></label>
 <label><span>DATE</span><input id="dashDate" type="date"></label>
 <label id="dashDateEndWrap" style="display:none"><span>TO</span><input id="dashDateEnd" type="date"></label>
@@ -47,32 +39,35 @@
 </section>
 <div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
 
-<!-- ===== EXECUTIVE SUMMARY — everything above this point (plus the next
-     few blocks) is meant to answer the situation in 5-10 seconds without
-     scrolling. Detailed/engineering drill-down lives below the divider. ===== -->
+<!-- ===== EXECUTIVE SUMMARY — status/KPI + the 2-column grid below answer
+     the situation in 5-10 seconds without scrolling. Detailed/engineering
+     drill-down lives below the light transition label. ===== -->
 <section id="dashStatusBanner" class="dash-status-banner"></section>
 <section id="dashPrimaryKpis" class="dash-primary-kpis"></section>
 <section id="dashKpis" class="dash-secondary-caption"></section>
-<section class="dash-exec-grid-2col">
-<div id="dashLossSummary" class="section-card exec-card"></div>
-<div id="dashMostAffected" class="section-card exec-card"></div>
-</section>
-<section id="dashActionCard" class="section-card exec-card"></section>
-<section class="dash-exec-grid-2col">
-<div class="section-card exec-card"><h3>LINE PERFORMANCE</h3><div id="dashOtherLines" class="dash-other-lines"></div></div>
-<div id="dashTrendCard" class="section-card exec-card"><h3>VS 7-DAY AVG</h3><div id="dashTrendLine" class="dash-trend-line"></div></div>
-</section>
-<section id="dashTop3" class="section-card exec-card"></section>
 
-<div class="dash-fold-divider"><span>Detailed / Engineering View</span></div>
+<div class="dv2-exec-grid">
+  <div class="dv2-exec-left">
+    <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
+    <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
+  </div>
+  <div class="dv2-exec-right">
+    <div class="section-card exec-card"><h3>LINE PERFORMANCE</h3><div id="dashOtherLines" class="dash-other-lines"></div></div>
+    <section id="dashTop3" class="section-card exec-card"></section>
+    <section class="dash-exec-grid-2col dv2-right-2up">
+      <div id="dashLossSummary" class="section-card exec-card"></div>
+      <div id="dashMostAffected" class="section-card exec-card"></div>
+    </section>
+    <div id="dashTrendCard" class="section-card exec-card"><h3>VS 7-DAY AVG</h3><div id="dashTrendLine" class="dash-trend-line"></div></div>
+    <section id="dashActionCard" class="section-card exec-card"></section>
+  </div>
+</div>
+
+<div class="dv2-detail-transition"><span>Detailed Production Analysis</span></div>
 
 <section id="dashThisBlock" class="dash-this-block"></section>
 <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
 <section id="dashAchievementBar" class="dash-ach-bar"></section>
-<div class="dv2-chart-grid">
-<section class="section-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
-</div>
 <section class="dash-grid-6040">
 <div class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement · เรียงตามที่หลุดแผนมากสุดก่อน</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
 <div class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
