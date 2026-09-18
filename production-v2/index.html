@@ -1,15 +1,41 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix55">
+<link rel="stylesheet" href="css/app.css?v=20260918-dv2-1">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-</head><body><div class="site-wrap">
-<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn current" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html" class="active">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html">Cabinet Plan Import</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></header>
-<section class="hero"><div><div class="eyebrow">STEP 8 · LIVE PRODUCTION OVERVIEW</div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div></section>
-<main class="content">
+</head><body>
+<div class="dv2-shell">
+<aside class="dv2-sidebar">
+  <div class="dv2-sidebar-brand">Production System <span>V2</span></div>
+  <nav class="dv2-sidebar-nav">
+    <a href="index.html" class="dv2-nav-item active"><span class="dv2-nav-icon">📊</span>Dashboard</a>
+    <a href="entry.html" class="dv2-nav-item"><span class="dv2-nav-icon">📝</span>Production Entry</a>
+    <a href="plan.html" class="dv2-nav-item"><span class="dv2-nav-icon">📅</span>Daily Plan</a>
+    <a href="loss.html" class="dv2-nav-item"><span class="dv2-nav-icon">⚠️</span>Loss / Downtime</a>
+    <a href="master.html" class="dv2-nav-item"><span class="dv2-nav-icon">⚙️</span>Master Setup</a>
+  </nav>
+  <details class="dv2-sidebar-more">
+    <summary>MORE ▾</summary>
+    <a href="exec.html">Executive</a>
+    <a href="order.html">Order Tracking</a>
+    <a href="cabinet-coverage.html">Cabinet Plan Coverage</a>
+    <a href="cabinet-import.html">Cabinet Plan Import</a>
+    <a href="assembly.html">Assembly</a>
+  </details>
+  <div class="dv2-sidebar-footer">
+    <div>Door Foam Production</div>
+    <div>Kabinburi Plant</div>
+  </div>
+</aside>
+<div class="dv2-main">
+<div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></div>
+<div class="dv2-page-header">
+  <div><h1>Production Dashboard</h1><p>Plan · Actual · Gap · Achievement · Loss จากข้อมูล Production V2 จริง</p></div>
+  <div class="dv2-header-right"><div class="isolation-pill">ISOLATED V2 · READ ONLY</div><div id="dashStatus" class="hero-status">Ready</div></div>
+</div>
 <section class="filter-card dash-filters">
 <label><span>VIEW</span><select id="dashViewMode"><option value="day">Day</option><option value="week">Week</option><option value="range">Custom Range</option></select></label>
 <label><span>DATE</span><input id="dashDate" type="date"></label>
@@ -43,14 +69,17 @@
 <section id="dashThisBlock" class="dash-this-block"></section>
 <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
 <section id="dashAchievementBar" class="dash-ach-bar"></section>
+<div class="dv2-chart-grid">
 <section class="section-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
 <section class="section-card"><div class="section-title-row"><div><h2>Cumulative Production</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
+</div>
 <section class="dash-grid-6040">
 <div class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement · เรียงตามที่หลุดแผนมากสุดก่อน</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
 <div class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></div>
 </section>
 <section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
-</main></div>
+</div>
+</div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
 <script src="js/dashboard.js?v=20260902-fix49"></script>
