@@ -123,24 +123,30 @@ function render(){
  statusBanner(status,actual,expected,gapExpected,ach,contextLine);
  insightBanner(P,A,use,loss,material);
  let totalLoss=totalLossMinutes();
- primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss);
+ primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status);
  lossSummaryCard(loss,material);
- mostAffectedCard(P,A,use);
- actionCard();
- top3BehindPlanCard(P,A,use);
+ lossCategoryBars();
+ recentIssuesTable();
  achievementBar(plan,actual,ach);
  // This Block / Hourly Summary / 7-Day Avg ไม่มีความหมายเมื่อดูมากกว่า 1 วัน —
  // ซ่อนไว้แทนที่จะโชว์ข้อมูลที่ตีความผิดได้
  $("dashThisBlock").style.display=agg?"none":"";
  $("dashThisBlockTable").style.display=agg?"none":($("dashThisBlockTable").style.display);
  $("dashHourlySection").style.display=agg?"none":"";
- $("dashTrendCard").style.display=agg?"none":"";
+ // dashTrendCard is no longer in the main layout (Trend omitted per approved
+ // decision) — guarded here since trendCompare()/this line would otherwise
+ // throw against a missing host, unlike every other host-guarded function
+ let trendHost=$("dashTrendCard");if(trendHost)trendHost.style.display=agg?"none":"";
  $("hourlyChartH2").textContent=agg?"Plan vs Actual by Day":"Plan vs Actual by Time Block";
  $("hourlyChartP").textContent=agg?"Adjusted Plan เทียบกับยอดผลิตจริง รายวัน · วันไหนเริ่มหลุดแผน":"Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน";
  if(!agg)thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
  charts(labels,pb,ab); performance(P,A,use); lossView();
  if(!agg){S.hourlyArgs={labels,bs,P,A,use};hourlySummary()}
  S.todayAch=ach;S.todayMaterial=material;
+ // Last Updated — when this Dashboard view was last rendered/refreshed,
+ // NOT when the underlying production data was recorded
+ let luHost=$("dashLastUpdated");
+ if(luHost)luHost.textContent=new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
  note(agg?`Dashboard loaded · ${S.multiDay.days[0]} → ${S.multiDay.days[S.multiDay.days.length-1]} · Line ${$("dashLine").value} / ${$("dashShift").value} (${S.multiDay.days.length} วัน)`:`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
 }
 function achievementBar(plan,actual,ach){
@@ -233,7 +239,7 @@ function ensureDatalabels(){
 function charts(labels,p,a){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
- const planColor="#64748b",actualColor="#2563eb";
+ const planColor="#2563eb",actualColor="#16a34a";
  S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false},tooltip:{mode:"index",intersect:false,callbacks:{
   title:items=>items.length?labels[items[0].dataIndex]:"",
   filter:()=>false,
@@ -347,20 +353,20 @@ function performance(P,A,keys){
  // มาปนอยู่บนสุดจนบังตัวร้ายจริง (เพราะ Achievement คำนวณไม่ได้เมื่อ Plan=0)
  let planned=plannedRowsSorted(P,A,keys);
  let unplanned=all.filter(r=>r.p===0).sort((r1,r2)=>r2.a-r1.a);
- let rowHtml=r=>{let q=splitKey(r.x);return `<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.p?r.z.toFixed(1)+"%":"—"}</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`};
- let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
- planned.forEach(r=>h+=rowHtml(r));
+ let rowHtml=(r,i)=>{let q=splitKey(r.x);return `<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.p?r.z.toFixed(1)+"%":"—"}</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`};
+ let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ planned.forEach((r,i)=>h+=rowHtml(r,i));
  if(unplanned.length){
-  h+=`<tr><td colspan="7" class="dash-perf-divider">นอกแผน (ผลิตเพิ่มนอกแผนวันนี้)</td></tr>`;
-  unplanned.forEach(r=>h+=rowHtml(r));
+  h+=`<tr><td colspan="8" class="dash-perf-divider">นอกแผน (ผลิตเพิ่มนอกแผนวันนี้)</td></tr>`;
+  unplanned.forEach((r,i)=>h+=rowHtml(r,planned.length+i));
  }
  let rows=all,tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
- h+=`<tr class="dash-this-block-total"><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
+ h+=`<tr class="dash-this-block-total"><td data-label=""></td><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
  h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
-function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss){
+function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status){
  let host=$("dashPrimaryKpis");
- if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div><div class="dash-pkpi"><small>LOSS</small><b>${totalLoss.toLocaleString()} <span class="dash-pkpi-unit">min</span></b></div>`;
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div><div class="dash-pkpi"><small>LOSS</small><b>${totalLoss.toLocaleString()} <span class="dash-pkpi-unit">min</span></b></div><div class="dash-pkpi dash-pkpi-wide"><small>PRODUCTION STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b><span class="dash-pkpi-ref">${gapExpected<0?`Short of plan by ${Math.abs(gapExpected).toLocaleString()} pcs`:`Ahead by ${gapExpected.toLocaleString()} pcs`}</span></div>`;
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");
@@ -368,6 +374,34 @@ function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss){
 }
 let mainLossState={cat:null,detail:null};
 function biLabel(en,th){return th?`${esc(th)} (${esc(en)})`:esc(en)}
+// New management-view presentation of loss data — additive only, reuses
+// the exact same groupLossByCategory(lossRows()) helper lossSummaryCard()
+// uses internally. lossSummaryCard() itself is not touched by this.
+function lossCategoryBars(){
+ let host=$("dashLossBars");
+ if(!host)return;
+ let catGroups=groupLossByCategory(lossRows());
+ if(!catGroups.length){host.innerHTML='<div class="dash-loss-total-line">Total Loss Time <b>0 min</b></div><div class="empty-state">No production loss recorded</div>';return}
+ let total=catGroups.reduce((s,g)=>s+g.total,0);
+ host.innerHTML=`<div class="dash-loss-total-line">Total Loss Time <b>${total.toLocaleString()} min</b></div>`+
+  catGroups.map(g=>{
+   let pct=total?Math.round(g.total/total*100):0;
+   return `<div class="dash-loss-bar-row"><span class="dash-loss-bar-label">${esc(g.name)}</span><div class="dash-loss-bar-track"><div class="dash-loss-bar-fill" style="width:${pct}%"></div></div><span class="dash-loss-bar-val">${g.total} min (${pct}%)</span></div>`;
+  }).join("");
+}
+// Recent Issues — no Line column (Dashboard is already single-Line
+// filtered, would just repeat the same value on every row). Reuses
+// lossRows() only, no new Firestore reads.
+function recentIssuesTable(){
+ let host=$("dashRecentIssues");
+ if(!host)return;
+ let rows=[...lossRows()].sort((a,b)=>String(b.start||"").localeCompare(String(a.start||""))).slice(0,8);
+ if(!rows.length){host.innerHTML='<div class="empty-state">No records</div>';return}
+ host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Detail</th><th>Duration</th></tr></thead><tbody>${rows.map(x=>{
+  let detail=x.detailCause?`${esc(x.category)} — ${esc(x.detailCause)}`:esc(x.category||"—");
+  return `<tr><td>${esc(x.start||"—")}</td><td>${detail}${x.remark?` <small>(${esc(x.remark)})</small>`:""}</td><td>${x.minutes||0} min</td></tr>`;
+ }).join("")}</tbody></table>`;
+}
 function lossSummaryCard(){
  let host=$("dashLossSummary");
  if(!host)return;
@@ -607,7 +641,10 @@ async function otherLinesToday(dateList,sh,currentLineId){
    return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
   }));
   if(!rows.length)return;
-  host.innerHTML=rows.map(r=>{let dot=!r.plan?"⚪":r.ach>=100?"🟢":r.ach>=95?"🟠":"🔴";return `<div class="dash-other-line-chip${r.lid===currentLineId?" current":""}"><span>${dot} ${esc(r.name)}</span><b class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</b>${r.lid===currentLineId?'<small>← CURRENT</small>':""}</div>`}).join("");
+  host.innerHTML=`<table class="grid dash-line-perf-table"><thead><tr><th>Line</th><th>Plan</th><th>Actual</th><th>Ach.</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows.map(r=>{
+   let gap=r.actual-r.plan;
+   return `<tr class="${r.lid===currentLineId?"dash-line-current":""}"><td>${esc(r.name)}${r.lid===currentLineId?" <small>(current)</small>":""}</td><td>${r.plan.toLocaleString()}</td><td><b>${r.actual.toLocaleString()}</b></td><td class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</td><td class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</td><td>${r.plan?statusBadge(gap):"—"}</td></tr>`;
+  }).join("")}</tbody></table>`;
  }catch(e){console.error(e)}
 }
 async function init(){
@@ -628,6 +665,7 @@ async function init(){
   $("dashHourlyToggle").textContent=open?"ดูสรุปรายชั่วโมง":"ซ่อนสรุปรายชั่วโมง";
  });
  $("dashHourlySelect")?.addEventListener("change",hourlySummary);
+ $("dashRefreshBtn")?.addEventListener("click",load);
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.viewMode&&[...$("dashViewMode").options].some(o=>o.value===c.viewMode)){$("dashViewMode").value=c.viewMode;$("dashDateEndWrap").style.display=c.viewMode==="range"?"":"none"}if($("dashDate").value&&$("dashLine").value&&$("dashShift").value)load()}catch(e){note(e.message,"plan-warn")}
 }
 addEventListener("DOMContentLoaded",init)})();
