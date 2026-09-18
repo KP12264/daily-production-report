@@ -122,7 +122,8 @@ function render(){
   :`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate($("dashDate").value)}`;
  statusBanner(status,actual,expected,gapExpected,ach,contextLine);
  insightBanner(P,A,use,loss,material);
- primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan);
+ let totalLoss=totalLossMinutes();
+ primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss);
  lossSummaryCard(loss,material);
  mostAffectedCard(P,A,use);
  actionCard();
@@ -289,6 +290,12 @@ function groupLossByCategory(rows){
  rows.forEach(x=>{let c=x.category||"Other";byCat[c]??={total:0,items:[]};byCat[c].total+=Number(x.minutes||0);byCat[c].items.push(x)});
  return Object.entries(byCat).map(([name,info])=>({name,total:info.total,items:info.items})).sort((a,b)=>b.total-a.total);
 }
+// Same formula lossSummaryCard() uses internally for "TOTAL LOSS" — reused
+// here so the Loss KPI card can never show a different number than
+// #dashLossSummary. lossSummaryCard() itself is not touched.
+function totalLossMinutes(){
+ return groupLossByCategory(lossRows()).reduce((s,g)=>s+g.total,0);
+}
 function groupLossByDetail(rows){
  let byDetail={};
  rows.forEach(x=>{
@@ -351,9 +358,9 @@ function performance(P,A,keys){
  h+=`<tr class="dash-this-block-total"><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
  h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
 }
-function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan){
+function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss){
  let host=$("dashPrimaryKpis");
- if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div>`;
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div><div class="dash-pkpi"><small>LOSS</small><b>${totalLoss.toLocaleString()} <span class="dash-pkpi-unit">min</span></b></div>`;
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");
