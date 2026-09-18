@@ -1083,3 +1083,81 @@ input,select,textarea,.grid input,.grid select{
   .dv2-filter-chips label,.dv2-filter-chips .notice.info-notice{border-right:0;border-bottom:1px solid var(--line)}
   .dv2-refresh-btn{margin:8px 12px;padding:8px}
 }
+
+/* ============================================================
+   PRODUCTION OVERVIEW KPI ICONS — visual-only refinement pass.
+   All 6 icons built as inline-SVG data-URIs on ::before pseudo-elements,
+   entirely in CSS — no index.html/dashboard.js changes needed, since the
+   KPI cards are generated fresh by dashboard.js's primaryKpis() on every
+   render() and any markup added there would just be regenerated away.
+   Dynamic icon choice (Gap up/down, Achievement/Status good/bad/watch)
+   keys off the SAME .kpi-good/.kpi-bad/.kpi-watch classes dashboard.js
+   already sets on the number — zero new status logic, just a different
+   CSS selector reading an existing class.
+   ============================================================ */
+.dv2-kpi-6 .dash-pkpi{
+  position:relative;padding:10px 12px 10px 56px;min-height:80px;
+  display:flex;flex-direction:column;justify-content:center
+}
+.dv2-kpi-6 .dash-pkpi::before{
+  content:"";position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  width:36px;height:36px;border-radius:9px;
+  background-repeat:no-repeat;background-position:center;background-size:19px 19px
+}
+/* 1 — Expected Now: ClipboardList, subtle blue */
+.dv2-kpi-6 .dash-pkpi:nth-child(1)::before{
+  background-color:#e5eefd;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='8' height='4' x='8' y='2' rx='1' ry='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M12 11h4'/%3E%3Cpath d='M12 16h4'/%3E%3Cpath d='M8 11h.01'/%3E%3Cpath d='M8 16h.01'/%3E%3C/svg%3E")
+}
+/* 2 — Actual: Factory, subtle green */
+.dv2-kpi-6 .dash-pkpi:nth-child(2)::before{
+  background-color:#e1f5e9;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-6 4V8l-6 4V4a1 1 0 0 0-1.243-.97L2 6Z'/%3E%3Cpath d='M17 18h1'/%3E%3Cpath d='M12 18h1'/%3E%3Cpath d='M7 18h1'/%3E%3C/svg%3E")
+}
+/* 3 — Gap: TrendingUp (green) if kpi-good, TrendingDown (red) if kpi-bad —
+   dashboard.js already puts one of these 2 classes on the number */
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good)::before{
+  background-color:#e1f5e9;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 7 13.5 15.5 8.5 10.5 2 17'/%3E%3Cpolyline points='16 7 22 7 22 13'/%3E%3C/svg%3E")
+}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad)::before{
+  background-color:#fbe4e4;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 17 13.5 8.5 8.5 13.5 2 7'/%3E%3Cpolyline points='16 17 22 17 22 11'/%3E%3C/svg%3E")
+}
+/* 4 — Achievement: Target, tinted by the existing achClass() result
+   (kpi-good/kpi-watch/kpi-bad) already on the number */
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good)::before{
+  background-color:#e1f5e9;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
+}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch)::before{
+  background-color:#fdf0d5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
+}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad)::before{
+  background-color:#fbe4e4;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
+}
+/* 5 — Loss: Clock, subtle amber (always — no threshold/status rule, same
+   as the earlier approved Loss KPI decision) */
+.dv2-kpi-6 .dash-pkpi:nth-child(5)::before{
+  background-color:#fdf0d5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16.5 14'/%3E%3C/svg%3E")
+}
+/* 6 — Production Status: CircleCheck (green) if kpi-good, TriangleAlert
+   (red) if kpi-bad — same status/gapExpected-derived class as before */
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good)::before{
+  background-color:#e1f5e9;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")
+}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad)::before{
+  background-color:#fbe4e4;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E")
+}
+/* Production Status card — strongest semantic treatment, slightly wider */
+.dv2-kpi-6 .dash-pkpi:nth-child(6){padding-left:60px}
+.dv2-kpi-6 .dash-pkpi:nth-child(6)::before{width:40px;height:40px;background-size:22px 22px}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f2fbf5;border-color:#bfe8cc}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fdf3f3;border-color:#f3c6c6}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#0f2417;border-color:#1e4030}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
