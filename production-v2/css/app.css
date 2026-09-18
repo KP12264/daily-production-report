@@ -1051,3 +1051,69 @@ input,select,textarea,.grid input,.grid select{
   .dv2-sidebar-nav{flex-direction:row;flex-wrap:wrap;padding:0}
   .dv2-sidebar-footer{display:none}
 }
+
+/* ============================================================
+   DASHBOARD V2 — UI polish pass (presentation only, index.html + this
+   file). No calculation, no dashboard.js loading logic changed.
+   ============================================================ */
+
+/* 1) #dashMessage relocated inline next to the filters — note() always
+   keeps "notice info-notice" as the base className, so this parent-scoped
+   selector survives every note() call without needing a new class on the
+   element itself (which would be wiped since note() overwrites className). */
+.dv2-filter-chips .notice.info-notice{
+  flex:0 0 auto;margin:0 0 0 auto;padding:0;background:none;border:0;
+  font-size:11px;font-weight:600;color:var(--muted);align-self:center
+}
+.dv2-filter-chips .notice.info-notice.plan-ok{color:#15803d}
+.dv2-filter-chips .notice.info-notice.plan-warn{color:#b45309}
+.dv2-filter-chips .notice.info-notice.err{color:#dc2626}
+
+/* 2) Status bar — one compact horizontal row: context … status … Actual/Expected */
+.dv2-main .dash-status-banner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:7px 14px;overflow:hidden}
+.dv2-main .dash-status-context{margin:0;font-size:10.5px;white-space:nowrap;flex:0 0 auto}
+.dv2-main .dash-status-main{gap:6px;flex:0 0 auto}
+.dv2-main .dash-status-sub{margin:0 0 0 auto;font-size:10.5px;white-space:nowrap}
+@media(min-width:1200px){.dv2-main .dash-status-banner{flex-wrap:nowrap}}
+
+/* 4) Shift Plan secondary line — relabelled to "Shift Plan" (dashboard.js
+   text-only edit, see below); the 2nd/3rd spans ("·" separator + "vs
+   Adjusted Plan: …") are hidden here via CSS position, not removed from
+   the DOM — the underlying gapPlan calculation is untouched. */
+.dv2-main .dash-secondary-caption span:nth-child(2),
+.dv2-main .dash-secondary-caption span:nth-child(3){display:none}
+
+/* 5) Line Performance — compact chip row instead of large empty cards */
+.dv2-main .dash-other-lines{gap:6px;margin:0}
+.dv2-main .dash-other-line-chip{padding:5px 10px;font-size:11.5px;border-radius:8px;gap:6px}
+
+/* 6) Right column rhythm — tighter gaps so cards read as one continuous
+   rail rather than separated islands, roughly matching the charts' pace */
+.dv2-exec-right{gap:7px}
+.dv2-exec-right .exec-card{padding:8px 12px}
+.dv2-exec-right .exec-card h3{margin:0 0 5px}
+
+/* 8) Header utility controls — .legacy-link/.theme-toggle-btn were styled
+   for the old dark top nav bar; .dv2-topbar sits on the light page
+   background now, so both need light-surface colors. "ระบบเดิม" reads as
+   a small secondary link, not a competing action. */
+.dv2-topbar{gap:6px;margin-bottom:4px}
+.dv2-topbar .legacy-link{
+  color:var(--muted);font-size:10.5px;text-decoration:none;
+  border:1px solid var(--line);border-radius:6px;padding:3px 8px;background:var(--card)
+}
+.dv2-topbar .legacy-link:hover{color:var(--text);border-color:#c9d3e0}
+.dv2-topbar .theme-toggle-btn{
+  border:1px solid var(--line);background:var(--card);color:var(--text);
+  border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:600;margin:0
+}
+
+/* 9) Reduce vertical whitespace — move KPI + charts up. Spacing only,
+   no font sizes reduced beyond the already-approved Phase 1 sizes. */
+.dv2-page-header{margin-bottom:6px}
+.dv2-filter-chips{margin-bottom:6px}
+.dv2-main .dash-primary-kpis{margin-bottom:5px}
+.dv2-main .dash-secondary-caption{margin-bottom:6px}
+.dv2-exec-grid{margin-bottom:4px}
+.dv2-exec-left,.dv2-exec-right{gap:7px}
+.dv2-chart-card .section-title-row{margin-bottom:2px}
