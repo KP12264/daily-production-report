@@ -899,10 +899,8 @@ input,select,textarea,.grid input,.grid select{
 }
 
 /* ============================================================
-   DASHBOARD V2 — Reference-matched management layout
-   (index.html ONLY, scoped under .dv2-shell/.dv2-main so other pages
-   that reuse the same class names — cabinet-coverage.html, exec.html,
-   master.html — are never affected.)
+   DASHBOARD V2 — Industrial monitoring visual refinement
+   (index.html ONLY, scoped under .dv2-shell/.dv2-main)
    ============================================================ */
 .dv2-shell{display:flex;align-items:flex-start;min-height:100vh;background:#f4f7fb}
 [data-theme="dark"] .dv2-shell{background:var(--bg)}
@@ -915,146 +913,165 @@ input,select,textarea,.grid input,.grid select{
 }
 .dv2-sidebar-brand{padding:0 16px 14px;font-size:14px;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:10px;letter-spacing:-.01em}
 .dv2-sidebar-brand span{color:#60a5fa}
-.dv2-sidebar-nav{display:flex;flex-direction:column;gap:3px;padding:0 10px}
-.dv2-nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;color:#a9b7cc;text-decoration:none;font-size:12.5px;font-weight:600;transition:background .12s,color .12s}
+.dv2-sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 10px}
+.dv2-nav-item{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;color:#8b9bb5;text-decoration:none;font-size:12.5px;font-weight:600;transition:background .12s,color .12s}
 .dv2-nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
 .dv2-nav-item.active{background:var(--blue);color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.4)}
-.dv2-nav-icon{width:16px;text-align:center;font-size:13px;opacity:.9;flex:0 0 auto}
+/* SVG icons use stroke="currentColor" — already inherit the active/inactive
+   color rules above with zero extra color logic needed */
+.dv2-nav-icon{width:17px;height:17px;flex:0 0 17px}
 .dv2-sidebar-footer{margin-top:auto;padding:14px 16px 0;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#7d8fac;line-height:1.6}
 
 /* ---------- Main column ---------- */
-.dv2-main{flex:1 1 0;min-width:0;padding:14px 20px 32px}
+.dv2-main{flex:1 1 0;min-width:0;padding:12px 18px 28px}
 .dv2-topbar{gap:6px;margin-bottom:4px;display:flex;justify-content:flex-end}
 .dv2-topbar .legacy-link{color:var(--muted);font-size:10.5px;text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:3px 8px;background:var(--card)}
 .dv2-topbar .legacy-link:hover{color:var(--text);border-color:#c9d3e0}
 .dv2-topbar .theme-toggle-btn{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:600;margin:0}
 
-/* ---------- Page header ---------- */
-.dv2-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
-.dv2-page-header h1{margin:0 0 2px;font-size:18px;font-weight:800;color:var(--heading);letter-spacing:-.01em;line-height:1.2}
+/* ---------- Page header — page title strongest, helper text smallest ---------- */
+.dv2-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:8px}
+.dv2-page-header h1{margin:0 0 2px;font-size:19px;font-weight:800;color:var(--heading);letter-spacing:-.01em;line-height:1.2}
 .dv2-header-sep{color:var(--muted);font-weight:400;margin:0 2px}
-.dv2-page-header p{margin:0;font-size:11px;color:var(--muted)}
+.dv2-page-header p{margin:0;font-size:10.5px;color:var(--muted);opacity:.9}
 .dv2-header-right{display:flex;align-items:center;gap:14px}
-.dv2-last-updated{display:flex;flex-direction:column;align-items:flex-end;font-size:9.5px;color:var(--muted);line-height:1.4}
-.dv2-last-updated b{font-size:11px;color:var(--heading)}
-.dv2-realtime-dot{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);font-weight:600}
-.dv2-dot-green{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;flex:0 0 auto}
-.dv2-header-right .isolation-pill{font-size:9.5px;padding:2px 8px}
-.dv2-header-right .hero-status{font-size:10.5px}
+.dv2-last-updated{display:flex;flex-direction:column;align-items:flex-end;font-size:9px;color:var(--muted);line-height:1.4;opacity:.85}
+.dv2-last-updated b{font-size:10.5px;color:var(--heading);opacity:1}
+.dv2-realtime-dot{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text);font-weight:600}
+.dv2-dot-green{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;flex:0 0 auto}
+.dv2-header-right .isolation-pill{font-size:9px;padding:2px 7px}
+.dv2-header-right .hero-status{font-size:10px}
 
-/* ---------- Filter row — compact auto-width chips, left-aligned, note()
-   targeted via a parent-scoped selector since note() always overwrites
-   className to just "notice info-notice [variant]" ---------- */
-.dv2-filter-chips{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin-bottom:8px;padding:0}
-.dv2-filter-chips label{display:flex;flex-direction:column;gap:3px;flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:5px 10px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
-.dv2-filter-chips label span{font-size:8.5px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
-.dv2-filter-chips input,.dv2-filter-chips select{height:24px;font-size:12.5px;border:0;padding:0;background:transparent;color:var(--heading);font-weight:600;min-width:0}
+/* ---------- Filter row — ONE compact toolbar strip, not 6 separate
+   boxed cards. A shared outer container carries the border/shadow; each
+   label is just a borderless column inside it, divided by thin rules. ---------- */
+.dv2-filter-chips{
+  display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin-bottom:8px;padding:0;
+  background:var(--card);border:1px solid var(--line);border-radius:8px;
+  box-shadow:0 1px 2px rgba(15,23,42,.05);overflow:hidden
+}
+.dv2-filter-chips label{
+  display:flex;flex-direction:column;justify-content:center;gap:2px;flex:0 0 auto;
+  padding:6px 12px;border-right:1px solid var(--line)
+}
+.dv2-filter-chips label span{font-size:8px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.dv2-filter-chips input,.dv2-filter-chips select{height:22px;font-size:12px;border:0;padding:0;background:transparent;color:var(--heading);font-weight:600;min-width:0}
 .dv2-filter-chips input:focus,.dv2-filter-chips select:focus{outline:none}
-.dv2-refresh-btn{align-self:center;background:var(--blue);color:#fff;border:0;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(37,99,235,.3)}
+.dv2-refresh-btn{
+  display:flex;align-items:center;gap:6px;align-self:center;margin:0 0 0 auto;
+  background:var(--blue);color:#fff;border:0;border-radius:0;padding:0 16px;
+  font-size:12px;font-weight:700;cursor:pointer
+}
 .dv2-refresh-btn:hover{background:#1d4ed8}
-.dv2-filter-chips .notice.info-notice{flex:0 0 auto;margin:0 0 0 auto;padding:0;background:none;border:0;font-size:11px;font-weight:600;color:var(--muted);align-self:center}
+.dv2-filter-chips .notice.info-notice{flex:0 0 auto;margin:0;padding:6px 12px;background:none;border:0;border-right:1px solid var(--line);font-size:10.5px;font-weight:600;color:var(--muted);align-self:center}
 .dv2-filter-chips .notice.info-notice.plan-ok{color:#15803d}
 .dv2-filter-chips .notice.info-notice.plan-warn{color:#b45309}
 .dv2-filter-chips .notice.info-notice.err{color:#dc2626}
 
-/* ---------- Production Overview card + 6-KPI row ---------- */
-.dv2-overview-card{padding:14px 16px}
-.dv2-overview-card .section-title-row h2{font-size:15px}
-.dv2-overview-card .section-title-row p{font-size:11px}
-.dv2-kpi-6{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin:10px 0 0}
-.dv2-kpi-6 .dash-pkpi{padding:11px 13px;border-radius:9px;border:1px solid transparent;box-shadow:0 1px 3px rgba(15,23,42,.05)}
-.dv2-kpi-6 .dash-pkpi small{font-size:9.5px}
-.dv2-kpi-6 .dash-pkpi b{font-size:20px;margin-top:3px}
-.dv2-kpi-6 .dash-pkpi-actual b{font-size:22px}
-.dv2-kpi-6 .dash-pkpi-ref{font-size:10px;margin-top:3px}
-.dv2-kpi-6 .dash-pkpi-unit{font-size:11px}
-.dv2-kpi-6 .dash-pkpi-wide{grid-column:span 1}
+/* ---------- Production Overview card + 6-KPI row — numbers are the
+   strongest visual element; card tints reduced to near-white restrained
+   tinting rather than saturated pastel ---------- */
+.dv2-overview-card{padding:12px 14px}
+.dv2-overview-card .section-title-row h2{font-size:14px;font-weight:800}
+.dv2-overview-card .section-title-row p{font-size:10.5px;opacity:.85}
+.dv2-kpi-6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:9px 0 0}
+.dv2-kpi-6 .dash-pkpi{padding:10px 12px;border-radius:7px;border:1px solid var(--line);box-shadow:none;background:var(--card)}
+.dv2-kpi-6 .dash-pkpi small{font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--muted)}
+.dv2-kpi-6 .dash-pkpi b{font-size:21px;margin-top:4px;font-weight:800}
+.dv2-kpi-6 .dash-pkpi-actual b{font-size:23px}
+.dv2-kpi-6 .dash-pkpi-ref{font-size:9.5px;margin-top:3px;opacity:.85}
+.dv2-kpi-6 .dash-pkpi-unit{font-size:10.5px}
 @media(min-width:1300px){.dv2-kpi-6{grid-template-columns:1fr 1fr 1fr 1fr 1fr 1.4fr}}
-/* 1=Expected Now soft blue, 2=Actual soft green, 3=Gap soft green/red,
-   4=Achievement soft green/amber/red, 5=Loss soft amber, 6=Production
-   Status soft green/red — reacts to the SAME kpi-good/kpi-bad classes
-   dashboard.js already sets, no new status logic */
-.dv2-kpi-6 .dash-pkpi:nth-child(1){background:#eef4ff;border-color:#dbe7fe}
-.dv2-kpi-6 .dash-pkpi:nth-child(2){background:#eefbf4;border-color:#d5f2e3}
-.dv2-kpi-6 .dash-pkpi:nth-child(3){background:#f6f8fb;border-color:var(--line)}
-.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good){background:#eefbf4;border-color:#d5f2e3}
-.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fef2f2;border-color:#fbd8d8}
-.dv2-kpi-6 .dash-pkpi:nth-child(4){background:#f6f8fb;border-color:var(--line)}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#eefbf4;border-color:#d5f2e3}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffaeb;border-color:#fde9b8}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fef2f2;border-color:#fbd8d8}
-.dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffaeb;border-color:#fde9b8}
-.dv2-kpi-6 .dash-pkpi:nth-child(6){background:#f6f8fb;border-color:var(--line)}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#eefbf4;border-color:#d5f2e3}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fef2f2;border-color:#fbd8d8}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(1){background:#152238;border-color:#1e3a63}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(2){background:#0f2417;border-color:#1e4030}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6){background:#171f2b}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#0f2417;border-color:#1e4030}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#2a2210;border-color:#4a3d1e}
-[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(5){background:#2a2210;border-color:#4a3d1e}
-.dv2-main .dash-secondary-caption{font-size:11px;margin:8px 0 0}
-.dv2-main .dash-secondary-caption span:nth-child(2),
-.dv2-main .dash-secondary-caption span:nth-child(3){display:none}
+/* Restrained tints — near-white, semantic hint only, not a saturated
+   pastel block. 1=Expected Now, 2=Actual, 3=Gap, 4=Achievement, 5=Loss,
+   6=Production Status (reacts to the SAME kpi-good/kpi-bad classes
+   dashboard.js already sets — no new status logic) */
+.dv2-kpi-6 .dash-pkpi:nth-child(1){background:#fafcff;border-color:#e2eafb}
+.dv2-kpi-6 .dash-pkpi:nth-child(2){background:#fafefb;border-color:#dcf0e5}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good){background:#fafefb;border-color:#dcf0e5}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fffafa;border-color:#f9dcdc}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#fafefb;border-color:#dcf0e5}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffdf7;border-color:#f7e8bd}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fffafa;border-color:#f9dcdc}
+.dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffdf7;border-color:#f7e8bd}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#fafefb;border-color:#dcf0e5}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fffafa;border-color:#f9dcdc}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi{background:#171f2b;border-color:#26313f}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(1){background:#131c2c}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(2),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#10201a}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#241212}
+[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(5){background:#241d0e}
+.dv2-main .dash-secondary-caption{font-size:10.5px;margin:7px 0 0;opacity:.9}
 
-/* ---------- Two-column layouts — 60/40 and 52/48, stack below 1200px.
-   Charts allowed to breathe (scrolling page now, not squeezed to fit
-   1366x768) but still compact/readable per the reference proportions. ---------- */
-.dv2-two-col{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:10px}
+/* ---------- Two-column layouts — 60/40 and 52/48, stack below 1200px ---------- */
+.dv2-two-col{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px}
 @media(min-width:1200px){
   .dv2-col-60-40{grid-template-columns:1.5fr 1fr}
   .dv2-col-52-48{grid-template-columns:1.08fr 1fr}
 }
-.dv2-chart-card .chart-box{height:260px;margin-top:6px}
+/* Chart card padding tightened so the plotting area (not the card) reads
+   as visually dominant — same chart heights as before, more of the card
+   is now canvas */
+.dv2-chart-card{padding:10px 10px 8px}
+.dv2-chart-card .section-title-row{padding:0 4px}
+.dv2-chart-card .chart-box{height:260px;margin-top:4px}
 @media(min-width:1600px){.dv2-chart-card .chart-box{height:300px}}
 
-/* Line Performance table */
-.dash-line-perf-table td,.dash-line-perf-table th{padding:7px 9px;font-size:12px}
-.dash-line-perf-table tr.dash-line-current td{background:#eef4ff}
-[data-theme="dark"] .dash-line-perf-table tr.dash-line-current td{background:#152238}
+/* Line Performance — denser rows, subtle left-border current-line accent
+   instead of a full pastel row fill */
+.dash-line-perf-table td,.dash-line-perf-table th{padding:5px 8px;font-size:11.5px}
+.dash-line-perf-table th{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
+.dash-line-perf-table tr.dash-line-current td{background:transparent;border-left:3px solid var(--blue)}
+.dash-line-perf-table tr.dash-line-current td:first-child{padding-left:6px}
 
 /* Loss Time Analysis — horizontal category bars */
-.dash-loss-total-line{font-size:13px;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
-.dash-loss-total-line b{font-size:18px;color:var(--heading);margin-left:6px}
-.dash-loss-bar-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12px}
-.dash-loss-bar-label{flex:0 0 120px;color:var(--text)}
-.dash-loss-bar-track{flex:1 1 auto;height:9px;background:var(--bg-soft,#eef1f6);border-radius:5px;overflow:hidden}
+.dash-loss-total-line{font-size:12px;color:var(--muted);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.dash-loss-total-line b{font-size:17px;color:var(--heading);margin-left:6px}
+.dash-loss-bar-row{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:11.5px}
+.dash-loss-bar-label{flex:0 0 118px;color:var(--text)}
+.dash-loss-bar-track{flex:1 1 auto;height:8px;background:var(--bg-soft,#eef1f6);border-radius:4px;overflow:hidden}
 [data-theme="dark"] .dash-loss-bar-track{background:#1c2532}
-.dash-loss-bar-fill{height:100%;background:linear-gradient(90deg,#f97316,#ef4444);border-radius:5px}
-.dash-loss-bar-val{flex:0 0 auto;color:var(--muted);font-size:11.5px;white-space:nowrap}
+.dash-loss-bar-fill{height:100%;background:linear-gradient(90deg,#f97316,#ef4444);border-radius:4px}
+.dash-loss-bar-val{flex:0 0 auto;color:var(--muted);font-size:11px;white-space:nowrap}
 
-/* ---------- Compact section cards + tables generally (scoped —
-   cabinet-coverage.html, exec.html, master.html reuse these class names
-   but never carry .dv2-main) ---------- */
-.dv2-main .section-card,.dv2-main .card{padding:12px 15px;margin-bottom:0;border-radius:10px;border-color:#e4e9f2;box-shadow:0 1px 4px rgba(15,23,42,.04)}
-.dv2-main .exec-card{padding:10px 13px}
-.dv2-main .exec-card h3,.dv2-main h3{font-size:11px;margin:0 0 6px}
-.dv2-main .section-title-row h2{font-size:13.5px}
-.dv2-main .section-title-row p{font-size:11px}
-.dv2-main table.grid td,.dv2-main table.grid th{padding:6px 9px;font-size:12px}
-.dv2-main table.grid th{font-weight:700;background:#f7f9fc}
+/* ---------- Compact section cards + tables generally ---------- */
+.dv2-main .section-card,.dv2-main .card{padding:10px 13px;margin-bottom:0;border-radius:7px;border-color:#e4e9f2;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.dv2-main .exec-card{padding:9px 12px}
+.dv2-main .exec-card h3,.dv2-main h3{font-size:10.5px;margin:0 0 5px}
+.dv2-main .section-title-row h2{font-size:13px;font-weight:700}
+.dv2-main .section-title-row p{font-size:10.5px;opacity:.85}
+.dv2-main table.grid td,.dv2-main table.grid th{padding:5px 8px;font-size:11.5px}
+.dv2-main table.grid th{font-weight:700;background:#f7f9fc;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
 [data-theme="dark"] .dv2-main table.grid th{background:#1c2532}
-.dv2-main .dash-status-banner{padding:8px 16px;border-radius:9px}
-.dv2-main .dash-status-icon{font-size:18px}
-.dv2-main .dash-status-text{font-size:15px}
+.dv2-main .dash-status-banner{padding:7px 14px;border-radius:7px}
+.dv2-main .dash-status-icon{font-size:17px}
+.dv2-main .dash-status-text{font-size:14px}
+.dv2-main > section.section-card,.dv2-main > section.dv2-overview-card{margin-bottom:8px}
 
-/* Sections that are direct children of .dv2-main need their own bottom
-   margin now that .section-card's margin-bottom was zeroed above (so it
-   doesn't double up inside the 2-col grids, which already have `gap`) */
-.dv2-main > section.section-card,.dv2-main > section.dv2-overview-card{margin-bottom:10px}
+/* Model / Door Performance — full-width fix: this card gets tighter
+   horizontal padding specifically (not the general .section-card rule)
+   so the table extends close to the card edges rather than reading as a
+   narrow block floating inside generous whitespace. Confirmed via direct
+   inspection that no max-width/margin:auto exists anywhere in the actual
+   chain (.dv2-main → .section-card → .table-scroll → table.grid all
+   already unconstrained/100%) — this is a padding/proportion fix, not a
+   hidden-bug fix. Column alignment per spec: Model left (default),
+   Door centered, all numeric columns right-aligned. */
+#performanceTable{margin:0 -4px}
+#performanceTable table.grid td:nth-child(3),#performanceTable table.grid th:nth-child(3){text-align:center}
+#performanceTable table.grid td:nth-child(4),#performanceTable table.grid td:nth-child(5),#performanceTable table.grid td:nth-child(6),#performanceTable table.grid td:nth-child(7),
+#performanceTable table.grid th:nth-child(4),#performanceTable table.grid th:nth-child(5),#performanceTable table.grid th:nth-child(6),#performanceTable table.grid th:nth-child(7){text-align:right}
+#performanceTable table.grid td:nth-child(8),#performanceTable table.grid th:nth-child(8){text-align:center}
 
-/* ---------- Detailed / Engineering View — collapsible, collapsed by
-   default. Existing sections inside are visually unchanged (no CSS
-   targeting their internals removed) — just relocated + wrapped. ---------- */
-.dv2-detail-section{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
-.dv2-detail-section summary{cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;list-style:none;padding:4px 0}
+/* ---------- Detailed / Engineering View — collapsible, collapsed by default ---------- */
+.dv2-detail-section{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.dv2-detail-section summary{cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;list-style:none;padding:4px 0}
 .dv2-detail-section summary::-webkit-details-marker{display:none}
 .dv2-detail-section summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
 .dv2-detail-section[open] summary::before{transform:rotate(90deg)}
 .dv2-detail-section[open] summary{margin-bottom:8px}
 
-/* ---------- Narrow screens: collapse sidebar to a horizontal top bar ---------- */
+/* ---------- Narrow screens ---------- */
 @media(max-width:900px){
   .dv2-shell{flex-direction:column}
   .dv2-sidebar{width:100%;flex:0 0 auto;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px}
@@ -1062,4 +1079,7 @@ input,select,textarea,.grid input,.grid select{
   .dv2-sidebar-nav{flex-direction:row;flex-wrap:wrap;padding:0}
   .dv2-sidebar-footer{display:none}
   .dv2-kpi-6{grid-template-columns:1fr 1fr}
+  .dv2-filter-chips{flex-direction:column}
+  .dv2-filter-chips label,.dv2-filter-chips .notice.info-notice{border-right:0;border-bottom:1px solid var(--line)}
+  .dv2-refresh-btn{margin:8px 12px;padding:8px}
 }
