@@ -897,3 +897,90 @@ input,select,textarea,.grid input,.grid select{
   .dash-pkpi b{font-size:26px}
   .dash-pkpi-actual b{font-size:28px}
 }
+
+/* ============================================================
+   DASHBOARD V2 SHELL — Phase 1 (index.html ONLY)
+   Every rule below is scoped under .dv2-shell / .dv2-main so it can
+   NEVER affect any other page. cabinet-coverage.html reuses .dash-pkpi/
+   .dash-status-banner/.dash-primary-kpis; exec.html and others reuse
+   .chart-box/table.grid — none of those pages carry the .dv2-main
+   wrapper, so they render with their exact current spacing, untouched,
+   until their own migration phase.
+   ============================================================ */
+.dv2-shell{display:flex;align-items:flex-start;min-height:100vh;background:var(--bg)}
+.dv2-sidebar{
+  width:190px;flex:0 0 190px;background:var(--navy);color:#c3ceE0;
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  padding:16px 0 14px;box-shadow:2px 0 10px rgba(15,23,42,.08)
+}
+.dv2-sidebar-brand{padding:0 18px 14px;font-size:14.5px;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:10px;letter-spacing:-.01em}
+.dv2-sidebar-brand span{color:#60a5fa}
+.dv2-sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 10px}
+.dv2-nav-item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;color:#a9b7cc;text-decoration:none;font-size:12.5px;font-weight:600;transition:background .12s,color .12s}
+.dv2-nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.dv2-nav-item.active{background:var(--blue);color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.35)}
+.dv2-nav-icon{width:16px;text-align:center;font-size:13px;opacity:.9;flex:0 0 auto}
+.dv2-sidebar-more{margin-top:8px;padding:8px 10px 0}
+.dv2-sidebar-more summary{cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.05em;color:#7d8fac;list-style:none;padding:6px 8px}
+.dv2-sidebar-more summary::-webkit-details-marker{display:none}
+.dv2-sidebar-more a{display:block;padding:6px 8px 6px 28px;font-size:12px;color:#a9b7cc;text-decoration:none;border-radius:6px}
+.dv2-sidebar-more a:hover{color:#fff;background:rgba(255,255,255,.06)}
+.dv2-sidebar-footer{margin-top:auto;padding:14px 18px 0;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#7d8fac;line-height:1.6}
+
+.dv2-main{flex:1 1 0;min-width:0;padding:12px 18px 24px;max-width:1400px}
+.dv2-topbar{display:flex;justify-content:flex-end;gap:10px;margin-bottom:6px}
+.dv2-page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:10px}
+.dv2-page-header h1{margin:0 0 3px;font-size:18px;font-weight:800;color:var(--heading);letter-spacing:-.01em}
+.dv2-page-header p{margin:0;font-size:11.5px;color:var(--muted)}
+.dv2-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.dv2-header-right .isolation-pill{font-size:9.5px;padding:2px 8px}
+.dv2-header-right .hero-status{font-size:10.5px}
+
+/* Compact filter toolbar */
+.dv2-main .dash-filters{padding:9px 12px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 1px 4px rgba(15,23,42,.04);margin-bottom:8px}
+.dv2-main .dash-filters input,.dv2-main .dash-filters select{height:33px;font-size:12.5px;border-radius:7px}
+.dv2-main .dash-filters label span{font-size:9px}
+
+/* Compact status banner + KPI row */
+.dv2-main .dash-status-banner{padding:9px 16px;border-radius:9px;margin-bottom:8px}
+.dv2-main .dash-status-icon{font-size:19px}
+.dv2-main .dash-status-text{font-size:16px}
+.dv2-main .dash-status-sub{font-size:11.5px}
+.dv2-main .dash-primary-kpis{gap:9px;margin:0 0 8px}
+.dv2-main .dash-pkpi{padding:11px 13px;border-radius:9px}
+.dv2-main .dash-pkpi small{font-size:10.5px}
+.dv2-main .dash-pkpi b{font-size:22px;margin-top:3px}
+.dv2-main .dash-pkpi-actual b{font-size:25px}
+.dv2-main .dash-pkpi-ref{font-size:11px;margin-top:4px}
+.dv2-main .dash-pkpi-unit{font-size:12px}
+.dv2-main .dash-secondary-caption{font-size:11.5px;margin:0 0 8px}
+
+/* Compact section cards + tables (scoped — cabinet-coverage.html, exec.html,
+   master.html etc. reuse these same class names but never carry .dv2-main) */
+.dv2-main .section-card,.dv2-main .card{padding:11px 14px;margin-bottom:9px;border-radius:10px}
+.dv2-main .exec-card{padding:11px 14px}
+.dv2-main .exec-card h3,.dv2-main h3{font-size:11px;margin:0 0 7px}
+.dv2-main .section-title-row h2{font-size:13.5px}
+.dv2-main .section-title-row p{font-size:11px}
+.dv2-main table.grid td,.dv2-main table.grid th{padding:6px 8px;font-size:12px}
+
+/* Charts — stacked by default (1366px is the priority target); only pair
+   up side-by-side on genuinely wide screens where a half-width canvas
+   chart stays legible */
+.dv2-chart-grid{display:flex;flex-direction:column;gap:9px}
+.dv2-main .chart-box{height:220px;margin-top:6px}
+.dv2-main .chart-box-lg{height:230px}
+@media(min-width:1600px){
+  .dv2-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+}
+
+/* Narrow screens: collapse sidebar to a horizontal top bar rather than a
+   fixed 190px column eating into a small laptop's width */
+@media(max-width:900px){
+  .dv2-shell{flex-direction:column}
+  .dv2-sidebar{width:100%;flex:0 0 auto;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px}
+  .dv2-sidebar-brand{border-bottom:0;padding:0 12px 0 0;margin-bottom:0}
+  .dv2-sidebar-nav{flex-direction:row;flex-wrap:wrap;padding:0}
+  .dv2-sidebar-more,.dv2-sidebar-footer{display:none}
+  .dv2-main{max-width:100%}
+}
