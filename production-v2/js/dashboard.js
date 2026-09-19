@@ -241,15 +241,45 @@ function charts(labels,p,a,curBlockIdx){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
  const planColor="#2563eb",actualColor="#16a34a";
- S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[{label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:3},{label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false},tooltip:{mode:"index",intersect:false,callbacks:{
-  title:items=>items.length?labels[items[0].dataIndex]:"",
-  filter:()=>false,
-  afterBody:items=>{
-   if(!items.length)return[];
-   let i=items[0].dataIndex,pv=Number(p[i]||0),av=Number(a[i]||0),gap=av-pv;
-   return [`Plan: ${pv.toLocaleString()}`,`Actual: ${av.toLocaleString()}`,`Gap: ${gap>0?"+":""}${gap.toLocaleString()}`];
+ // External tooltip — same technique as cumChart's, needed here too since
+ // the built-in Chart.js tooltip can't color Gap red/green individually.
+ function hourlyTooltip(ctx){
+  let {chart,tooltip}=ctx;
+  let wrap=chart.canvas.parentNode;
+  let el=wrap.querySelector(".dv2-hourly-tooltip");
+  if(!el){el=document.createElement("div");el.className="dv2-hourly-tooltip";wrap.style.position="relative";wrap.appendChild(el)}
+  if(tooltip.opacity===0){el.style.opacity=0;return}
+  let i=tooltip.dataPoints?.[0]?.dataIndex;
+  if(i==null){el.style.opacity=0;return}
+  let pv=Number(p[i]||0),av=Number(a[i]||0),gap=av-pv,ach=pv?av/pv*100:0;
+  el.innerHTML=`<div class="dv2-cum-tt-time">${esc(labels[i]||"")}</div><div class="dv2-cum-tt-row">Adjusted Plan: <b class="dv2-cum-tt-plan">${pv.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Actual: <b class="dv2-cum-tt-actual">${av.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Gap: <b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div>${pv?`<div class="dv2-cum-tt-row">Achievement: <b>${ach.toFixed(1)}%</b></div>`:""}`;
+  el.style.opacity=1;
+  el.style.left=Math.min(tooltip.caretX+10,wrap.clientWidth-160)+"px";
+  el.style.top=tooltip.caretY+"px";
+ }
+ S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[
+  {label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:2,barPercentage:.78,categoryPercentage:.68},
+  {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:2,barPercentage:.78,categoryPercentage:.68}
+ ]},options:{
+  responsive:true,maintainAspectRatio:false,
+  scales:{
+   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()},grid:{color:"rgba(148,163,184,.15)"}},
+   x:{ticks:{maxRotation:20,minRotation:0,autoSkip:true},grid:{display:false}}
+  },
+  plugins:{
+   legend:{position:"top",align:"end",labels:{boxWidth:10,boxHeight:10,padding:10,font:{size:11}}},
+   tooltip:{enabled:false,external:hourlyTooltip},
+   datalabels:{
+    // Actual only, per the "if crowded show Actual only" instruction —
+    // and never label a 0 (future/not-yet-produced block), without
+    // treating that 0 as any kind of failure state
+    display:context=>context.datasetIndex===1&&Number(context.dataset.data[context.dataIndex])>0,
+    anchor:"end",align:"top",offset:2,clip:false,
+    formatter:v=>Math.round(v).toLocaleString(),
+    color:actualColor,font:{weight:"700",size:10}
+   }
   }
- }}}}});
+ }});
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
  // Custom external tooltip — reuses the SAME cp/ca cumulative arrays above,
  // only needed because Chart.js's built-in tooltip can't color individual
