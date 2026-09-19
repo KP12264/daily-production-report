@@ -258,8 +258,17 @@ function charts(labels,p,a,curBlockIdx){
   el.style.top=tooltip.caretY+"px";
  }
  S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[
-  {label:"Adjusted Plan",data:p,backgroundColor:"rgba(37,99,235,.20)",borderColor:planColor,borderWidth:1.25,borderRadius:2,barPercentage:.82,categoryPercentage:.72},
-  {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:2,barPercentage:.82,categoryPercentage:.72}
+  {label:"Adjusted Plan",data:p,
+   backgroundColor:context=>{
+    let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+    return isFuture?"rgba(148,163,184,.16)":"rgba(37,99,235,.22)";
+   },
+   borderColor:context=>{
+    let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+    return isFuture?"rgba(148,163,184,.45)":planColor;
+   },
+   borderWidth:1,borderRadius:3,barPercentage:.85,categoryPercentage:.76},
+  {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:3,barPercentage:.85,categoryPercentage:.76}
  ]},options:{
   responsive:true,maintainAspectRatio:false,
   layout:{padding:{bottom:6}},
@@ -271,13 +280,28 @@ function charts(labels,p,a,curBlockIdx){
    legend:{display:false},
    tooltip:{enabled:false,external:hourlyTooltip},
    datalabels:{
-    // Actual only, per the "if crowded show Actual only" instruction —
-    // and never label a 0 (future/not-yet-produced block), without
-    // treating that 0 as any kind of failure state
-    display:context=>context.datasetIndex===1&&Number(context.dataset.data[context.dataIndex])>0,
+    // Actual only. Future blocks (only meaningful when curBlockIdx>=0, i.e.
+    // viewing today with an active/valid current block — a historical date
+    // or completed shift is never treated as "future") show a small neutral
+    // "–" placeholder instead of no label at all; past/current blocks show
+    // the real value, still suppressed only when genuinely 0 — never
+    // treating that 0 as a failure state.
+    display:context=>{
+     if(context.datasetIndex!==1)return false;
+     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+     if(isFuture)return true;
+     return Number(context.dataset.data[context.dataIndex])>0;
+    },
     anchor:"end",align:"top",offset:2,clip:false,
-    formatter:v=>Math.round(v).toLocaleString(),
-    color:actualColor,font:{weight:"700",size:10}
+    formatter:(v,context)=>{
+     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+     return isFuture?"–":Math.round(v).toLocaleString();
+    },
+    color:context=>{
+     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+     return isFuture?"#94a3b8":actualColor;
+    },
+    font:{weight:"700",size:10}
    }
   }
  }});
@@ -743,18 +767,10 @@ async function otherLinesToday(dateList,sh,currentLineId){
    return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
   }));
   if(!rows.length)return;
-  host.innerHTML=`<div class="dash-line-perf-cards">${rows.map(r=>{
-   let gap=r.actual-r.plan,isCur=r.lid===currentLineId;
-   return `<div class="dash-line-card${isCur?" dash-line-card-current":""}">
-    <div class="dash-line-card-head"><span class="dash-line-card-name">${esc(r.name)}</span>${isCur?'<span class="dash-line-card-tag">CURRENT</span>':""}</div>
-    <div class="dash-line-card-actual"><b>${r.actual.toLocaleString()}</b><span class="dash-line-card-plan">/ ${r.plan.toLocaleString()} Plan</span></div>
-    <div class="dash-line-card-stats">
-     <div><small>ACH.</small><b class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</b></div>
-     <div><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</b></div>
-    </div>
-    <div class="dash-line-card-status">${r.plan?statusBadge(gap):"—"}</div>
-   </div>`;
-  }).join("")}</div>`;
+  host.innerHTML=`<table class="grid dash-line-perf-table"><thead><tr><th>Line</th><th>Plan</th><th>Actual</th><th>Achieve</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows.map(r=>{
+   let gap=r.actual-r.plan;
+   return `<tr class="${r.lid===currentLineId?"dash-line-current":""}"><td>${esc(r.name)}${r.lid===currentLineId?" <small>(current)</small>":""}</td><td>${r.plan.toLocaleString()}</td><td><b>${r.actual.toLocaleString()}</b></td><td class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</td><td class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</td><td>${r.plan?statusBadge(gap):"—"}</td></tr>`;
+  }).join("")}</tbody></table>`;
  }catch(e){console.error(e)}
 }
 async function init(){
