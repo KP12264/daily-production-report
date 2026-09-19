@@ -1,0 +1,836 @@
+(()=>{const $=id=>document.getElementById(id);let S={lines:[],plan:null,actual:null,manual:[],hourly:null,cum:null,keys:[],multiDay:null};
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
+function addDays(dateStr,n){let d=new Date(dateStr+"T12:00:00");d.setDate(d.getDate()+n);return localDate(d)}
+// Monday–Sunday week containing dateStr, for VIEW=Week
+function weekRange(dateStr){
+ let d=new Date(dateStr+"T12:00:00");
+ let dow=(d.getDay()+6)%7; // 0=Mon .. 6=Sun
+ return {start:addDays(dateStr,-dow),end:addDays(dateStr,6-dow)};
+}
+function stat(t,c=""){$("dashStatus").textContent=t;$("dashStatus").className="hero-status "+c}
+function note(t,c=""){$("dashMessage").textContent=t;$("dashMessage").className="notice info-notice "+c}
+async function all(n){let s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
+const k=(m,d)=>`${m}|||${d}`;
+function splitKey(x){let p=String(x).split("|||");return {model:p[0]||"",door:p[1]||""}}
+function mins(t){let [h,m]=String(t||"00:00").split(":").map(Number);return (h||0)*60+(m||0)}
+function nowMinutes(){let d=new Date();return d.getHours()*60+d.getMinutes()}
+// Blocks are given as local HH:MM with no date, and a Night shift can cross
+// midnight — so times must be "unwrapped" into a monotonically increasing
+// timeline (each block's start/end pushed +1440 past the previous block's end
+// whenever it looks like the clock rolled over) before they can be compared to
+// "now" or to each other.
+function unwrapBlockTimes(bs){
+ let out=[],prevEnd=null;
+ bs.forEach(b=>{
+  let s=mins(b.start||b.startTime),e=mins(b.end||b.endTime);
+  if(prevEnd!=null)while(s<prevEnd)s+=1440;
+  if(e<=s)e+=1440;
+  out.push({startU:s,endU:e});prevEnd=e;
+ });
+ return out;
+}
+// Plan the shift is expected to have produced by "now" — full Adjusted Plan for
+// a past date, 0 for a future date, and for today: completed blocks count in
+// full, the in-progress block is prorated by elapsed time, future blocks count
+// as 0. This is what STATUS should compare Actual against, per Section 33 — not
+// the full-shift Adjusted Plan, which overstates how far behind an early shift
+// looks (e.g. 08:00–10:00 actual compared against a whole day's 3,150 plan).
+function expectedByNow(pb,bs,viewDate){
+ let today=localDate();
+ if(viewDate<today)return pb.reduce((a,b)=>a+b,0);
+ if(viewDate>today)return 0;
+ if(!bs.length)return pb.reduce((a,b)=>a+b,0);
+ let u=unwrapBlockTimes(bs),now=nowMinutes();
+ if(now<u[0].startU)now+=1440;
+ let sum=0;
+ for(let i=0;i<pb.length;i++){
+  let blk=u[i];if(!blk)break;
+  if(now>=blk.endU)sum+=pb[i];
+  else if(now>blk.startU)sum+=pb[i]*(now-blk.startU)/(blk.endU-blk.startU);
+ }
+ return sum;
+}
+function blocks(){
+ // Canonical schema written by plan.js snap(): S.plan.blocks[] — each block has
+ // {start,end,cells:[{model,door,plan,originalPlan}],total,originalTotal,...}
+ return S.plan?.blocks||[];
+}
+function rowsFromPlan(){
+ // Week/Range view: P is already built per-day in load() (S.multiDay.P)
+ if(S.multiDay)return S.multiDay.P;
+ // Read plan quantities directly from the same field entry.js already reads
+ // (S.plan.blocks[bi].cells[].plan) so Dashboard can never diverge from Entry.
+ let out={};
+ blocks().forEach((b,bi)=>{
+  (b.cells||[]).forEach(c=>{
+   let kk=k(c.model,c.door);
+   (out[kk]??=[])[bi]=Number(c.plan||0);
+  });
+ });
+ return out;
+}
+function actualRows(){
+ if(S.multiDay)return S.multiDay.A;
+ let out={},a=S.actual?.actualByCell||{};
+ Object.entries(a).forEach(([cell,v])=>{let p=cell.split("|||"),bi=Number(p[0]),kk=k(p[1],p[2]);(out[kk]??=[])[bi]=Number(v||0)});
+ return out;
+}
+function filters(keys){
+ let models=[...new Set(keys.map(x=>splitKey(x).model).filter(Boolean))].sort(),doors=[...new Set(keys.map(x=>splitKey(x).door).filter(Boolean))].sort();
+ let mv=$("dashModel").value,dv=$("dashDoor").value;
+ $("dashModel").innerHTML='<option value="">All Models</option>'+models.map(x=>`<option ${x===mv?"selected":""}>${esc(x)}</option>`).join("");
+ $("dashDoor").innerHTML='<option value="">All Doors</option>'+doors.map(x=>`<option ${x===dv?"selected":""}>${esc(x)}</option>`).join("");
+}
+function selected(keys){let m=$("dashModel").value,d=$("dashDoor").value;return keys.filter(x=>(!m||splitKey(x).model===m)&&(!d||splitKey(x).door===d))}
+function autoLoss(){return S.plan?.masterSnapshot?.palletChangeLosses||[]}
+function lossRows(){
+ if(S.multiDay)return S.multiDay.lossRows;
+ return [...autoLoss().map(x=>({...x,category:x.category||"Pallet Change"})),...S.manual];
+}
+function render(){
+ let agg=!!S.multiDay;
+ let P=rowsFromPlan();let A=actualRows();let keys=[...new Set([...Object.keys(P),...Object.keys(A)])];S.keys=keys;filters(keys);let use=selected(keys);
+ let n=Math.max(0,...use.flatMap(x=>[(P[x]||[]).length,(A[x]||[]).length])), labels=[];
+ let bs=agg?[]:blocks();
+ if(agg)labels=S.multiDay.labels.slice(0,n);
+ else for(let i=0;i<n;i++)labels.push(bs[i]?(bs[i].label||`${bs[i].start||bs[i].startTime||""}–${bs[i].end||bs[i].endTime||""}`):`Block ${i+1}`);
+ let pb=Array(n).fill(0),ab=Array(n).fill(0);use.forEach(x=>{for(let i=0;i<n;i++){pb[i]+=Number(P[x]?.[i]||0);
+  // นับ Actual เฉพาะ Model/Door ที่ยังอยู่ใน Plan ปัจจุบัน — กัน key เก่าที่
+  // ค้างมาจากก่อนเปลี่ยนชื่อ Model ใน Master ไม่ให้บวกเข้าไปในยอดรวมซ้ำซ้อน
+  if(P[x])ab[i]+=Number(A[x]?.[i]||0);
+ }});
+ // gapPlan = เทียบ Adjusted Plan เต็มกะ (secondary, ใต้ Adjusted Plan) — ยังคง
+ // สูตรเดิมไว้ ไม่ลบทิ้ง แค่ลดความเด่น
+ // gapExpected = เทียบ Expected Now (real-time pacing) — ตัวหลักที่โชว์เด่น
+ // ใน Header/Primary KPI ตามที่ยืนยันไว้ (spec §1 + §13 — สองค่านี้คนละความหมาย
+ // กัน ไม่ได้แก้สูตร Plan/Actual/Expected เดิมเลย แค่เพิ่มค่าที่ derive จากของ
+ // ที่มีอยู่แล้วและเปลี่ยนว่าตัวไหนโชว์เด่นกว่า)
+ // ในมุมมอง Week/Range ไม่มี "ตอนนี้" ของทั้งช่วง — Expected Now จึงหมายถึง
+ // Adjusted Plan เต็มช่วงตรงๆ (ไม่ prorate ตามเวลาเหมือนโหมด Day)
+ let plan=pb.reduce((a,b)=>a+b,0),actual=ab.reduce((a,b)=>a+b,0),gapPlan=actual-plan,ach=plan?actual/plan*100:0,loss=lossRows().filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0),material=lossRows().filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
+ let expectedRaw=agg?plan:expectedByNow(pb,bs,$("dashDate").value);
+ // ปัดเศษ Expected Now เป็นจำนวนเต็มครั้งเดียวตรงนี้ — ทุกที่ที่ใช้ต่อจากนี้
+ // (Gap, สถานะ ON TARGET/BEHIND PLAN, การ์ดที่โชว์) ใช้ค่าเดียวกันนี้เสมอ กัน
+ // ไม่ให้ Gap ที่โชว์ขัดกับ Expected Now ที่โชว์ (เช่น 939 กับ -667.25)
+ let expected=Math.round(expectedRaw);
+ let gapExpected=actual-expected;
+ let status=expected>0?(actual>=expected?"ON TARGET":"BEHIND PLAN"):"ON TARGET";
+ let lineName=S.lines.find(x=>(x.lineId||x.code||x.id||"").toUpperCase()===$("dashLine").value.toUpperCase())?.lineName||$("dashLine").value;
+ let contextLine=agg
+  ?`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate(S.multiDay.days[0])} – ${formatContextDate(S.multiDay.days[S.multiDay.days.length-1])}`
+  :`LINE ${lineName} · ${$("dashShift").value} SHIFT · ${formatContextDate($("dashDate").value)}`;
+ statusBanner(status,actual,expected,gapExpected,ach,contextLine);
+ insightBanner(P,A,use,loss,material);
+ let totalLoss=totalLossMinutes();
+ primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status);
+ lossSummaryCard(loss,material);
+ lossCategoryBars();
+ recentIssuesTable();
+ achievementBar(plan,actual,ach);
+ // This Block / Hourly Summary / 7-Day Avg ไม่มีความหมายเมื่อดูมากกว่า 1 วัน —
+ // ซ่อนไว้แทนที่จะโชว์ข้อมูลที่ตีความผิดได้
+ $("dashThisBlock").style.display=agg?"none":"";
+ $("dashThisBlockTable").style.display=agg?"none":($("dashThisBlockTable").style.display);
+ $("dashHourlySection").style.display=agg?"none":"";
+ // dashTrendCard is no longer in the main layout (Trend omitted per approved
+ // decision) — guarded here since trendCompare()/this line would otherwise
+ // throw against a missing host, unlike every other host-guarded function
+ let trendHost=$("dashTrendCard");if(trendHost)trendHost.style.display=agg?"none":"";
+ $("hourlyChartH2").textContent=agg?"Plan vs Actual by Day":"Plan vs Actual by Time Block";
+ $("hourlyChartP").textContent=agg?"Adjusted Plan เทียบกับยอดผลิตจริง รายวัน · วันไหนเริ่มหลุดแผน":"Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน";
+ if(!agg)thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
+ let curBlockIdx=agg?-1:currentBlockIndex(bs,$("dashDate").value);
+ charts(labels,pb,ab,curBlockIdx); S.perfP=P;S.perfA=A;S.perfUse=use; renderPerfCard(); performanceFull(P,A,use); lossView();
+ if(!agg){S.hourlyArgs={labels,bs,P,A,use};hourlySummary()}
+ S.todayAch=ach;S.todayMaterial=material;
+ // Last Updated — when this Dashboard view was last rendered/refreshed,
+ // NOT when the underlying production data was recorded
+ let luHost=$("dashLastUpdated");
+ if(luHost)luHost.textContent=new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+ note(agg?`Dashboard loaded · ${S.multiDay.days[0]} → ${S.multiDay.days[S.multiDay.days.length-1]} · Line ${$("dashLine").value} / ${$("dashShift").value} (${S.multiDay.days.length} วัน)`:`Dashboard loaded · ${$("dashDate").value} · Line ${$("dashLine").value} / ${$("dashShift").value}`,"plan-ok");
+}
+function achievementBar(plan,actual,ach){
+ let host=$("dashAchievementBar");
+ if(!host)return;
+ if(!plan){host.innerHTML="";return}
+ let pct=Math.min(100,Math.max(0,ach));
+ let remaining=Math.max(plan-actual,0);
+ let sub=actual>=plan?"Plan achieved":`${remaining.toLocaleString()} pcs remaining to Plan`;
+ host.innerHTML=`<div class="dash-ach-head"><span>Achievement</span><b>${ach.toFixed(1)}%</b></div><div class="dash-ach-track"><div class="dash-ach-fill${ach>=100?" full":""}" style="width:${pct}%"></div></div><div class="dash-ach-sub">${sub}</div>`;
+}
+function hourlySummary(){
+ let host=$("dashHourly"),sel=$("dashHourlySelect");
+ if(!host||!S.hourlyArgs)return;
+ let {labels,bs,P,A,use}=S.hourlyArgs;
+ // Populate the block picker (WORK blocks only) — keep whatever was already
+ // selected if it's still a valid option after reloading.
+ if(sel){
+  let keepVal=sel.value;
+  let opts=['<option value="ALL">ทุกช่วงเวลา</option>'];
+  for(let i=0;i<labels.length;i++)if(bs[i]?.type!=="BREAK")opts.push(`<option value="${i}">${esc(labels[i]||"")}</option>`);
+  sel.innerHTML=opts.join("");
+  if([...sel.options].some(o=>o.value===keepVal))sel.value=keepVal;
+ }
+ let want=sel?sel.value:"ALL";
+ let n=labels.length,h="";
+ for(let i=0;i<n;i++){
+  if(bs[i]?.type==="BREAK")continue;
+  if(want!=="ALL"&&String(i)!==want)continue;
+  let rows=(use||[]).map(x=>{let pv=Number(P[x]?.[i]||0),av=Number(A[x]?.[i]||0);return {x,p:pv,a:av,d:av-pv}}).filter(r=>r.p||r.a);
+  if(!rows.length)continue;
+  rows.sort((r1,r2)=>r1.d-r2.d);
+  let tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),td=ta-tp;
+  h+=`<div class="dash-hour-block"><div class="dash-hour-block-title">${esc(labels[i]||"")}</div><div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
+  rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Diff" class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
+  h+=`<tr class="dash-this-block-total"><td colspan="2" data-label="">Total</td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Diff" class="${td<0?"kpi-bad":"kpi-good"}">${td>0?"+":""}${td}</td></tr>`;
+  h+=`</tbody></table></div></div>`;
+ }
+ host.innerHTML=h||'<div class="empty-state">ไม่มีข้อมูล</div>';
+}
+function statusBanner(status,actual,expected,gapExpected,ach,contextLine){
+ let ok=status==="ON TARGET";
+ let host=$("dashStatusBanner");
+ if(!host)return;
+ host.className="dash-status-banner "+(ok?"kpi-good-bg":"kpi-bad-bg");
+ let ctx=contextLine?`<div class="dash-status-context">${esc(contextLine)}</div>`:"";
+ host.innerHTML=`${ctx}<div class="dash-status-main"><span class="dash-status-icon">${ok?"🟢":"🔴"}</span><span class="dash-status-text">${status}</span></div><div class="dash-status-sub">Actual ${actual.toLocaleString()} / Expected (Now) ${expected.toLocaleString()}</div>`;
+}
+function currentBlockIndex(bs,viewDate){
+ // "Current block" only makes sense when looking at TODAY — a past/future
+ // date has no "now" inside its own timeline.
+ if(viewDate!==localDate()||!bs.length)return -1;
+ let u=unwrapBlockTimes(bs),now=nowMinutes();
+ if(now<u[0].startU)now+=1440;
+ for(let i=0;i<u.length;i++)if(now>=u[i].startU&&now<u[i].endU)return i;
+ return -1;
+}
+function thisBlockCard(labels,pb,ab,bs,viewDate,P,A,use){
+ let host=$("dashThisBlock"),tableHost=$("dashThisBlockTable");
+ if(!host)return;
+ let idx=currentBlockIndex(bs,viewDate);
+ if(idx<0||bs[idx]?.type==="BREAK"){
+  host.innerHTML="";host.style.display="none";
+  if(tableHost){tableHost.innerHTML="";tableHost.style.display="none"}
+  return;
+ }
+ let p=Number(pb[idx]||0),a=Number(ab[idx]||0),d=a-p;
+ host.style.display="block";
+ host.innerHTML=`<div class="dash-this-block-label">THIS BLOCK · ${esc(labels[idx]||"")}</div><div class="dash-this-block-nums"><span>Plan <b>${p}</b></span><span>Actual <b>${a}</b></span><span class="dash-this-block-diff ${d<0?"kpi-bad":"kpi-good"}">Diff <b>${d>0?"+":""}${d}</b></span></div>`;
+ if(!tableHost)return;
+ // Per-Model/Door breakdown for just this one block — worst Diff first, so
+ // whichever model is dragging this hour down shows up right at the top.
+ let rows=(use||[]).map(x=>{
+  let pv=Number(P[x]?.[idx]||0),av=Number(A[x]?.[idx]||0);
+  return {x,p:pv,a:av,d:av-pv};
+ }).filter(r=>r.p||r.a);
+ if(!rows.length){tableHost.innerHTML="";tableHost.style.display="none";return}
+ rows.sort((r1,r2)=>r1.d-r2.d);
+ let h=`<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Diff</th></tr></thead><tbody>`;
+ rows.forEach(r=>{let q=splitKey(r.x);h+=`<tr><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Diff" class="${r.d<0?"kpi-bad":"kpi-good"}">${r.d>0?"+":""}${r.d}</td></tr>`});
+ h+=`<tr class="dash-this-block-total"><td colspan="2" data-label="">Total</td><td data-label="Plan">${p}</td><td data-label="Actual"><b>${a}</b></td><td data-label="Diff" class="${d<0?"kpi-bad":"kpi-good"}">${d>0?"+":""}${d}</td></tr>`;
+ h+=`</tbody></table></div>`;
+ tableHost.style.display="block";
+ tableHost.innerHTML=h;
+}
+let datalabelsRegistered=false;
+function ensureDatalabels(){
+ if(!datalabelsRegistered&&window.ChartDataLabels){Chart.register(window.ChartDataLabels);datalabelsRegistered=true}
+}
+function charts(labels,p,a,curBlockIdx){
+ ensureDatalabels();
+ if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
+ const planColor="#2563eb",actualColor="#16a34a";
+ // External tooltip — same technique as cumChart's, needed here too since
+ // the built-in Chart.js tooltip can't color Gap red/green individually.
+ function hourlyTooltip(ctx){
+  let {chart,tooltip}=ctx;
+  let wrap=chart.canvas.parentNode;
+  let el=wrap.querySelector(".dv2-hourly-tooltip");
+  if(!el){el=document.createElement("div");el.className="dv2-hourly-tooltip";wrap.style.position="relative";wrap.appendChild(el)}
+  if(tooltip.opacity===0){el.style.opacity=0;return}
+  let i=tooltip.dataPoints?.[0]?.dataIndex;
+  if(i==null){el.style.opacity=0;return}
+  let pv=Number(p[i]||0),av=Number(a[i]||0),gap=av-pv,ach=pv?av/pv*100:0;
+  el.innerHTML=`<div class="dv2-cum-tt-time">${esc(labels[i]||"")}</div><div class="dv2-cum-tt-row">Adjusted Plan: <b class="dv2-cum-tt-plan">${pv.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Actual: <b class="dv2-cum-tt-actual">${av.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Gap: <b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div>${pv?`<div class="dv2-cum-tt-row">Achievement: <b>${ach.toFixed(1)}%</b></div>`:""}`;
+  el.style.opacity=1;
+  el.style.left=Math.min(tooltip.caretX+10,wrap.clientWidth-160)+"px";
+  el.style.top=tooltip.caretY+"px";
+ }
+ S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[
+  {label:"Adjusted Plan",data:p,
+   backgroundColor:context=>{
+    let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+    return isFuture?"rgba(148,163,184,.16)":"rgba(37,99,235,.22)";
+   },
+   borderColor:context=>{
+    let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+    return isFuture?"rgba(148,163,184,.45)":planColor;
+   },
+   borderWidth:1,borderRadius:3,barPercentage:.85,categoryPercentage:.76},
+  {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:3,barPercentage:.85,categoryPercentage:.76}
+ ]},options:{
+  responsive:true,maintainAspectRatio:false,
+  layout:{padding:{bottom:6}},
+  scales:{
+   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()},grid:{color:"rgba(148,163,184,.07)"}},
+   x:{ticks:{maxRotation:0,minRotation:0,autoSkip:false},grid:{display:false}}
+  },
+  plugins:{
+   legend:{display:false},
+   tooltip:{enabled:false,external:hourlyTooltip},
+   datalabels:{
+    // Actual only. Future blocks (only meaningful when curBlockIdx>=0, i.e.
+    // viewing today with an active/valid current block — a historical date
+    // or completed shift is never treated as "future") show a small neutral
+    // "–" placeholder instead of no label at all; past/current blocks show
+    // the real value, still suppressed only when genuinely 0 — never
+    // treating that 0 as a failure state.
+    display:context=>{
+     if(context.datasetIndex!==1)return false;
+     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+     if(isFuture)return true;
+     return Number(context.dataset.data[context.dataIndex])>0;
+    },
+    anchor:"end",align:"top",offset:2,clip:false,
+    formatter:(v,context)=>{
+     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+     return isFuture?"–":Math.round(v).toLocaleString();
+    },
+    color:context=>{
+     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
+     return isFuture?"#94a3b8":actualColor;
+    },
+    font:{weight:"700",size:10}
+   }
+  }
+ }});
+ let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
+ // Custom external tooltip — reuses the SAME cp/ca cumulative arrays above,
+ // only needed because Chart.js's built-in tooltip can't color individual
+ // body lines (Plan/Actual/Gap each need their own color, not one tooltip color).
+ function cumTooltip(ctx){
+  let {chart,tooltip}=ctx;
+  let wrap=chart.canvas.parentNode;
+  let el=wrap.querySelector(".dv2-cum-tooltip");
+  if(!el){el=document.createElement("div");el.className="dv2-cum-tooltip";wrap.style.position="relative";wrap.appendChild(el)}
+  if(tooltip.opacity===0){el.style.opacity=0;return}
+  let i=tooltip.dataPoints?.[0]?.dataIndex;
+  if(i==null){el.style.opacity=0;return}
+  let pv=Number(cp[i]||0),av=Number(ca[i]||0),gap=av-pv;
+  el.innerHTML=`<div class="dv2-cum-tt-time">${esc(labels[i]||"")}</div><div class="dv2-cum-tt-row">Plan: <b class="dv2-cum-tt-plan">${pv.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Actual: <b class="dv2-cum-tt-actual">${av.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Gap: <b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div>`;
+  el.style.opacity=1;
+  el.style.left=Math.min(tooltip.caretX+10,wrap.clientWidth-150)+"px";
+  el.style.top=tooltip.caretY+"px";
+ }
+ // Current-time dashed guide — registered ONLY on this chart instance
+ // (plugins:[...] below, not Chart.register()), so hourlyChart is never
+ // affected. curBlockIdx comes from the existing currentBlockIndex()
+ // function (already -1 for any non-today date or a completed shift) —
+ // no new time/production calculation. Time label reuses the SAME
+ // labels[] array already passed into charts() for the current block.
+ const curTimePlugin={id:"cumCurTime",afterDraw(chart){
+  if(curBlockIdx==null||curBlockIdx<0)return;
+  let xScale=chart.scales.x,yScale=chart.scales.y;
+  if(!xScale||!yScale)return;
+  let xPix=xScale.getPixelForValue(curBlockIdx),ctx=chart.ctx;
+  ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);
+  ctx.moveTo(xPix,yScale.top);ctx.lineTo(xPix,yScale.bottom);
+  ctx.strokeStyle="#64748b";ctx.lineWidth=1.3;ctx.stroke();
+  ctx.setLineDash([]);
+  // Time label — drawn INSIDE the plot area (yScale.top + offset), never
+  // above it, so it can never be clipped by the card/canvas boundary.
+  // Reuses the SAME labels[] array + curBlockIdx already available — no
+  // new time lookup or calculation.
+  let txt=labels[curBlockIdx]?`Now · ${labels[curBlockIdx]}`:"";
+  if(txt){
+   ctx.font="700 10px system-ui,-apple-system,sans-serif";
+   let tw=ctx.measureText(txt).width,padX=5,boxH=15;
+   let boxX=Math.min(Math.max(xPix-tw/2-padX,xScale.left),xScale.right-tw-padX*2);
+   let boxY=yScale.top+6;
+   ctx.fillStyle="rgba(100,116,139,.12)";
+   ctx.fillRect(boxX,boxY,tw+padX*2,boxH);
+   ctx.fillStyle="#475569";ctx.textBaseline="middle";
+   ctx.fillText(txt,boxX+padX,boxY+boxH/2+1);
+  }
+  ctx.restore();
+ }};
+ S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[
+  {label:"Plan (Cumulative)",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,borderDash:[6,4],borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:false},
+  {label:"Actual (Cumulative)",data:ca,tension:.25,borderColor:actualColor,backgroundColor:"rgba(22,163,74,.06)",borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:true}
+ ]},options:{
+  responsive:true,maintainAspectRatio:false,
+  layout:{padding:{right:60,top:18}},
+  scales:{
+   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()},grid:{color:"rgba(148,163,184,.15)"}},
+   x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true},grid:{color:"rgba(148,163,184,.08)"}}
+  },
+  plugins:{
+   legend:{display:false},
+   tooltip:{enabled:false,external:cumTooltip},
+   datalabels:{
+    display:context=>context.dataIndex===context.dataset.data.length-1,
+    anchor:"center",align:"right",offset:6,clip:false,
+    formatter:v=>Math.round(v).toLocaleString(),
+    color:context=>context.datasetIndex===0?planColor:actualColor,
+    font:{weight:"700",size:11}
+   }
+  }
+ },plugins:[curTimePlugin]});
+}
+function statusBadge(gap){
+ // Same thresholds as before (gap>=0 / gap>=-20 / gap<-20) — only the
+ // presentation changed, from an emoji dot to a labeled subtle badge.
+ if(gap>=0)return '<span class="status-badge status-good">ON TARGET</span>';
+ if(gap>=-20)return '<span class="status-badge status-watch">WATCH</span>';
+ return '<span class="status-badge status-bad">BEHIND PLAN</span>';
+}
+function achClass(z){return z>=100?"kpi-good":z>=95?"kpi-watch":"kpi-bad"}
+function plannedRowsSorted(P,A,use){
+ // Shared by the full Model/Door Performance table AND the compact Top-3
+ // card — Plan>0 only (unplanned extra production never counts as "worst"),
+ // worst Achievement% first. Single source of truth so both views agree.
+ return use.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}})
+  .filter(r=>r.p>0).sort((r1,r2)=>r1.z-r2.z);
+}
+const MONTHS_EN=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+function formatContextDate(dateStr){
+ let [y,m,d]=String(dateStr||"").split("-").map(Number);
+ if(!y||!m||!d)return dateStr||"";
+ return `${d} ${MONTHS_EN[m-1]||""} ${y}`;
+}
+// ข้อเสนอแนะสั้นๆ ต่อ Loss category — ใครควรถูกตามก่อนเมื่อ category นี้เป็นสาเหตุหลัก
+const CATEGORY_ACTIONS={
+ "Material":"→ ตรวจสอบสถานะวัตถุดิบและยืนยันสาเหตุ",
+ "Machine":"→ ตรวจสอบสภาพเครื่องและยืนยันสาเหตุ Downtime",
+ "Robot":"→ ตรวจสอบ Robot / Alarm และยืนยันสาเหตุ",
+ "Jig":"→ ตรวจสอบสภาพ Jig / Setup / Alignment",
+ "Conveyor":"→ ตรวจสอบสภาพ Conveyor (Jam / Sensor / Stopper) และยืนยันสาเหตุ",
+ "Pallet Change":"→ ตรวจสอบเวลาเปลี่ยน Pallet และผลกระทบต่อการผลิต",
+ "Change Model":"→ ตรวจสอบขั้นตอนเปลี่ยนรุ่นและระยะเวลา Setup",
+ "Quality":"→ ตรวจสอบปัญหาคุณภาพและยืนยันการตัดสินงาน",
+ "Manpower":"→ ตรวจสอบการจัดสรรกำลังคนของกะนี้",
+ "Process / Method":"→ ตรวจสอบ Process/Method และยืนยันการปรับแก้ที่ต้องทำ",
+ "Waiting":"→ ตรวจสอบว่ารออะไรอยู่และยืนยันสาเหตุ",
+};
+// Shared grouping helpers — single source of truth so MAIN LOSS and Loss
+// Analysis can never mathematically drift apart from each other. Both
+// sections call these instead of each keeping their own copy of the same
+// reduce/sort logic.
+function groupLossByCategory(rows){
+ let byCat={};
+ rows.forEach(x=>{let c=x.category||"Other";byCat[c]??={total:0,items:[]};byCat[c].total+=Number(x.minutes||0);byCat[c].items.push(x)});
+ return Object.entries(byCat).map(([name,info])=>({name,total:info.total,items:info.items})).sort((a,b)=>b.total-a.total);
+}
+// Same formula lossSummaryCard() uses internally for "TOTAL LOSS" — reused
+// here so the Loss KPI card can never show a different number than
+// #dashLossSummary. lossSummaryCard() itself is not touched.
+function totalLossMinutes(){
+ return groupLossByCategory(lossRows()).reduce((s,g)=>s+g.total,0);
+}
+function groupLossByDetail(rows){
+ let byDetail={};
+ rows.forEach(x=>{
+  let key=x.detailCause||"__unspec__";
+  byDetail[key]??={min:0,th:x.detailCauseTh,items:[]};
+  byDetail[key].min+=Number(x.minutes||0);
+  byDetail[key].items.push(x);
+ });
+ return Object.entries(byDetail).map(([key,info])=>({key,...info})).sort((a,b)=>b.min-a.min);
+}
+function detailLabel(key,th){return key==="__unspec__"?"ไม่ระบุรายละเอียด (Unspecified)":key==="Other"?"อื่น ๆ (Other)":biLabel(key,th)}
+function topLossCategory(){
+ let groups=groupLossByCategory(lossRows());
+ let entries=groups.map(g=>[g.name,g.total]);
+ return {entries,total:entries.reduce((s,[,v])=>s+v,0),top:entries[0]?entries[0][0]:null,topMin:entries[0]?entries[0][1]:0};
+}
+function insightBanner(P,A,use,loss,material){
+ let host=$("dashInsightBanner");
+ if(!host)return;
+ // สาเหตุหลัก: เทียบทุก Loss category (รวม Material ด้วย) หา category ที่กิน
+ // เวลามากที่สุด — ไม่ใช่แค่ Material vs รวม Loss อื่น เผื่อวันไหน Machine/Jig
+ // เป็นตัวการหลักแทน
+ let {entries:catEntries,total:totalLossAllCats,top:topCatShared,topMin:topMinShared}=topLossCategory();
+ // ตัวร้ายจริง: เฉพาะ Model/Door ที่ "มีแผน" (p>0) — ไม่เอาแถวที่ไม่ได้วางแผนไว้
+ // (ซึ่งเป็นของแถมที่ทีมงานผลิตเสริม ไม่ใช่ปัญหา) มาปนเป็นตัวร้ายอันดับ 1
+ let worst=use.map(x=>{
+  let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);
+  return {x,p,a,g:a-p,z:p?a/p*100:0};
+ }).filter(r=>r.p>0).sort((r1,r2)=>r1.z-r2.z)[0];
+ if(!catEntries.length&&!worst){host.innerHTML="";return}
+ let parts=[];
+ let topCat=topCatShared;
+ if(catEntries.length){
+  let pct=totalLossAllCats?Math.round(topMinShared/totalLossAllCats*100):0;
+  parts.push(`สาเหตุหลัก: <b>${esc(topCat)} ${topMinShared} นาที</b> (${pct}% ของเวลาที่เสียทั้งหมด)`);
+ }
+ if(worst){
+  let q=splitKey(worst.x);
+  parts.push(`รุ่นที่กระทบหนักสุด: <b>${esc(q.model)} ${esc(q.door)}</b> (${worst.g>0?"+":""}${worst.g.toLocaleString()} ชิ้น, ${worst.z.toFixed(0)}%)`);
+ }
+ let action=topCat&&CATEGORY_ACTIONS[topCat]?`<span class="dash-insight-action">${esc(CATEGORY_ACTIONS[topCat])}</span>`:"";
+ host.innerHTML=`<span class="dash-insight-icon">💡</span><span class="dash-insight-text">${parts.join(" · ")}${action}</span>`;
+}
+// Toggles the Model Performance card IN PLACE between the compact Top 5
+// view and the full planned+Unplanned+TOTAL view — reuses performanceTop5()
+// and performanceFull() exactly as-is, just picks which one renders into
+// #performanceTable based on S.perfExpanded. Never touches
+// #performanceTableFull/Detailed View, which keeps its own independent,
+// always-rendered copy from render()'s unchanged performanceFull(P,A,use) call.
+function renderPerfCard(){
+ if(!S.perfUse)return;
+ if(S.perfExpanded)performanceFull(S.perfP,S.perfA,S.perfUse,"performanceTable");
+ else performanceTop5(S.perfP,S.perfA,S.perfUse);
+ let btn=$("dashViewAllPerf");
+ if(btn)btn.textContent=S.perfExpanded?"Show Top 5 ↑":"View All →";
+}
+function performanceFull(P,A,keys,hostId){
+ hostId=hostId||"performanceTableFull";
+ let host=$(hostId);
+ if(!host)return;
+ if(!keys.length){host.className="empty-state";host.innerHTML='ไม่มี Model/Door สำหรับตัวกรองนี้';return}
+ let all=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
+ // แยก 2 กลุ่ม: มีแผน (p>0) เรียง Achievement ต่ำสุดก่อน = ตัวที่แย่จริงต้อง
+ // แก้ก่อน — กับ ไม่มีแผน (p=0) ที่ทำเพิ่มนอกแผน เรียง Actual มากสุดก่อน ไม่ให้
+ // มาปนอยู่บนสุดจนบังตัวร้ายจริง (เพราะ Achievement คำนวณไม่ได้เมื่อ Plan=0)
+ let planned=plannedRowsSorted(P,A,keys);
+ let unplanned=all.filter(r=>r.p===0).sort((r1,r2)=>r2.a-r1.a);
+ let rowHtml=(r,i)=>{let q=splitKey(r.x);return `<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.p?r.z.toFixed(1)+"%":"—"}</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`};
+ let h='<div class="table-scroll"><table class="grid mobile-cards dash-perf-wide-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ planned.forEach((r,i)=>h+=rowHtml(r,i));
+ if(unplanned.length){
+  h+=`<tr><td colspan="8" class="dash-perf-divider">นอกแผน (ผลิตเพิ่มนอกแผนวันนี้)</td></tr>`;
+  unplanned.forEach((r,i)=>h+=rowHtml(r,planned.length+i));
+ }
+ let rows=all,tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
+ h+=`<tr class="dash-this-block-total"><td data-label=""></td><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
+ h+='</tbody></table></div>';host.className="";host.innerHTML=h;
+}
+// Compact management summary — Top 5 planned rows most needing attention.
+// Reuses plannedRowsSorted() (same function performanceFull() uses for its
+// own planned rows) — identical filter (p>0, unplanned never included) and
+// identical worst-Achievement-first ordering. No second ranking formula.
+function performanceTop5(P,A,keys){
+ let host=$("performanceTable");
+ if(!host)return;
+ if(!keys.length){host.className="empty-state";host.innerHTML='ไม่มี Model/Door สำหรับตัวกรองนี้';return}
+ let top5=plannedRowsSorted(P,A,keys).slice(0,5);
+ if(!top5.length){host.className="empty-state";host.innerHTML='ไม่มี Model/Door ที่มีแผนสำหรับตัวกรองนี้';return}
+ let h='<div class="table-scroll"><table class="grid mobile-cards dash-top5-table dash-perf-wide-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ top5.forEach((r,i)=>{
+  let q=splitKey(r.x);
+  h+=`<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${achClass(r.z)}">${r.z.toFixed(1)}%</td><td data-label="Status">${statusBadge(r.g)}</td></tr>`;
+ });
+ h+='</tbody></table></div>';
+ host.className="";host.innerHTML=h;
+}
+function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status){
+ let host=$("dashPrimaryKpis");
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div><div class="dash-pkpi"><small>LOSS</small><b>${totalLoss.toLocaleString()} <span class="dash-pkpi-unit">min</span></b></div><div class="dash-pkpi dash-pkpi-wide"><small>PRODUCTION STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b><span class="dash-pkpi-ref">${gapExpected<0?`Short of plan by ${Math.abs(gapExpected).toLocaleString()} pcs`:`Ahead by ${gapExpected.toLocaleString()} pcs`}</span></div>`;
+ // Adjusted Plan demoted to a small secondary caption (still visible, not
+ // competing visually with Expected Now) — reuses the old #dashKpis host.
+ let sec=$("dashKpis");
+ if(sec)sec.innerHTML=`<span>Shift Plan: <b>${Math.round(plan).toLocaleString()} pcs</b></span><span class="dash-secondary-sep">·</span><span>vs Adjusted Plan: <b class="${gapPlan<0?"kpi-bad":"kpi-good"}">${gapPlan>0?"+":""}${Math.round(gapPlan).toLocaleString()} pcs</b></span>`;
+}
+let mainLossState={cat:null,detail:null};
+function biLabel(en,th){return th?`${esc(th)} (${esc(en)})`:esc(en)}
+// New management-view presentation of loss data — additive only, reuses
+// the exact same groupLossByCategory(lossRows()) helper lossSummaryCard()
+// uses internally. lossSummaryCard() itself is not touched by this.
+function lossCategoryBars(){
+ let host=$("dashLossBars");
+ if(!host)return;
+ let catGroups=groupLossByCategory(lossRows());
+ if(!catGroups.length){host.innerHTML='<div class="dash-loss-total-line">Total Loss Time <b>0 min</b></div><div class="empty-state">No production loss recorded</div>';return}
+ let total=catGroups.reduce((s,g)=>s+g.total,0);
+ host.innerHTML=`<div class="dash-loss-total-line">Total Loss Time <b>${total.toLocaleString()} min</b></div>`+
+  catGroups.map(g=>{
+   let pct=total?Math.round(g.total/total*100):0;
+   return `<div class="dash-loss-bar-row"><span class="dash-loss-bar-label">${esc(g.name)}</span><div class="dash-loss-bar-track"><div class="dash-loss-bar-fill" style="width:${pct}%"></div></div><span class="dash-loss-bar-val">${g.total} min (${pct}%)</span></div>`;
+  }).join("");
+}
+// Recent Issues — no Line column (Dashboard is already single-Line
+// filtered, would just repeat the same value on every row). Reuses
+// lossRows() only, no new Firestore reads.
+function recentIssuesTable(){
+ let host=$("dashRecentIssues");
+ if(!host)return;
+ let rows=[...lossRows()].sort((a,b)=>String(b.start||"").localeCompare(String(a.start||""))).slice(0,8);
+ if(!rows.length){host.innerHTML='<div class="empty-state">No records</div>';return}
+ host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Detail</th><th>Duration</th></tr></thead><tbody>${rows.map(x=>{
+  let detail=x.detailCause?`${esc(x.category)} — ${esc(x.detailCause)}`:esc(x.category||"—");
+  return `<tr><td>${esc(x.start||"—")}</td><td>${detail}${x.remark?` <small>(${esc(x.remark)})</small>`:""}</td><td>${x.minutes||0} min</td></tr>`;
+ }).join("")}</tbody></table>`;
+}
+function lossSummaryCard(){
+ let host=$("dashLossSummary");
+ if(!host)return;
+ let catGroups=groupLossByCategory(lossRows());
+ if(!catGroups.length){host.innerHTML='<h3>MAIN LOSS</h3><div class="empty-state">No production loss recorded</div>';return}
+ let total=catGroups.reduce((s,g)=>s+g.total,0);
+ let top=catGroups[0],pct=total?Math.round(top.total/total*100):0;
+ let top3=catGroups.slice(0,3);
+ // Top Detail — เสริมทางเลือก เฉพาะเมื่อมี detailCause จริงในข้อมูลของ
+ // Category อันดับ 1 เท่านั้น (ไม่ fabricate ให้ record เก่าที่ไม่มีข้อมูลนี้)
+ let topDetails=groupLossByDetail(top.items.filter(x=>x.detailCause));
+ let topDetailHtml=topDetails.length?`<div class="dash-main-loss-detail">Top Detail: <b>${biLabel(topDetails[0].key,topDetails[0].th)}</b> · ${topDetails[0].min} min</div>`:"";
+ // Category → Detail Cause → Individual Record, inline, one level
+ // expanded at a time per level (mainLossState) — clicking the same
+ // row again collapses it; clicking a different Category row switches
+ // which one is open and resets any open Detail Cause under the old one.
+ let rowsHtml=top3.map((g,i)=>{
+  let catPct=total?Math.round(g.total/total*100):0;
+  let isOpen=mainLossState.cat===g.name;
+  let row=`<div class="dash-loss-cat-row" data-mloss-cat="${esc(g.name)}"><span class="dash-loss-chevron">${isOpen?"▾":"›"}</span><span class="dash-loss-cat-rank">${i+1}. ${esc(g.name)}</span><b>${g.total} min</b><small>${catPct}%</small></div>`;
+  if(!isOpen)return row;
+  let detailHtml=groupLossByDetail(g.items).map(d=>{
+   let dKey=g.name+"|||"+d.key,detailOpen=mainLossState.detail===dKey;
+   let dRow=`<div class="dash-loss-detail-row" data-mloss-detail="${esc(dKey)}"><span class="dash-loss-chevron">${detailOpen?"▾":"›"}</span><span>${detailLabel(d.key,d.th)}</span><b>${d.min} min</b></div>`;
+   if(!detailOpen)return dRow;
+   // รายการดิบ — โชว์เฉพาะ field ที่มีจริง ไม่ประดิษฐ์ Model/Door ที่ Loss
+   // record ไม่มี (ตามที่ระบุไว้ชัดเจน)
+   let recHtml=d.items.map(x=>{
+    let remark=x.detailCause==="Other"&&x.customCause?`Other: ${esc(x.customCause)}${x.remark?" · "+esc(x.remark):""}`:esc(x.remark||"—");
+    return `<div class="dash-loss-record-row"><span>${esc(x.start||"")}–${esc(x.end||"")}</span><b>${x.minutes||0} min</b>${remark?`<small>${remark}</small>`:""}</div>`;
+   }).join("");
+   return dRow+`<div class="dash-loss-record-list">${recHtml}</div>`;
+  }).join("");
+  return row+`<div class="dash-loss-detail-list">${detailHtml}</div>`;
+ }).join("");
+ host.innerHTML=`<h3>MAIN LOSS</h3>
+  <div class="dash-main-loss"><div class="dash-main-loss-name">${esc(top.name)}</div><div class="dash-main-loss-num">${top.total} min <span>· ${pct}% of Total Loss</span></div>${topDetailHtml}</div>
+  <div class="dash-loss-total">TOTAL LOSS: <b>${total} min</b></div>
+  <div class="dash-loss-top3">${rowsHtml}</div>`;
+ host.onclick=e=>{
+  let dEl=e.target.closest("[data-mloss-detail]");
+  if(dEl){let k=dEl.dataset.mlossDetail;mainLossState.detail=mainLossState.detail===k?null:k;lossSummaryCard();return}
+  let cEl=e.target.closest("[data-mloss-cat]");
+  if(cEl){let c=cEl.dataset.mlossCat;if(mainLossState.cat===c){mainLossState.cat=null;mainLossState.detail=null}else{mainLossState.cat=c;mainLossState.detail=null}lossSummaryCard()}
+ };
+}
+function mostAffectedCard(P,A,use){
+ let host=$("dashMostAffected");
+ if(!host)return;
+ let worst=plannedRowsSorted(P,A,use)[0];
+ if(!worst){host.innerHTML='<h3>MOST AFFECTED</h3><div class="empty-state">No planned Model/Door behind today</div>';return}
+ let q=splitKey(worst.x);
+ host.innerHTML=`<h3>MOST AFFECTED</h3>
+  <div class="dash-affected-name">${esc(q.model)} <small>${esc(q.door)}</small></div>
+  <div class="dash-affected-nums">
+   <span>Plan <b>${worst.p.toLocaleString()}</b></span>
+   <span>Actual <b>${worst.a.toLocaleString()}</b></span>
+   <span>Gap <b class="${worst.g<0?"kpi-bad":"kpi-good"}">${worst.g>0?"+":""}${worst.g.toLocaleString()}</b></span>
+   <span>Achievement <b class="${achClass(worst.z)}">${worst.z.toFixed(1)}%</b></span>
+  </div>`;
+}
+function actionCard(){
+ let host=$("dashActionCard");
+ if(!host)return;
+ let {top:topCat}=topLossCategory();
+ if(!topCat){host.innerHTML="";return}
+ let action=CATEGORY_ACTIONS[topCat]||"→ ตรวจสอบสาเหตุเพิ่มเติมกับหัวหน้ากะ";
+ host.innerHTML=`<div class="dash-action-strip">
+  <span class="dash-action-strip-label">ACTION</span>
+  <span class="dash-action-strip-cat">${esc(topCat)}</span>
+  <span class="dash-action-strip-text">${esc(action)}</span>
+  <span class="dash-action-strip-meta">Owner: — · Status: — · ETA: —</span>
+ </div>`;
+}
+function top3BehindPlanCard(P,A,use){
+ let host=$("dashTop3");
+ if(!host)return;
+ // อันดับตาม Gap (ชิ้น) ไม่ใช่ Achievement% — ต่างจากตาราง Performance หลัก
+ // ที่เรียงตาม Achievement — ที่นี่ต้องการ "กระทบยอดรวมมากสุด" ไม่ใช่
+ // "สัดส่วนพลาดมากสุด" ตัวเลข pcs ที่หายไปเยอะสุดสำคัญกว่าสำหรับสรุปผู้บริหาร
+ let rows=[...plannedRowsSorted(P,A,use)].sort((r1,r2)=>r1.g-r2.g).slice(0,3);
+ if(!rows.length){host.innerHTML='<h3>TOP 3 BEHIND PLAN</h3><div class="empty-state">No planned Model/Door behind today</div>';return}
+ host.innerHTML=`<h3>TOP 3 BEHIND PLAN</h3><div class="dash-top3-list">${rows.map((r,i)=>{let q=splitKey(r.x);return `<div class="dash-top3-row"><span class="dash-top3-rank">${i+1}</span><span class="dash-top3-name">${esc(q.model)} <small>${esc(q.door)}</small></span><b class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g.toLocaleString()} pcs</b></div>`}).join("")}</div>`;
+}
+function lossView(){
+ let groups=groupLossByCategory(lossRows());
+ if(!groups.length){$("lossAnalysis").innerHTML='<div class="empty-state">No production loss recorded</div>';return}
+ let max=Math.max(...groups.map(g=>g.total),1);
+ let h='<div class="loss-pareto">';
+ groups.forEach((g,gi)=>{
+  let pct=Math.round(g.total/max*100);
+  h+=`<div class="loss-pareto-row loss-cat-toggle" data-idx="${gi}">
+   <span class="loss-pareto-chevron">▸</span>
+   <div class="loss-pareto-label">${esc(g.name)}</div>
+   <div class="loss-pareto-track"><div class="loss-pareto-fill" style="width:${pct}%"></div></div>
+   <div class="loss-pareto-value">${g.total} min</div>
+  </div>`;
+ });
+ h+='</div>';
+ groups.forEach((g,gi)=>{
+  let items=[...g.items].sort((a,b)=>String(a.start||"").localeCompare(String(b.start||"")));
+  h+=`<div class="loss-cat-detail" id="lossCatDetail${gi}" style="display:none">`;
+  // Detail Cause breakdown ก่อนรายการดิบ — Auto Pallet Change (ไม่มี
+  // detailCause เลย) และ record เก่าก่อนฟีเจอร์นี้ ถูกจัดเข้ากลุ่ม
+  // "Unspecified" เสมอ ผลรวมของกลุ่มยังคงเท่ากับ total เดิมของ Category
+  let detailGroups=groupLossByDetail(g.items);
+  if(detailGroups.length>1||detailGroups[0]?.key!=="__unspec__"){
+   h+='<div class="loss-detail-breakdown">'+detailGroups.map(d=>`<div class="loss-detail-cause-row"><span>${detailLabel(d.key,d.th)}</span><b>${d.min} min</b></div>`).join("")+'</div>';
+  }
+  items.forEach(x=>h+=`<div class="loss-detail-row"><span>${esc(x.start||"")}–${esc(x.end||"")}</span><b>${x.minutes} min</b>${x.remark?`<small>${esc(x.remark)}</small>`:""}</div>`);
+  h+=`</div>`;
+ });
+ $("lossAnalysis").innerHTML=h;
+ groups.forEach((g,gi)=>{
+  let chip=document.querySelector(`.loss-cat-toggle[data-idx="${gi}"]`),detail=$(`lossCatDetail${gi}`);
+  if(!chip||!detail)return;
+  chip.onclick=()=>{let open=detail.style.display!=="none";detail.style.display=open?"none":"block";chip.classList.toggle("open",!open)};
+ });
+}
+async function load(){
+ let mode=$("dashViewMode").value,l=$("dashLine").value.toUpperCase(),sh=$("dashShift").value;
+ mainLossState={cat:null,detail:null};
+ if(mode==="day"){
+  let d=$("dashDate").value;
+  ProdV2Context.set({date:d,lineId:l,shift:sh,viewMode:mode});stat("Loading...");
+  S.multiDay=null;
+  try{
+   let [p,a,loss]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_lossLogs").where("date","==",d).where("lineId","==",l).where("shift","==",sh).get()
+   ]);
+   S.plan=p.exists?{id:p.id,...p.data()}:null;S.actual=a.exists?{id:a.id,...a.data()}:null;S.manual=loss.docs.map(x=>({id:x.id,...x.data()}));
+   if(!S.plan)note("ไม่พบ Saved Daily Plan สำหรับชุดนี้","plan-warn");render();stat("Loaded","ok");
+   trendCompare(d,l,sh);otherLinesToday([d],sh,l);
+  }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
+  return;
+ }
+ // Week / Custom Range — aggregate across every date in the range
+ let startD,endD;
+ if(mode==="week"){let r=weekRange($("dashDate").value);startD=r.start;endD=r.end;$("dashDateEnd").value=endD}
+ else{startD=$("dashDate").value;endD=$("dashDateEnd").value||startD}
+ if(endD<startD){note("วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่ม","plan-warn");return}
+ let days=[];for(let dt=startD;dt<=endD;dt=addDays(dt,1))days.push(dt);
+ if(days.length>31){note("ช่วงเวลายาวเกินไป (สูงสุด 31 วัน)","plan-warn");return}
+ ProdV2Context.set({date:startD,lineId:l,shift:sh,viewMode:mode});
+ stat(`Loading ${days.length} days...`);
+ try{
+  let results=await Promise.all(days.map(async dt=>{
+   let [p,a,loss]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_lossLogs").where("date","==",dt).where("lineId","==",l).where("shift","==",sh).get()
+   ]);
+   return {plan:p.exists?{id:p.id,...p.data()}:null,actual:a.exists?{id:a.id,...a.data()}:null,manual:loss.docs.map(x=>({id:x.id,...x.data()}))};
+  }));
+  let P={},A={},lossAll=[];
+  results.forEach((r,di)=>{
+   let dayP={};
+   (r.plan?.blocks||[]).forEach(b=>(b.cells||[]).forEach(c=>{let kk=k(c.model,c.door);dayP[kk]=(dayP[kk]||0)+Number(c.plan||0)}));
+   let cells=r.actual?.actualByCell||{},dayA={};
+   Object.entries(cells).forEach(([cell,v])=>{let parts=cell.split("|||"),kk=k(parts[1],parts[2]);dayA[kk]=(dayA[kk]||0)+Number(v||0)});
+   Object.keys(dayP).forEach(kk=>{(P[kk]??=[])[di]=dayP[kk]});
+   // นับ Actual เฉพาะ key ที่มีอยู่ใน Plan ของ "วันนั้นๆ" เอง (เหมือน guard
+   // เดิมของโหมด Day กันชื่อ Model เก่าค้างที่เคย rename ไปแล้ว)
+   Object.keys(dayA).forEach(kk=>{if(dayP[kk]!=null)(A[kk]??=[])[di]=dayA[kk]});
+   let autoRows=(r.plan?.masterSnapshot?.palletChangeLosses||[]).map(x=>({...x,category:x.category||"Pallet Change"}));
+   lossAll.push(...autoRows,...r.manual);
+  });
+  S.multiDay={P,A,lossRows:lossAll,labels:days.map(dt=>{let[,m,dd]=dt.split("-");return `${dd}/${m}`}),days};
+  S.plan=null;S.actual=null;S.manual=[];
+  render();stat(`Loaded ${days.length} days`,"ok");
+  otherLinesToday(days,sh,l);
+ }catch(e){console.error(e);note(e.message,"plan-warn");stat("Load failed","err")}
+}
+async function trendCompare(d,l,sh){
+ // ค่าเฉลี่ย Achievement / Material ของ 7 วันย้อนหลัง (ไม่รวมวันนี้) เทียบกับ
+ // ของวันนี้ — บอกว่าวันนี้แย่กว่าปกติจริง หรือเป็นสภาพปกติที่เกิดทุกสัปดาห์
+ // อยู่แล้ว ยิงแยกจาก render() หลัก เพราะต้องอ่านย้อนหลัง 7 วัน (ช้ากว่า) และ
+ // ไม่ควรบล็อกไม่ให้ตัวเลขหลักของวันนี้ขึ้นก่อน
+ let host=$("dashTrendLine");
+ if(!host)return;
+ host.innerHTML="";
+ try{
+  let days=[];for(let i=1;i<=7;i++)days.push(addDays(d,-i));
+  let rows=await Promise.all(days.map(async dt=>{
+   let [p,a,loss]=await Promise.all([
+    ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${dt}_${l}_${sh}`).get(),
+    ProdV2DB.collection("prodV2_lossLogs").where("date","==",dt).where("lineId","==",l).where("shift","==",sh).get()
+   ]);
+   if(!p.exists)return null;
+   let plan=(p.data().blocks||[]).reduce((s,b)=>s+(b.cells||[]).reduce((s2,c)=>s2+Number(c.plan||0),0),0);
+   let cells=a.exists?(a.data().actualByCell||{}):{};
+   let actual=Object.values(cells).reduce((s,v)=>s+Number(v||0),0);
+   let material=loss.docs.map(x=>x.data()).filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
+   return {plan,actual,material};
+  }));
+  let valid=rows.filter(Boolean);
+  if(!valid.length||S.todayAch==null)return;
+  let avgAch=valid.reduce((s,r)=>s+(r.plan?r.actual/r.plan*100:0),0)/valid.length;
+  let avgMaterial=valid.reduce((s,r)=>s+r.material,0)/valid.length;
+  let achDiff=S.todayAch-avgAch;
+  let achArrow=achDiff>=0?"↑":"↓";
+  let achTxt=`<div class="dash-trend-headline ${achDiff>=0?"kpi-good":"kpi-bad"}">${achArrow} ${Math.abs(achDiff).toFixed(1)} pts</div><div class="dash-trend-detail">Today: <b>${S.todayAch.toFixed(1)}%</b> · 7-Day Avg: <b>${avgAch.toFixed(1)}%</b></div>`;
+  let matTxt="";
+  if(avgMaterial>0){
+   let ratio=S.todayMaterial/avgMaterial;
+   matTxt=`<div class="dash-trend-detail dash-trend-material">Material Today: <b>${S.todayMaterial.toFixed(0)} min</b> · 7-Day Avg: <b>${avgMaterial.toFixed(0)} min</b> ${ratio>=1?`<span class="kpi-bad">↑ ${ratio.toFixed(1)}×</span>`:`<span class="kpi-good">↓ lower</span>`}</div>`;
+  }
+  host.innerHTML=`${achTxt}${matTxt}`;
+ }catch(e){console.error(e)}
+}
+async function otherLinesToday(dateList,sh,currentLineId){
+ // สรุป Achievement ของทุก Line ในช่วงวันที่เดียวกับที่ Dashboard กำลังแสดงอยู่
+ // (วันเดียวหรือหลายวันก็ได้) แบบย่อในหน้า Dashboard เอง กันต้องสลับไปหน้า
+ // Executive Summary เพื่อเทียบ Line ระหว่างพรีเซนต์สด
+ let host=$("dashOtherLines");
+ if(!host)return;
+ host.innerHTML="";
+ try{
+  let lines=S.lines.length?S.lines:(await all("prodV2_lines")).filter(x=>x.active!==false);
+  let rows=await Promise.all(lines.map(async ln=>{
+   let lid=(ln.lineId||ln.code||ln.id||"").toUpperCase();
+   let perDate=await Promise.all(dateList.map(async d=>{
+    let [p,a]=await Promise.all([
+     ProdV2DB.collection("prodV2_dailyPlans").doc(`plan_${d}_${lid}_${sh}`).get(),
+     ProdV2DB.collection("prodV2_actualLogs").doc(`actual_${d}_${lid}_${sh}`).get()
+    ]);
+    if(!p.exists)return {plan:0,actual:0};
+    let plan=(p.data().blocks||[]).reduce((s,b)=>s+(b.cells||[]).reduce((s2,c)=>s2+Number(c.plan||0),0),0);
+    let cells=a.exists?(a.data().actualByCell||{}):{};
+    let actual=Object.values(cells).reduce((s,v)=>s+Number(v||0),0);
+    return {plan,actual};
+   }));
+   let plan=perDate.reduce((s,x)=>s+x.plan,0),actual=perDate.reduce((s,x)=>s+x.actual,0);
+   return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
+  }));
+  if(!rows.length)return;
+  host.innerHTML=`<table class="grid dash-line-perf-table"><thead><tr><th>Line</th><th>Plan</th><th>Actual</th><th>Achieve</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows.map(r=>{
+   let gap=r.actual-r.plan;
+   return `<tr class="${r.lid===currentLineId?"dash-line-current":""}"><td>${esc(r.name)}${r.lid===currentLineId?" <small>(current)</small>":""}</td><td>${r.plan.toLocaleString()}</td><td><b>${r.actual.toLocaleString()}</b></td><td class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</td><td class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</td><td>${r.plan?statusBadge(gap):"—"}</td></tr>`;
+  }).join("")}</tbody></table>`;
+ }catch(e){console.error(e)}
+}
+async function init(){
+ $("dashDate").value=localDate();$("dashModel").onchange=render;$("dashDoor").onchange=render;
+ // เปลี่ยน Date/Line/Shift แล้วโหลดใหม่ทันที ไม่ต้องกด Load Dashboard เอง —
+ // ปุ่มยังอยู่เผื่ออยากรีเฟรชข้อมูลซ้ำที่ตัวกรองเดิม (เช่น มีคนกรอก Actual เพิ่มระหว่างเปิดหน้าไว้)
+ $("dashDate").onchange=load;$("dashLine").onchange=load;$("dashShift").onchange=load;
+ $("dashDateEnd").onchange=load;
+ $("dashViewMode").onchange=()=>{
+  let mode=$("dashViewMode").value;
+  $("dashDateEndWrap").style.display=mode==="range"?"":"none";
+  if(mode==="week"){let r=weekRange($("dashDate").value);$("dashDateEnd").value=r.end}
+  load();
+ };
+ $("dashHourlyToggle")?.addEventListener("click",()=>{
+  let open=$("dashHourly").style.display!=="none";
+  $("dashHourly").style.display=open?"none":"block";
+  $("dashHourlyToggle").textContent=open?"ดูสรุปรายชั่วโมง":"ซ่อนสรุปรายชั่วโมง";
+ });
+ $("dashHourlySelect")?.addEventListener("change",hourlySummary);
+ $("dashRefreshBtn")?.addEventListener("click",load);
+ $("dashViewAllPerf")?.addEventListener("click",e=>{
+  e.preventDefault();
+  S.perfExpanded=!S.perfExpanded;
+  renderPerfCard();
+ });
+ try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.viewMode&&[...$("dashViewMode").options].some(o=>o.value===c.viewMode)){$("dashViewMode").value=c.viewMode;$("dashDateEndWrap").style.display=c.viewMode==="range"?"":"none"}if($("dashDate").value&&$("dashLine").value&&$("dashShift").value)load()}catch(e){note(e.message,"plan-warn")}
+}
+addEventListener("DOMContentLoaded",init)})();
