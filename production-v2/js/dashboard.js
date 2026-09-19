@@ -283,13 +283,20 @@ function charts(labels,p,a,curBlockIdx){
   ctx.moveTo(xPix,yScale.top);ctx.lineTo(xPix,yScale.bottom);
   ctx.strokeStyle="#64748b";ctx.lineWidth=1.3;ctx.stroke();
   ctx.setLineDash([]);
-  let txt=labels[curBlockIdx]||"";
+  // Time label — drawn INSIDE the plot area (yScale.top + offset), never
+  // above it, so it can never be clipped by the card/canvas boundary.
+  // Reuses the SAME labels[] array + curBlockIdx already available — no
+  // new time lookup or calculation.
+  let txt=labels[curBlockIdx]?`Now · ${labels[curBlockIdx]}`:"";
   if(txt){
    ctx.font="700 10px system-ui,-apple-system,sans-serif";
-   let tw=ctx.measureText(txt).width;
-   let boxX=Math.min(Math.max(xPix-tw/2,xScale.left),xScale.right-tw);
-   ctx.fillStyle="#475569";ctx.textBaseline="alphabetic";
-   ctx.fillText(txt,boxX,yScale.top-4);
+   let tw=ctx.measureText(txt).width,padX=5,boxH=15;
+   let boxX=Math.min(Math.max(xPix-tw/2-padX,xScale.left),xScale.right-tw-padX*2);
+   let boxY=yScale.top+6;
+   ctx.fillStyle="rgba(100,116,139,.12)";
+   ctx.fillRect(boxX,boxY,tw+padX*2,boxH);
+   ctx.fillStyle="#475569";ctx.textBaseline="middle";
+   ctx.fillText(txt,boxX+padX,boxY+boxH/2+1);
   }
   ctx.restore();
  }};
@@ -304,16 +311,7 @@ function charts(labels,p,a,curBlockIdx){
    x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true},grid:{color:"rgba(148,163,184,.08)"}}
   },
   plugins:{
-   legend:{
-    position:"top",align:"end",
-    labels:{
-     boxWidth:22,boxHeight:2,usePointStyle:true,padding:12,font:{size:11},
-     generateLabels:chart=>chart.data.datasets.map((ds,i)=>({
-      text:ds.label,strokeStyle:ds.borderColor,fillStyle:ds.borderColor,
-      lineWidth:ds.borderWidth,lineDash:ds.borderDash||[],pointStyle:"line",datasetIndex:i
-     }))
-    }
-   },
+   legend:{display:false},
    tooltip:{enabled:false,external:cumTooltip},
    datalabels:{
     display:context=>context.dataIndex===context.dataset.data.length-1,
