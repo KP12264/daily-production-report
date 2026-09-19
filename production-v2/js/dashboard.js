@@ -141,7 +141,7 @@ function render(){
  $("hourlyChartP").textContent=agg?"Adjusted Plan เทียบกับยอดผลิตจริง รายวัน · วันไหนเริ่มหลุดแผน":"Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน";
  if(!agg)thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
  let curBlockIdx=agg?-1:currentBlockIndex(bs,$("dashDate").value);
- charts(labels,pb,ab,curBlockIdx); performance(P,A,use); lossView();
+ charts(labels,pb,ab,curBlockIdx); performanceTop5(P,A,use); performanceFull(P,A,use); lossView();
  if(!agg){S.hourlyArgs={labels,bs,P,A,use};hourlySummary()}
  S.todayAch=ach;S.todayMaterial=material;
  // Last Updated — when this Dashboard view was last rendered/refreshed,
@@ -471,8 +471,8 @@ function insightBanner(P,A,use,loss,material){
  let action=topCat&&CATEGORY_ACTIONS[topCat]?`<span class="dash-insight-action">${esc(CATEGORY_ACTIONS[topCat])}</span>`:"";
  host.innerHTML=`<span class="dash-insight-icon">💡</span><span class="dash-insight-text">${parts.join(" · ")}${action}</span>`;
 }
-function performance(P,A,keys){
- if(!keys.length){$("performanceTable").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
+function performanceFull(P,A,keys){
+ if(!keys.length){$("performanceTableFull").innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
  let all=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
  // แยก 2 กลุ่ม: มีแผน (p>0) เรียง Achievement ต่ำสุดก่อน = ตัวที่แย่จริงต้อง
  // แก้ก่อน — กับ ไม่มีแผน (p=0) ที่ทำเพิ่มนอกแผน เรียง Actual มากสุดก่อน ไม่ให้
@@ -488,7 +488,25 @@ function performance(P,A,keys){
  }
  let rows=all,tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
  h+=`<tr class="dash-this-block-total"><td data-label=""></td><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
- h+='</tbody></table></div>';$("performanceTable").innerHTML=h;
+ h+='</tbody></table></div>';$("performanceTableFull").innerHTML=h;
+}
+// Compact management summary — Top 5 planned rows most needing attention.
+// Reuses plannedRowsSorted() (same function performanceFull() uses for its
+// own planned rows) — identical filter (p>0, unplanned never included) and
+// identical worst-Achievement-first ordering. No second ranking formula.
+function performanceTop5(P,A,keys){
+ let host=$("performanceTable");
+ if(!host)return;
+ if(!keys.length){host.innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
+ let top5=plannedRowsSorted(P,A,keys).slice(0,5);
+ if(!top5.length){host.innerHTML='<div class="empty-state">ไม่มี Model/Door ที่มีแผนสำหรับตัวกรองนี้</div>';return}
+ let h='<div class="table-scroll"><table class="grid mobile-cards dash-top5-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ top5.forEach((r,i)=>{
+  let q=splitKey(r.x);
+  h+=`<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${achClass(r.z)}">${r.z.toFixed(1)}%</td><td data-label="Status">${statusBadge(r.g)}</td></tr>`;
+ });
+ h+='</tbody></table></div>';
+ host.innerHTML=h;
 }
 function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status){
  let host=$("dashPrimaryKpis");
@@ -792,6 +810,7 @@ async function init(){
  });
  $("dashHourlySelect")?.addEventListener("change",hourlySummary);
  $("dashRefreshBtn")?.addEventListener("click",load);
+ $("dashViewAllPerf")?.addEventListener("click",()=>{let d=$("dashDetailSection");if(d)d.open=true});
  try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("dashLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${esc(x.lineName||x.name||"Line "+(x.lineId||x.code||x.id))}</option>`).join("");let c=ProdV2Context.get();if(c.date)$("dashDate").value=c.date;if(c.lineId&&[...$("dashLine").options].some(o=>o.value===c.lineId))$("dashLine").value=c.lineId;if(c.shift)$("dashShift").value=c.shift;if(c.viewMode&&[...$("dashViewMode").options].some(o=>o.value===c.viewMode)){$("dashViewMode").value=c.viewMode;$("dashDateEndWrap").style.display=c.viewMode==="range"?"":"none"}if($("dashDate").value&&$("dashLine").value&&$("dashShift").value)load()}catch(e){note(e.message,"plan-warn")}
 }
 addEventListener("DOMContentLoaded",init)})();
