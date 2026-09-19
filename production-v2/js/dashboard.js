@@ -140,7 +140,8 @@ function render(){
  $("hourlyChartH2").textContent=agg?"Plan vs Actual by Day":"Plan vs Actual by Time Block";
  $("hourlyChartP").textContent=agg?"Adjusted Plan เทียบกับยอดผลิตจริง รายวัน · วันไหนเริ่มหลุดแผน":"Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน";
  if(!agg)thisBlockCard(labels,pb,ab,bs,$("dashDate").value,P,A,use);
- charts(labels,pb,ab); performance(P,A,use); lossView();
+ let curBlockIdx=agg?-1:currentBlockIndex(bs,$("dashDate").value);
+ charts(labels,pb,ab,curBlockIdx); performance(P,A,use); lossView();
  if(!agg){S.hourlyArgs={labels,bs,P,A,use};hourlySummary()}
  S.todayAch=ach;S.todayMaterial=material;
  // Last Updated — when this Dashboard view was last rendered/refreshed,
@@ -236,7 +237,7 @@ let datalabelsRegistered=false;
 function ensureDatalabels(){
  if(!datalabelsRegistered&&window.ChartDataLabels){Chart.register(window.ChartDataLabels);datalabelsRegistered=true}
 }
-function charts(labels,p,a){
+function charts(labels,p,a,curBlockIdx){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
  const planColor="#2563eb",actualColor="#16a34a";
@@ -250,7 +251,60 @@ function charts(labels,p,a){
   }
  }}}}});
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
- S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[{label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,pointRadius:2},{label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:actualColor,pointRadius:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{datalabels:{display:false}}}});
+ // Custom external tooltip — reuses the SAME cp/ca cumulative arrays above,
+ // only needed because Chart.js's built-in tooltip can't color individual
+ // body lines (Gap needs green/red per value, not a single tooltip color).
+ function cumTooltip(ctx){
+  let {chart,tooltip}=ctx;
+  let wrap=chart.canvas.parentNode;
+  let el=wrap.querySelector(".dv2-cum-tooltip");
+  if(!el){el=document.createElement("div");el.className="dv2-cum-tooltip";wrap.style.position="relative";wrap.appendChild(el)}
+  if(tooltip.opacity===0){el.style.opacity=0;return}
+  let i=tooltip.dataPoints?.[0]?.dataIndex;
+  if(i==null){el.style.opacity=0;return}
+  let pv=Number(cp[i]||0),av=Number(ca[i]||0),gap=av-pv;
+  el.innerHTML=`<div class="dv2-cum-tt-time">${esc(labels[i]||"")}</div><div class="dv2-cum-tt-row">Plan: <b>${pv.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Actual: <b>${av.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Gap: <b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div>`;
+  el.style.opacity=1;
+  el.style.left=Math.min(tooltip.caretX+10,wrap.clientWidth-150)+"px";
+  el.style.top=tooltip.caretY+"px";
+ }
+ // Current-time dashed guide — registered ONLY on this chart instance
+ // (plugins:[...] below, not Chart.register()), so hourlyChart is never
+ // affected. curBlockIdx comes from the existing currentBlockIndex()
+ // function (already -1 for any non-today date or a completed shift) —
+ // no new time/production calculation.
+ const curTimePlugin={id:"cumCurTime",afterDraw(chart){
+  if(curBlockIdx==null||curBlockIdx<0)return;
+  let xScale=chart.scales.x,yScale=chart.scales.y;
+  if(!xScale||!yScale)return;
+  let xPix=xScale.getPixelForValue(curBlockIdx),ctx=chart.ctx;
+  ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);
+  ctx.moveTo(xPix,yScale.top);ctx.lineTo(xPix,yScale.bottom);
+  ctx.strokeStyle="#94a3b8";ctx.lineWidth=1.3;ctx.stroke();ctx.restore();
+ }};
+ S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[
+  {label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,borderDash:[6,4],borderWidth:2,pointRadius:2.5,pointHoverRadius:5,fill:false},
+  {label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:"rgba(22,163,74,.08)",borderWidth:2.5,pointRadius:2.5,pointHoverRadius:5,fill:true}
+ ]},options:{
+  responsive:true,maintainAspectRatio:false,
+  layout:{padding:{right:54,top:6}},
+  scales:{
+   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()}},
+   x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true}}
+  },
+  plugins:{
+   legend:{position:"top",align:"end",labels:{boxWidth:10,usePointStyle:true,padding:10,font:{size:11}}},
+   tooltip:{enabled:false,external:cumTooltip},
+   datalabels:{
+    display:context=>context.dataIndex===context.dataset.data.length-1,
+    align:context=>context.datasetIndex===0?"top":"bottom",
+    anchor:"end",clip:false,
+    formatter:v=>Math.round(v).toLocaleString(),
+    color:context=>context.datasetIndex===0?planColor:actualColor,
+    font:{weight:"700",size:11}
+   }
+  }
+ },plugins:[curTimePlugin]});
 }
 function statusBadge(gap){
  // Same thresholds as before (gap>=0 / gap>=-20 / gap<-20) — only the
