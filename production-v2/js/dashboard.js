@@ -253,7 +253,7 @@ function charts(labels,p,a,curBlockIdx){
  let cp=[],ca=[],x=0,y=0;p.forEach(v=>cp.push(x+=v));a.forEach(v=>ca.push(y+=v));
  // Custom external tooltip — reuses the SAME cp/ca cumulative arrays above,
  // only needed because Chart.js's built-in tooltip can't color individual
- // body lines (Gap needs green/red per value, not a single tooltip color).
+ // body lines (Plan/Actual/Gap each need their own color, not one tooltip color).
  function cumTooltip(ctx){
   let {chart,tooltip}=ctx;
   let wrap=chart.canvas.parentNode;
@@ -263,7 +263,7 @@ function charts(labels,p,a,curBlockIdx){
   let i=tooltip.dataPoints?.[0]?.dataIndex;
   if(i==null){el.style.opacity=0;return}
   let pv=Number(cp[i]||0),av=Number(ca[i]||0),gap=av-pv;
-  el.innerHTML=`<div class="dv2-cum-tt-time">${esc(labels[i]||"")}</div><div class="dv2-cum-tt-row">Plan: <b>${pv.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Actual: <b>${av.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Gap: <b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div>`;
+  el.innerHTML=`<div class="dv2-cum-tt-time">${esc(labels[i]||"")}</div><div class="dv2-cum-tt-row">Plan: <b class="dv2-cum-tt-plan">${pv.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Actual: <b class="dv2-cum-tt-actual">${av.toLocaleString()}</b></div><div class="dv2-cum-tt-row">Gap: <b class="${gap<0?"kpi-bad":"kpi-good"}">${gap>0?"+":""}${gap.toLocaleString()}</b></div>`;
   el.style.opacity=1;
   el.style.left=Math.min(tooltip.caretX+10,wrap.clientWidth-150)+"px";
   el.style.top=tooltip.caretY+"px";
@@ -272,7 +272,8 @@ function charts(labels,p,a,curBlockIdx){
  // (plugins:[...] below, not Chart.register()), so hourlyChart is never
  // affected. curBlockIdx comes from the existing currentBlockIndex()
  // function (already -1 for any non-today date or a completed shift) —
- // no new time/production calculation.
+ // no new time/production calculation. Time label reuses the SAME
+ // labels[] array already passed into charts() for the current block.
  const curTimePlugin={id:"cumCurTime",afterDraw(chart){
   if(curBlockIdx==null||curBlockIdx<0)return;
   let xScale=chart.scales.x,yScale=chart.scales.y;
@@ -280,25 +281,43 @@ function charts(labels,p,a,curBlockIdx){
   let xPix=xScale.getPixelForValue(curBlockIdx),ctx=chart.ctx;
   ctx.save();ctx.beginPath();ctx.setLineDash([4,4]);
   ctx.moveTo(xPix,yScale.top);ctx.lineTo(xPix,yScale.bottom);
-  ctx.strokeStyle="#94a3b8";ctx.lineWidth=1.3;ctx.stroke();ctx.restore();
+  ctx.strokeStyle="#64748b";ctx.lineWidth=1.3;ctx.stroke();
+  ctx.setLineDash([]);
+  let txt=labels[curBlockIdx]||"";
+  if(txt){
+   ctx.font="700 10px system-ui,-apple-system,sans-serif";
+   let tw=ctx.measureText(txt).width;
+   let boxX=Math.min(Math.max(xPix-tw/2,xScale.left),xScale.right-tw);
+   ctx.fillStyle="#475569";ctx.textBaseline="alphabetic";
+   ctx.fillText(txt,boxX,yScale.top-4);
+  }
+  ctx.restore();
  }};
  S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[
-  {label:"Cumulative Plan",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,borderDash:[6,4],borderWidth:2,pointRadius:2.5,pointHoverRadius:5,fill:false},
-  {label:"Cumulative Actual",data:ca,tension:.25,borderColor:actualColor,backgroundColor:"rgba(22,163,74,.08)",borderWidth:2.5,pointRadius:2.5,pointHoverRadius:5,fill:true}
+  {label:"Plan (Cumulative)",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,borderDash:[6,4],borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:false},
+  {label:"Actual (Cumulative)",data:ca,tension:.25,borderColor:actualColor,backgroundColor:"rgba(22,163,74,.06)",borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:true}
  ]},options:{
   responsive:true,maintainAspectRatio:false,
-  layout:{padding:{right:54,top:6}},
+  layout:{padding:{right:60,top:18}},
   scales:{
-   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()}},
-   x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true}}
+   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()},grid:{color:"rgba(148,163,184,.15)"}},
+   x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true},grid:{color:"rgba(148,163,184,.08)"}}
   },
   plugins:{
-   legend:{position:"top",align:"end",labels:{boxWidth:10,usePointStyle:true,padding:10,font:{size:11}}},
+   legend:{
+    position:"top",align:"end",
+    labels:{
+     boxWidth:22,boxHeight:2,usePointStyle:true,padding:12,font:{size:11},
+     generateLabels:chart=>chart.data.datasets.map((ds,i)=>({
+      text:ds.label,strokeStyle:ds.borderColor,fillStyle:ds.borderColor,
+      lineWidth:ds.borderWidth,lineDash:ds.borderDash||[],pointStyle:"line",datasetIndex:i
+     }))
+    }
+   },
    tooltip:{enabled:false,external:cumTooltip},
    datalabels:{
     display:context=>context.dataIndex===context.dataset.data.length-1,
-    align:context=>context.datasetIndex===0?"top":"bottom",
-    anchor:"end",clip:false,
+    anchor:"center",align:"right",offset:6,clip:false,
     formatter:v=>Math.round(v).toLocaleString(),
     color:context=>context.datasetIndex===0?planColor:actualColor,
     font:{weight:"700",size:11}
