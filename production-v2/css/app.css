@@ -1161,3 +1161,20 @@ input,select,textarea,.grid input,.grid select{
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fdf3f3;border-color:#f3c6c6}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#0f2417;border-color:#1e4030}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
+
+/* ============================================================
+   CUMULATIVE PLAN VS ACTUAL — custom external tooltip element (built by
+   the cumTooltip() function in charts(), dashboard.js). Positioned via
+   inline left/top set in JS; all colors/typography here.
+   ============================================================ */
+.dv2-cum-tooltip{
+  position:absolute;pointer-events:none;z-index:20;transform:translate(-8px,-100%);
+  background:#1e2937;color:#fff;border-radius:7px;padding:8px 11px;
+  font-size:11.5px;line-height:1.5;box-shadow:0 4px 14px rgba(15,23,42,.25);
+  opacity:0;transition:opacity .1s;white-space:nowrap
+}
+.dv2-cum-tt-time{font-weight:800;margin-bottom:3px;color:#cbd5e1;font-size:10.5px;letter-spacing:.03em}
+.dv2-cum-tt-row{display:flex;justify-content:space-between;gap:14px}
+.dv2-cum-tt-row b{font-weight:700;color:#fff}
+.dv2-cum-tt-row b.kpi-good{color:#4ade80}
+.dv2-cum-tt-row b.kpi-bad{color:#f87171}
