@@ -1196,3 +1196,25 @@ input,select,textarea,.grid input,.grid select{
 /* Line Performance now spans full width per the new stacked layout. Its
    row-level density (padding/font) is already set by the existing
    .dash-line-perf-table rules — untouched, no redesign here. */
+
+/* ============================================================
+   LINE PERFORMANCE — compact horizontal cards (replaces the table
+   presentation). Same data/values as before, presentation only.
+   ============================================================ */
+.dash-line-perf-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:900px){.dash-line-perf-cards{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.dash-line-perf-cards{grid-template-columns:1fr}}
+.dash-line-card{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--card)}
+.dash-line-card-current{border-color:#bcd4fb;background:#f7faff}
+[data-theme="dark"] .dash-line-card-current{background:#141f30;border-color:#26456f}
+.dash-line-card-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px}
+.dash-line-card-name{font-size:12.5px;font-weight:800;color:var(--heading)}
+.dash-line-card-tag{font-size:8.5px;font-weight:800;letter-spacing:.05em;color:#fff;background:var(--blue);padding:2px 6px;border-radius:4px}
+.dash-line-card-actual{display:flex;align-items:baseline;gap:6px;margin-bottom:6px}
+.dash-line-card-actual b{font-size:19px;font-weight:800;color:var(--heading)}
+.dash-line-card-plan{font-size:10.5px;color:var(--muted)}
+.dash-line-card-stats{display:flex;gap:16px;margin-bottom:6px}
+.dash-line-card-stats div{display:flex;flex-direction:column;gap:1px}
+.dash-line-card-stats small{font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--muted)}
+.dash-line-card-stats b{font-size:12.5px;font-weight:700}
+.dash-line-card-status .status-badge{font-size:9.5px;padding:2px 7px}
