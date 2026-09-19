@@ -258,17 +258,17 @@ function charts(labels,p,a,curBlockIdx){
   el.style.top=tooltip.caretY+"px";
  }
  S.hourly=new Chart($("hourlyChart"),{type:"bar",data:{labels,datasets:[
-  {label:"Adjusted Plan",data:p,backgroundColor:planColor,borderColor:planColor,borderRadius:2,barPercentage:.62,categoryPercentage:.52},
-  {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderRadius:2,barPercentage:.62,categoryPercentage:.52}
+  {label:"Adjusted Plan",data:p,backgroundColor:"rgba(37,99,235,.20)",borderColor:planColor,borderWidth:1.25,borderRadius:2,barPercentage:.82,categoryPercentage:.72},
+  {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:2,barPercentage:.82,categoryPercentage:.72}
  ]},options:{
   responsive:true,maintainAspectRatio:false,
   layout:{padding:{bottom:6}},
   scales:{
-   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()},grid:{color:"rgba(148,163,184,.10)"}},
-   x:{ticks:{maxRotation:15,minRotation:15,autoSkip:true,autoSkipPadding:8},grid:{display:false}}
+   y:{beginAtZero:true,title:{display:true,text:"pcs",font:{size:10}},ticks:{callback:v=>Math.round(v).toLocaleString()},grid:{color:"rgba(148,163,184,.07)"}},
+   x:{ticks:{maxRotation:0,minRotation:0,autoSkip:false},grid:{display:false}}
   },
   plugins:{
-   legend:{position:"top",align:"end",labels:{boxWidth:8,boxHeight:8,padding:10,font:{size:11}}},
+   legend:{display:false},
    tooltip:{enabled:false,external:hourlyTooltip},
    datalabels:{
     // Actual only, per the "if crowded show Actual only" instruction —
