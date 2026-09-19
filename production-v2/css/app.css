@@ -1180,3 +1180,15 @@ input,select,textarea,.grid input,.grid select{
 .dv2-cum-tt-actual{color:#4ade80}
 .dv2-cum-tt-row b.kpi-good{color:#4ade80}
 .dv2-cum-tt-row b.kpi-bad{color:#f87171}
+
+/* ============================================================
+   CUMULATIVE PLAN VS ACTUAL — static HTML legend (replaces the unreliable
+   Chart.js built-in point-style legend, which does not apply custom
+   lineDash to pointStyle:"line" items in the loaded Chart.js version).
+   Fixed text, no JS involvement.
+   ============================================================ */
+.dv2-cum-legend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--text);white-space:nowrap}
+.dv2-cum-legend-item{display:flex;align-items:center;gap:5px}
+.dv2-cum-legend-swatch{display:inline-block;width:18px;height:0;border-top:2.5px solid;vertical-align:middle}
+.dv2-cum-legend-plan{border-top-style:dashed;border-top-color:#2563eb}
+.dv2-cum-legend-actual{border-top-style:solid;border-top-color:#16a34a}
