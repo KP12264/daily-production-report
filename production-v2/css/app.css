@@ -1218,3 +1218,10 @@ input,select,textarea,.grid input,.grid select{
 .dash-line-card-stats small{font-size:8.5px;font-weight:800;letter-spacing:.05em;color:var(--muted)}
 .dash-line-card-stats b{font-size:12.5px;font-weight:700}
 .dash-line-card-status .status-badge{font-size:9.5px;padding:2px 7px}
+
+/* Plan vs Actual by Time Block — bar-chart legend swatches (filled
+   squares, matching the bar fill styles, not the line-chart dashed/solid
+   swatches used by Cumulative). Reuses .dv2-cum-legend's layout/container
+   rules — only the swatch shape differs. */
+.dv2-bar-legend-plan{width:12px;height:12px;border-radius:2px;border:1.25px solid #2563eb;background:rgba(37,99,235,.20)}
+.dv2-bar-legend-actual{width:12px;height:12px;border-radius:2px;background:#16a34a}
