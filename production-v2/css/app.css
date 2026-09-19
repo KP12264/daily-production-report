@@ -1167,7 +1167,7 @@ input,select,textarea,.grid input,.grid select{
    the cumTooltip() function in charts(), dashboard.js). Positioned via
    inline left/top set in JS; all colors/typography here.
    ============================================================ */
-.dv2-cum-tooltip{
+.dv2-cum-tooltip,.dv2-hourly-tooltip{
   position:absolute;pointer-events:none;z-index:20;transform:translate(-8px,-100%);
   background:#1e2937;color:#fff;border-radius:6px;padding:6px 9px;
   font-size:11px;line-height:1.4;box-shadow:0 4px 14px rgba(15,23,42,.25);
