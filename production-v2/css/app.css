@@ -1229,3 +1229,24 @@ input,select,textarea,.grid input,.grid select{
    rules — only the swatch shape differs. */
 .dv2-bar-legend-plan{width:12px;height:12px;border-radius:2px;border:1.25px solid #2563eb;background:rgba(37,99,235,.20)}
 .dv2-bar-legend-actual{width:12px;height:12px;border-radius:2px;background:#16a34a}
+
+/* ============================================================
+   MODEL PERFORMANCE (TOP GAP) — compact management summary.
+   Fixes a pre-existing specificity issue: an older #performanceTable rule
+   (ID-scoped, font-size:14px/padding:12px 10px) outranked the newer
+   .dv2-main table.grid compact rules — overriding it here with equal ID
+   specificity so this card is genuinely compact, matching "approximately
+   5 rows visible, compact row height".
+   ============================================================ */
+.dv2-main #performanceTable .grid th,.dv2-main #performanceTable .grid td{font-size:11.5px;padding:5px 8px}
+.dv2-main #performanceTable .status-badge{font-size:9.5px;padding:2px 7px}
+#performanceTable table.grid td:nth-child(2),#performanceTableFull table.grid td:nth-child(2){font-weight:700;color:var(--heading)}
+/* Extend the existing numeric-alignment rules to the full-view table too */
+#performanceTableFull table.grid td:nth-child(3),#performanceTableFull table.grid th:nth-child(3){text-align:center}
+#performanceTableFull table.grid td:nth-child(4),#performanceTableFull table.grid td:nth-child(5),#performanceTableFull table.grid td:nth-child(6),#performanceTableFull table.grid td:nth-child(7),
+#performanceTableFull table.grid th:nth-child(4),#performanceTableFull table.grid th:nth-child(5),#performanceTableFull table.grid th:nth-child(6),#performanceTableFull table.grid th:nth-child(7){text-align:right}
+#performanceTableFull table.grid td:nth-child(8),#performanceTableFull table.grid th:nth-child(8){text-align:center}
+
+/* "View All →" link in the section header */
+.dv2-view-all-link{font-size:11px;font-weight:700;color:var(--blue);text-decoration:none;white-space:nowrap}
+.dv2-view-all-link:hover{text-decoration:underline}
