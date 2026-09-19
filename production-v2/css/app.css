@@ -1020,7 +1020,11 @@ input,select,textarea,.grid input,.grid select{
 /* Line Performance — denser rows, subtle left-border current-line accent
    instead of a full pastel row fill */
 .dash-line-perf-table td,.dash-line-perf-table th{padding:5px 8px;font-size:11.5px}
-.dash-line-perf-table th{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
+.dash-line-perf-table th{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;background:#f7f9fc}
+[data-theme="dark"] .dash-line-perf-table th{background:#1c2532}
+.dash-line-perf-table td:nth-child(2),.dash-line-perf-table td:nth-child(3),.dash-line-perf-table td:nth-child(4),.dash-line-perf-table td:nth-child(5),
+.dash-line-perf-table th:nth-child(2),.dash-line-perf-table th:nth-child(3),.dash-line-perf-table th:nth-child(4),.dash-line-perf-table th:nth-child(5){text-align:right}
+.dash-line-perf-table td:nth-child(6),.dash-line-perf-table th:nth-child(6){text-align:center}
 .dash-line-perf-table tr.dash-line-current td{background:transparent;border-left:3px solid var(--blue)}
 .dash-line-perf-table tr.dash-line-current td:first-child{padding-left:6px}
 
