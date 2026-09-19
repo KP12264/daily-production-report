@@ -1008,6 +1008,7 @@ input,select,textarea,.grid input,.grid select{
 @media(min-width:1200px){
   .dv2-col-60-40{grid-template-columns:1.5fr 1fr}
   .dv2-col-52-48{grid-template-columns:1.08fr 1fr}
+  .dv2-col-65-35{grid-template-columns:1.86fr 1fr}
 }
 /* Chart card padding tightened so the plotting area (not the card) reads
    as visually dominant — same chart heights as before, more of the card
@@ -1250,3 +1251,32 @@ input,select,textarea,.grid input,.grid select{
 /* "View All →" link in the section header */
 .dv2-view-all-link{font-size:11px;font-weight:700;color:var(--blue);text-decoration:none;white-space:nowrap;border:0;background:none;cursor:pointer;font-family:inherit;padding:0}
 .dv2-view-all-link:hover{text-decoration:underline}
+
+/* ============================================================
+   LAYOUT POLISH ROUND — Cumulative+LinePerf row, Model Performance width
+   fix, Loss Time Analysis emphasis. Presentation only.
+   ============================================================ */
+
+/* Model Performance (Top Gap) / Full — column width distribution so the
+   table uses the full card width instead of centering at its natural
+   narrow content width (root cause was the stale .empty-state class on
+   the host, fixed in dashboard.js; this distributes width sensibly once
+   the table is genuinely full-width). */
+.dash-perf-wide-table{table-layout:fixed;width:100%}
+.dash-perf-wide-table th:nth-child(1),.dash-perf-wide-table td:nth-child(1){width:34px}
+.dash-perf-wide-table th:nth-child(2),.dash-perf-wide-table td:nth-child(2){width:auto}
+.dash-perf-wide-table th:nth-child(3),.dash-perf-wide-table td:nth-child(3){width:60px}
+.dash-perf-wide-table th:nth-child(4),.dash-perf-wide-table td:nth-child(4),
+.dash-perf-wide-table th:nth-child(5),.dash-perf-wide-table td:nth-child(5),
+.dash-perf-wide-table th:nth-child(6),.dash-perf-wide-table td:nth-child(6),
+.dash-perf-wide-table th:nth-child(7),.dash-perf-wide-table td:nth-child(7){width:80px}
+.dash-perf-wide-table th:nth-child(8),.dash-perf-wide-table td:nth-child(8){width:96px}
+.dash-perf-wide-table td:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Loss Time Analysis — Total Loss Time reads stronger; largest category
+   (first row — lossCategoryBars() already sorts by minutes descending)
+   gets a slightly bolder label so it's the easiest to spot at a glance */
+.dash-loss-total-line{font-size:12px;margin-bottom:10px;padding-bottom:8px}
+.dash-loss-total-line b{font-size:22px;font-weight:800;margin-left:8px}
+.dash-loss-bar-row:first-of-type .dash-loss-bar-label{font-weight:800;color:var(--heading)}
+.dash-loss-bar-row:first-of-type .dash-loss-bar-fill{background:linear-gradient(90deg,#ea580c,#dc2626)}
