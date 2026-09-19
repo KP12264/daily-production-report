@@ -58,7 +58,7 @@
 
 <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2>Cumulative Plan vs Actual</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div><div class="dv2-cum-legend"><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-cum-legend-plan"></span>Plan (Cumulative)</span><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-cum-legend-actual"></span>Actual (Cumulative)</span></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
 
-<section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance</h2><p>Plan, Actual, Gap และ Achievement · เรียงตามที่หลุดแผนมากสุดก่อน</p></div></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+<section class="section-card"><div class="section-title-row"><div><h2>Model Performance (Top Gap)</h2><p>5 Model/Door ที่หลุดแผนมากสุด · เรียงจาก Achievement ต่ำสุดก่อน</p></div><a href="#dashDetailSection" id="dashViewAllPerf" class="dv2-view-all-link">View All →</a></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
 
 <div class="dv2-two-col dv2-col-52-48">
   <section class="section-card"><div class="section-title-row"><div><h2>Loss Time Analysis</h2></div></div><div id="dashLossBars"></div></section>
@@ -68,11 +68,12 @@
 <!-- ===== DETAILED / ENGINEERING VIEW — existing sections, unchanged
      calculations/data/drill-down behavior, just relocated + collapsed by
      default so the management flow above stays clean. ===== -->
-<details class="dv2-detail-section">
+<details class="dv2-detail-section" id="dashDetailSection">
   <summary>Detailed / Engineering View</summary>
   <section id="dashThisBlock" class="dash-this-block"></section>
   <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
   <section id="dashAchievementBar" class="dash-ach-bar"></section>
+  <section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance — Full</h2><p>Plan, Actual, Gap และ Achievement ทั้งหมด · รวม Unplanned และ TOTAL</p></div></div><div id="performanceTableFull" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
   <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
   <section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
 </details>
