@@ -743,10 +743,18 @@ async function otherLinesToday(dateList,sh,currentLineId){
    return {lid,name:ln.lineName||ln.name||lid,plan,actual,ach:plan?actual/plan*100:0};
   }));
   if(!rows.length)return;
-  host.innerHTML=`<table class="grid dash-line-perf-table"><thead><tr><th>Line</th><th>Plan</th><th>Actual</th><th>Ach.</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows.map(r=>{
-   let gap=r.actual-r.plan;
-   return `<tr class="${r.lid===currentLineId?"dash-line-current":""}"><td>${esc(r.name)}${r.lid===currentLineId?" <small>(current)</small>":""}</td><td>${r.plan.toLocaleString()}</td><td><b>${r.actual.toLocaleString()}</b></td><td class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</td><td class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</td><td>${r.plan?statusBadge(gap):"—"}</td></tr>`;
-  }).join("")}</tbody></table>`;
+  host.innerHTML=`<div class="dash-line-perf-cards">${rows.map(r=>{
+   let gap=r.actual-r.plan,isCur=r.lid===currentLineId;
+   return `<div class="dash-line-card${isCur?" dash-line-card-current":""}">
+    <div class="dash-line-card-head"><span class="dash-line-card-name">${esc(r.name)}</span>${isCur?'<span class="dash-line-card-tag">CURRENT</span>':""}</div>
+    <div class="dash-line-card-actual"><b>${r.actual.toLocaleString()}</b><span class="dash-line-card-plan">/ ${r.plan.toLocaleString()} Plan</span></div>
+    <div class="dash-line-card-stats">
+     <div><small>ACH.</small><b class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</b></div>
+     <div><small>GAP</small><b class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</b></div>
+    </div>
+    <div class="dash-line-card-status">${r.plan?statusBadge(gap):"—"}</div>
+   </div>`;
+  }).join("")}</div>`;
  }catch(e){console.error(e)}
 }
 async function init(){
