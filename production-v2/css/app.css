@@ -996,6 +996,11 @@ input,select,textarea,.grid input,.grid select{
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#f7fcfa;border-color:#dce4ee}
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffcf5;border-color:#dce4ee}
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fff8f8;border-color:#dce4ee}
+/* Achievement — supporting information, not competing with Gap/Production
+   Status. Card tint above stays (still signals "behind" at a glance), but
+   the number itself uses the existing neutral secondary color at normal
+   weight instead of the full danger red. achClass()/thresholds untouched. */
+.dv2-kpi-6 .dash-pkpi:nth-child(4) b.kpi-bad{color:var(--muted)!important;font-weight:500}
 .dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffcf5;border-color:#dce4ee}
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcfa;border-color:#dce4ee}
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#dce4ee}
@@ -1011,19 +1016,20 @@ input,select,textarea,.grid input,.grid select{
 @media(min-width:1200px){
   .dv2-col-60-40{grid-template-columns:1.5fr 1fr}
   .dv2-col-52-48{grid-template-columns:1.08fr 1fr}
-  .dv2-col-65-35{grid-template-columns:1.86fr 1fr}
+  .dv2-col-65-35{grid-template-columns:2.6fr 1fr}
 }
 /* Chart card padding tightened so the plotting area (not the card) reads
    as visually dominant — same chart heights as before, more of the card
    is now canvas */
 .dv2-chart-card{padding:10px 10px 8px}
 .dv2-chart-card .section-title-row{padding:0 4px}
-.dv2-chart-card .chart-box{height:260px;margin-top:4px}
-@media(min-width:1600px){.dv2-chart-card .chart-box{height:300px}}
+.dv2-chart-card .chart-box{height:225px;margin-top:4px}
+@media(min-width:1600px){.dv2-chart-card .chart-box{height:255px}}
 
 /* Line Performance — denser rows, subtle left-border current-line accent
    instead of a full pastel row fill */
 .dash-line-perf-table td,.dash-line-perf-table th{padding:5px 8px;font-size:11.5px}
+#dashOtherLines .dash-line-perf-table{width:92%;margin:0 auto}
 .dash-line-perf-table th{font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;background:#f7f9fc}
 [data-theme="dark"] .dash-line-perf-table th{background:#1c2532}
 .dash-line-perf-table td:nth-child(2),.dash-line-perf-table td:nth-child(3),.dash-line-perf-table td:nth-child(4),.dash-line-perf-table td:nth-child(5),
@@ -1264,7 +1270,7 @@ input,select,textarea,.grid input,.grid select{
    table uses the full card width instead of centering at its natural
    narrow content width. */
 .dash-perf-wide-table{table-layout:fixed;width:100%}
-#performanceTable .dash-perf-wide-table{width:78%;margin:0 auto;height:auto;min-height:0}
+#performanceTable .dash-perf-wide-table{width:70%;margin:0 auto;height:auto;min-height:0}
 #performanceTable{height:auto;min-height:0}
 #performanceTable .table-scroll{height:auto;min-height:0;margin-top:12px;margin-bottom:6px}
 .dv2-main .section-card:has(#performanceTable){padding-top:9px;padding-bottom:8px;height:auto;min-height:0}
