@@ -261,7 +261,7 @@ function charts(labels,p,a,curBlockIdx){
   {label:"Adjusted Plan",data:p,
    backgroundColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.16)":"rgba(59,130,246,.25)";
+    return isFuture?"rgba(148,163,184,.16)":"rgba(59,130,246,.33)";
    },
    borderColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
