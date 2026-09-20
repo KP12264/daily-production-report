@@ -1016,7 +1016,7 @@ input,select,textarea,.grid input,.grid select{
 @media(min-width:1200px){
   .dv2-col-60-40{grid-template-columns:1.5fr 1fr}
   .dv2-col-52-48{grid-template-columns:1.08fr 1fr}
-  .dv2-col-65-35{grid-template-columns:2.6fr 1fr}
+  .dv2-col-65-35{grid-template-columns:2.125fr 1fr}
 }
 /* Chart card padding tightened so the plotting area (not the card) reads
    as visually dominant — same chart heights as before, more of the card
