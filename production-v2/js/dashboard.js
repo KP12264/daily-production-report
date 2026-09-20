@@ -240,7 +240,7 @@ function ensureDatalabels(){
 function charts(labels,p,a,curBlockIdx){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
- const planColor="#2563eb",actualColor="#059669";
+ const planColor="#4f46e5",actualColor="#059669";
  // External tooltip — same technique as cumChart's, needed here too since
  // the built-in Chart.js tooltip can't color Gap red/green individually.
  function hourlyTooltip(ctx){
@@ -261,11 +261,11 @@ function charts(labels,p,a,curBlockIdx){
   {label:"Adjusted Plan",data:p,
    backgroundColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.16)":"#DBEAFE";
+    return isFuture?"rgba(148,163,184,.16)":"#C7D2FE";
    },
    borderColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.45)":"#2563EB";
+    return isFuture?"rgba(148,163,184,.45)":"#4F46E5";
    },
    borderWidth:1,borderRadius:3,barPercentage:.85,categoryPercentage:.76},
   {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:3,barPercentage:.85,categoryPercentage:.76}
