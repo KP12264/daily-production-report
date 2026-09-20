@@ -1287,8 +1287,8 @@ input,select,textarea,.grid input,.grid select{
    full danger-red emphasis; Achievement's bad state uses the existing
    neutral secondary text color instead, at normal weight, so it doesn't
    visually compete. No new color introduced; achClass() itself untouched. */
-#performanceTable .dash-perf-wide-table td:nth-child(7).kpi-bad,
-#performanceTableFull .dash-perf-wide-table td:nth-child(7).kpi-bad{color:var(--muted)!important;font-weight:500}
+#performanceTable .dash-perf-wide-table td[data-label="Ach."].kpi-bad,
+#performanceTableFull .dash-perf-wide-table td[data-label="Ach."].kpi-bad{color:var(--muted)!important;font-weight:500}
 
 
 /* Loss Time Analysis / Recent Issues — compact empty state (120-150px)
