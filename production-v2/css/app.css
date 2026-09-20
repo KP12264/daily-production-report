@@ -1295,4 +1295,3 @@ input,select,textarea,.grid input,.grid select{
 .dash-loss-total-line{font-size:12px;margin-bottom:10px;padding-bottom:8px}
 .dash-loss-total-line b{font-size:22px;font-weight:800;margin-left:8px}
 .dash-loss-bar-row:first-of-type .dash-loss-bar-label{font-weight:800;color:var(--heading)}
-.dash-loss-bar-row:first-of-type .dash-loss-bar-fill{background:linear-gradient(90deg,#f97316,#ef4444)}
