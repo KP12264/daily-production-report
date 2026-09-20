@@ -5,17 +5,17 @@
   --blue:#2563eb;
   --blue-deep:#1d4ed8;
   --blue-soft:#eff6ff;
-  --green:#16a34a;
-  --green-soft:#f0fdf4;
+  --green:#059669;
+  --green-soft:#ecfdf5;
   --orange:#d97706;
   --red:#dc2626;
-  --bg:#f1f5f9;
+  --bg:#f4f7fb;
   --card:#ffffff;
-  --bg-soft:#f8fafc;
+  --bg-soft:#f1f5f9;
   --text:#1f2937;
   --heading:#0f2747;
   --muted:#64748b;
-  --line:#e2e8f0;
+  --line:#dce4ee;
   --line2:#eef2f7;
   --shadow:0 2px 8px rgba(15,23,42,.06);
 }
@@ -415,7 +415,7 @@ input,select,textarea,.grid input,.grid select{
 .danger-plan:hover{background:#fff1f2}
 
 /* STEP 8 — Dashboard */
-.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}.kpi-watch{color:#d97706!important}
+.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#047857!important}.kpi-bad{color:#dc2626!important}.kpi-watch{color:#d97706!important}
 @media(max-width:1100px){.dash-filters{grid-template-columns:repeat(3,1fr)}.dash-kpis{grid-template-columns:repeat(3,1fr)}.dash-grid{grid-template-columns:1fr}}
 
 /* AUTH — Production V2 slim read-only banner (page content stays visible/usable
@@ -549,9 +549,9 @@ input,select,textarea,.grid input,.grid select{
 .dash-status-icon{font-size:28px;line-height:1}
 .dash-status-text{font-size:26px;font-weight:800;letter-spacing:.02em}
 .dash-status-sub{font-size:13px;opacity:.85;margin-left:auto}
-.dash-status-banner.kpi-good-bg{background:var(--green-soft);color:#15803d;border:1px solid #bbf7d0}
+.dash-status-banner.kpi-good-bg{background:var(--green-soft);color:#047857;border:1px solid #a7f3d0}
 .dash-status-banner.kpi-bad-bg{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
-[data-theme="dark"] .dash-status-banner.kpi-good-bg{background:#0f2417;color:#4ade80;border-color:#166534}
+[data-theme="dark"] .dash-status-banner.kpi-good-bg{background:#0f2417;color:#34d399;border-color:#166534}
 [data-theme="dark"] .dash-status-banner.kpi-bad-bg{background:#2a1414;color:#f87171;border-color:#7f1d1d}
 .dash-insight-banner{display:flex;align-items:flex-start;gap:10px;border-radius:12px;padding:14px 20px;margin:-8px 0 16px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-size:14px;line-height:1.6}
 .dash-insight-banner:empty{display:none}
@@ -714,10 +714,10 @@ input,select,textarea,.grid input,.grid select{
    Performance (ON TARGET / WATCH / BEHIND PLAN). Text-based per spec, not
    color-only, and never fills the whole row — just this one cell. */
 .status-badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.03em;white-space:nowrap}
-.status-badge.status-good{background:var(--green-soft);color:#15803d}
+.status-badge.status-good{background:var(--green-soft);color:#047857}
 .status-badge.status-watch{background:#fffbeb;color:#d97706}
 .status-badge.status-bad{background:#fef2f2;color:#dc2626}
-[data-theme="dark"] .status-badge.status-good{background:#0f2417;color:#4ade80}
+[data-theme="dark"] .status-badge.status-good{background:#0f2417;color:#34d399}
 [data-theme="dark"] .status-badge.status-watch{background:#3a2a12;color:#fbbf24}
 [data-theme="dark"] .status-badge.status-bad{background:#2a1414;color:#f87171}
 
@@ -902,7 +902,10 @@ input,select,textarea,.grid input,.grid select{
    DASHBOARD V2 — Industrial monitoring visual refinement
    (index.html ONLY, scoped under .dv2-shell/.dv2-main)
    ============================================================ */
-.dv2-shell{display:flex;align-items:flex-start;min-height:100vh;background:#f4f7fb}
+.dv2-shell{
+  --green:#059669;--green-soft:#ecfdf5;--line:#dce4ee;
+  display:flex;align-items:flex-start;min-height:100vh;background:#f4f7fb
+}
 [data-theme="dark"] .dv2-shell{background:var(--bg)}
 
 /* ---------- Sidebar — 180px, dark navy, full height ---------- */
@@ -939,7 +942,7 @@ input,select,textarea,.grid input,.grid select{
 .dv2-last-updated b{font-size:10.5px;color:var(--heading);opacity:1}
 .dv2-realtime-dot{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text);font-weight:600}
 .dv2-dot-green{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;flex:0 0 auto}
-.dv2-header-right .isolation-pill{font-size:9px;padding:2px 7px}
+.dv2-header-right .isolation-pill{font-size:9px;padding:2px 7px;border-color:#a7f3d0;color:#047857;background:#ecfdf5}
 .dv2-header-right .hero-status{font-size:10px}
 
 /* ---------- Filter row — ONE compact toolbar strip, not 6 separate
@@ -964,7 +967,7 @@ input,select,textarea,.grid input,.grid select{
 }
 .dv2-refresh-btn:hover{background:#1d4ed8}
 .dv2-filter-chips .notice.info-notice{flex:0 0 auto;margin:0;padding:6px 12px;background:none;border:0;border-right:1px solid var(--line);font-size:10.5px;font-weight:600;color:var(--muted);align-self:center}
-.dv2-filter-chips .notice.info-notice.plan-ok{color:#15803d}
+.dv2-filter-chips .notice.info-notice.plan-ok{color:#047857}
 .dv2-filter-chips .notice.info-notice.plan-warn{color:#b45309}
 .dv2-filter-chips .notice.info-notice.err{color:#dc2626}
 
@@ -986,16 +989,16 @@ input,select,textarea,.grid input,.grid select{
    pastel block. 1=Expected Now, 2=Actual, 3=Gap, 4=Achievement, 5=Loss,
    6=Production Status (reacts to the SAME kpi-good/kpi-bad classes
    dashboard.js already sets — no new status logic) */
-.dv2-kpi-6 .dash-pkpi:nth-child(1){background:#f8faff;border-color:#dbeafe}
-.dv2-kpi-6 .dash-pkpi:nth-child(2){background:#f7fcf9;border-color:#d1fae5}
-.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
-.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffcf5;border-color:#fde68a}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
-.dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffcf5;border-color:#fde68a}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
+.dv2-kpi-6 .dash-pkpi:nth-child(1){background:#f8faff;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(2){background:#f7fcfa;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good){background:#f7fcfa;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fff8f8;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#f7fcfa;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffcf5;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fff8f8;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffcf5;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcfa;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#dce4ee}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi{background:#171f2b;border-color:#26313f}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(1){background:#131c2c}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(2),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#10201a}
@@ -1046,7 +1049,7 @@ input,select,textarea,.grid input,.grid select{
 .dv2-main .section-title-row h2{font-size:13px;font-weight:700}
 .dv2-main .section-title-row p{font-size:10.5px;opacity:.85}
 .dv2-main table.grid td,.dv2-main table.grid th{padding:5px 8px;font-size:11.5px}
-.dv2-main table.grid th{font-weight:700;background:#f8fafc;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
+.dv2-main table.grid th{font-weight:700;background:#f1f5f9;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
 [data-theme="dark"] .dv2-main table.grid th{background:#1c2532}
 .dv2-main .dash-status-banner{padding:7px 14px;border-radius:7px}
 .dv2-main .dash-status-icon{font-size:17px}
@@ -1116,14 +1119,14 @@ input,select,textarea,.grid input,.grid select{
 }
 /* 2 — Actual: Factory, subtle green */
 .dv2-kpi-6 .dash-pkpi:nth-child(2)::before{
-  background-color:#e7f8ee;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-6 4V8l-6 4V4a1 1 0 0 0-1.243-.97L2 6Z'/%3E%3Cpath d='M17 18h1'/%3E%3Cpath d='M12 18h1'/%3E%3Cpath d='M7 18h1'/%3E%3C/svg%3E")
+  background-color:#d1fae5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-6 4V8l-6 4V4a1 1 0 0 0-1.243-.97L2 6Z'/%3E%3Cpath d='M17 18h1'/%3E%3Cpath d='M12 18h1'/%3E%3Cpath d='M7 18h1'/%3E%3C/svg%3E")
 }
 /* 3 — Gap: TrendingUp (green) if kpi-good, TrendingDown (red) if kpi-bad —
    dashboard.js already puts one of these 2 classes on the number */
 .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good)::before{
-  background-color:#e7f8ee;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 7 13.5 15.5 8.5 10.5 2 17'/%3E%3Cpolyline points='16 7 22 7 22 13'/%3E%3C/svg%3E")
+  background-color:#d1fae5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 7 13.5 15.5 8.5 10.5 2 17'/%3E%3Cpolyline points='16 7 22 7 22 13'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad)::before{
   background-color:#fdeaea;
@@ -1132,8 +1135,8 @@ input,select,textarea,.grid input,.grid select{
 /* 4 — Achievement: Target, tinted by the existing achClass() result
    (kpi-good/kpi-watch/kpi-bad) already on the number */
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good)::before{
-  background-color:#e7f8ee;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
+  background-color:#d1fae5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch)::before{
   background-color:#fff3d6;
@@ -1152,8 +1155,8 @@ input,select,textarea,.grid input,.grid select{
 /* 6 — Production Status: CircleCheck (green) if kpi-good, TriangleAlert
    (red) if kpi-bad — same status/gapExpected-derived class as before */
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good)::before{
-  background-color:#e7f8ee;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")
+  background-color:#d1fae5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad)::before{
   background-color:#fdeaea;
@@ -1162,8 +1165,8 @@ input,select,textarea,.grid input,.grid select{
 /* Production Status card — strongest semantic treatment, slightly wider */
 .dv2-kpi-6 .dash-pkpi:nth-child(6){padding-left:60px}
 .dv2-kpi-6 .dash-pkpi:nth-child(6)::before{width:40px;height:40px;background-size:22px 22px}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcfa;border-color:#dce4ee}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#dce4ee}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#0f2417;border-color:#1e4030}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
 
@@ -1182,8 +1185,8 @@ input,select,textarea,.grid input,.grid select{
 .dv2-cum-tt-row{display:flex;justify-content:space-between;gap:12px}
 .dv2-cum-tt-row b{font-weight:700;color:#fff}
 .dv2-cum-tt-plan{color:#60a5fa}
-.dv2-cum-tt-actual{color:#4ade80}
-.dv2-cum-tt-row b.kpi-good{color:#4ade80}
+.dv2-cum-tt-actual{color:#34d399}
+.dv2-cum-tt-row b.kpi-good{color:#34d399}
 .dv2-cum-tt-row b.kpi-bad{color:#f87171}
 
 /* ============================================================
@@ -1196,7 +1199,7 @@ input,select,textarea,.grid input,.grid select{
 .dv2-cum-legend-item{display:flex;align-items:center;gap:5px}
 .dv2-cum-legend-swatch{display:inline-block;width:18px;height:0;border-top:2.5px solid;vertical-align:middle}
 .dv2-cum-legend-plan{border-top-style:dashed;border-top-color:#2563eb}
-.dv2-cum-legend-actual{border-top-style:solid;border-top-color:#16a34a}
+.dv2-cum-legend-actual{border-top-style:solid;border-top-color:#059669}
 
 /* Line Performance now spans full width per the new stacked layout. Its
    row-level density (padding/font) is already set by the existing
@@ -1229,7 +1232,7 @@ input,select,textarea,.grid input,.grid select{
    swatches used by Cumulative). Reuses .dv2-cum-legend's layout/container
    rules — only the swatch shape differs. */
 .dv2-bar-legend-plan{width:12px;height:12px;border-radius:2px;border:1.25px solid #2563eb;background:rgba(37,99,235,.20)}
-.dv2-bar-legend-actual{width:12px;height:12px;border-radius:2px;background:#16a34a}
+.dv2-bar-legend-actual{width:12px;height:12px;border-radius:2px;background:#059669}
 
 /* ============================================================
    MODEL PERFORMANCE (TOP GAP) — compact management summary.
