@@ -240,7 +240,7 @@ function ensureDatalabels(){
 function charts(labels,p,a,curBlockIdx){
  ensureDatalabels();
  if(S.hourly)S.hourly.destroy();if(S.cum)S.cum.destroy();
- const planColor="#2563eb",actualColor="#16a34a";
+ const planColor="#2563eb",actualColor="#059669";
  // External tooltip — same technique as cumChart's, needed here too since
  // the built-in Chart.js tooltip can't color Gap red/green individually.
  function hourlyTooltip(ctx){
@@ -261,11 +261,11 @@ function charts(labels,p,a,curBlockIdx){
   {label:"Adjusted Plan",data:p,
    backgroundColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.16)":"rgba(59,130,246,.33)";
+    return isFuture?"rgba(148,163,184,.16)":"#DBEAFE";
    },
    borderColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.45)":"#3b82f6";
+    return isFuture?"rgba(148,163,184,.45)":"#2563EB";
    },
    borderWidth:1,borderRadius:3,barPercentage:.85,categoryPercentage:.76},
   {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:3,barPercentage:.85,categoryPercentage:.76}
@@ -299,7 +299,7 @@ function charts(labels,p,a,curBlockIdx){
     },
     color:context=>{
      let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-     return isFuture?"#94a3b8":actualColor;
+     return isFuture?"#94a3b8":"#047857";
     },
     font:{weight:"700",size:10}
    }
@@ -357,7 +357,7 @@ function charts(labels,p,a,curBlockIdx){
  }};
  S.cum=new Chart($("cumChart"),{type:"line",data:{labels,datasets:[
   {label:"Plan (Cumulative)",data:cp,tension:.25,borderColor:planColor,backgroundColor:planColor,borderDash:[6,4],borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:false},
-  {label:"Actual (Cumulative)",data:ca,tension:.25,borderColor:actualColor,backgroundColor:"rgba(22,163,74,.06)",borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:true}
+  {label:"Actual (Cumulative)",data:ca,tension:.25,borderColor:actualColor,backgroundColor:"rgba(5,150,105,.06)",borderWidth:2.5,pointRadius:2,pointHoverRadius:5,fill:true}
  ]},options:{
   responsive:true,maintainAspectRatio:false,
   layout:{padding:{right:60,top:18}},
