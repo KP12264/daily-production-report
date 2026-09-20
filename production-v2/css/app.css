@@ -7,7 +7,7 @@
   --blue-soft:#eff6ff;
   --green:#16a34a;
   --green-soft:#f0fdf4;
-  --orange:#f59e0b;
+  --orange:#d97706;
   --red:#dc2626;
   --bg:#f1f5f9;
   --card:#ffffff;
@@ -415,7 +415,7 @@ input,select,textarea,.grid input,.grid select{
 .danger-plan:hover{background:#fff1f2}
 
 /* STEP 8 — Dashboard */
-.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}.kpi-watch{color:#b45309!important}
+.dash-filters{display:grid;grid-template-columns:150px 150px 150px 180px 150px 1fr;gap:12px;align-items:end}.dash-filters label{display:flex;flex-direction:column;gap:6px}.dash-filters label span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}.dash-filters input,.dash-filters select{height:42px;border:1px solid var(--line);border-radius:10px;padding:0 11px;background:var(--card);color:var(--heading)}.dash-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.chart-box{height:330px;margin-top:14px}.kpi-good{color:#15803d!important}.kpi-bad{color:#dc2626!important}.kpi-watch{color:#d97706!important}
 @media(max-width:1100px){.dash-filters{grid-template-columns:repeat(3,1fr)}.dash-kpis{grid-template-columns:repeat(3,1fr)}.dash-grid{grid-template-columns:1fr}}
 
 /* AUTH — Production V2 slim read-only banner (page content stays visible/usable
@@ -715,7 +715,7 @@ input,select,textarea,.grid input,.grid select{
    color-only, and never fills the whole row — just this one cell. */
 .status-badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.03em;white-space:nowrap}
 .status-badge.status-good{background:var(--green-soft);color:#15803d}
-.status-badge.status-watch{background:#fef3e2;color:#b45309}
+.status-badge.status-watch{background:#fffbeb;color:#d97706}
 .status-badge.status-bad{background:#fef2f2;color:#dc2626}
 [data-theme="dark"] .status-badge.status-good{background:#0f2417;color:#4ade80}
 [data-theme="dark"] .status-badge.status-watch{background:#3a2a12;color:#fbbf24}
@@ -986,16 +986,16 @@ input,select,textarea,.grid input,.grid select{
    pastel block. 1=Expected Now, 2=Actual, 3=Gap, 4=Achievement, 5=Loss,
    6=Production Status (reacts to the SAME kpi-good/kpi-bad classes
    dashboard.js already sets — no new status logic) */
-.dv2-kpi-6 .dash-pkpi:nth-child(1){background:#fafcff;border-color:#e2eafb}
-.dv2-kpi-6 .dash-pkpi:nth-child(2){background:#fafefb;border-color:#dcf0e5}
-.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good){background:#fafefb;border-color:#dcf0e5}
-.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fffafa;border-color:#f9dcdc}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#fafefb;border-color:#dcf0e5}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffdf7;border-color:#f7e8bd}
-.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fffafa;border-color:#f9dcdc}
-.dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffdf7;border-color:#f7e8bd}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#fafefb;border-color:#dcf0e5}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fffafa;border-color:#f9dcdc}
+.dv2-kpi-6 .dash-pkpi:nth-child(1){background:#f8faff;border-color:#dbeafe}
+.dv2-kpi-6 .dash-pkpi:nth-child(2){background:#f7fcf9;border-color:#d1fae5}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
+.dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch){background:#fffcf5;border-color:#fde68a}
+.dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
+.dv2-kpi-6 .dash-pkpi:nth-child(5){background:#fffcf5;border-color:#fde68a}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi{background:#171f2b;border-color:#26313f}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(1){background:#131c2c}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(2),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good),[data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#10201a}
@@ -1034,9 +1034,9 @@ input,select,textarea,.grid input,.grid select{
 .dash-loss-total-line b{font-size:17px;color:var(--heading);margin-left:6px}
 .dash-loss-bar-row{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:11.5px}
 .dash-loss-bar-label{flex:0 0 118px;color:var(--text)}
-.dash-loss-bar-track{flex:1 1 auto;height:8px;background:var(--bg-soft,#eef1f6);border-radius:4px;overflow:hidden}
+.dash-loss-bar-track{flex:1 1 auto;height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden}
 [data-theme="dark"] .dash-loss-bar-track{background:#1c2532}
-.dash-loss-bar-fill{height:100%;background:linear-gradient(90deg,#f97316,#ef4444);border-radius:4px}
+.dash-loss-bar-fill{height:100%;background:#f97316;border-radius:4px}
 .dash-loss-bar-val{flex:0 0 auto;color:var(--muted);font-size:11px;white-space:nowrap}
 
 /* ---------- Compact section cards + tables generally ---------- */
@@ -1046,7 +1046,7 @@ input,select,textarea,.grid input,.grid select{
 .dv2-main .section-title-row h2{font-size:13px;font-weight:700}
 .dv2-main .section-title-row p{font-size:10.5px;opacity:.85}
 .dv2-main table.grid td,.dv2-main table.grid th{padding:5px 8px;font-size:11.5px}
-.dv2-main table.grid th{font-weight:700;background:#f7f9fc;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
+.dv2-main table.grid th{font-weight:700;background:#f8fafc;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase}
 [data-theme="dark"] .dv2-main table.grid th{background:#1c2532}
 .dv2-main .dash-status-banner{padding:7px 14px;border-radius:7px}
 .dv2-main .dash-status-icon{font-size:17px}
@@ -1111,59 +1111,59 @@ input,select,textarea,.grid input,.grid select{
 }
 /* 1 — Expected Now: ClipboardList, subtle blue */
 .dv2-kpi-6 .dash-pkpi:nth-child(1)::before{
-  background-color:#e5eefd;
+  background-color:#eaf2ff;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='8' height='4' x='8' y='2' rx='1' ry='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M12 11h4'/%3E%3Cpath d='M12 16h4'/%3E%3Cpath d='M8 11h.01'/%3E%3Cpath d='M8 16h.01'/%3E%3C/svg%3E")
 }
 /* 2 — Actual: Factory, subtle green */
 .dv2-kpi-6 .dash-pkpi:nth-child(2)::before{
-  background-color:#e1f5e9;
+  background-color:#e7f8ee;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-6 4V8l-6 4V4a1 1 0 0 0-1.243-.97L2 6Z'/%3E%3Cpath d='M17 18h1'/%3E%3Cpath d='M12 18h1'/%3E%3Cpath d='M7 18h1'/%3E%3C/svg%3E")
 }
 /* 3 — Gap: TrendingUp (green) if kpi-good, TrendingDown (red) if kpi-bad —
    dashboard.js already puts one of these 2 classes on the number */
 .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-good)::before{
-  background-color:#e1f5e9;
+  background-color:#e7f8ee;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 7 13.5 15.5 8.5 10.5 2 17'/%3E%3Cpolyline points='16 7 22 7 22 13'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(3):has(.kpi-bad)::before{
-  background-color:#fbe4e4;
+  background-color:#fdeaea;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 17 13.5 8.5 8.5 13.5 2 7'/%3E%3Cpolyline points='16 17 22 17 22 11'/%3E%3C/svg%3E")
 }
 /* 4 — Achievement: Target, tinted by the existing achClass() result
    (kpi-good/kpi-watch/kpi-bad) already on the number */
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-good)::before{
-  background-color:#e1f5e9;
+  background-color:#e7f8ee;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-watch)::before{
-  background-color:#fdf0d5;
+  background-color:#fff3d6;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(4):has(.kpi-bad)::before{
-  background-color:#fbe4e4;
+  background-color:#fdeaea;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3C/svg%3E")
 }
 /* 5 — Loss: Clock, subtle amber (always — no threshold/status rule, same
    as the earlier approved Loss KPI decision) */
 .dv2-kpi-6 .dash-pkpi:nth-child(5)::before{
-  background-color:#fdf0d5;
+  background-color:#fff3d6;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16.5 14'/%3E%3C/svg%3E")
 }
 /* 6 — Production Status: CircleCheck (green) if kpi-good, TriangleAlert
    (red) if kpi-bad — same status/gapExpected-derived class as before */
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good)::before{
-  background-color:#e1f5e9;
+  background-color:#e7f8ee;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2316a34a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")
 }
 .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad)::before{
-  background-color:#fbe4e4;
+  background-color:#fdeaea;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E")
 }
 /* Production Status card — strongest semantic treatment, slightly wider */
 .dv2-kpi-6 .dash-pkpi:nth-child(6){padding-left:60px}
 .dv2-kpi-6 .dash-pkpi:nth-child(6)::before{width:40px;height:40px;background-size:22px 22px}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f2fbf5;border-color:#bfe8cc}
-.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fdf3f3;border-color:#f3c6c6}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#f7fcf9;border-color:#d1fae5}
+.dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#fff8f8;border-color:#fecaca}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-good){background:#0f2417;border-color:#1e4030}
 [data-theme="dark"] .dv2-kpi-6 .dash-pkpi:nth-child(6):has(.kpi-bad){background:#2a1414;border-color:#4a2323}
 
@@ -1295,4 +1295,4 @@ input,select,textarea,.grid input,.grid select{
 .dash-loss-total-line{font-size:12px;margin-bottom:10px;padding-bottom:8px}
 .dash-loss-total-line b{font-size:22px;font-weight:800;margin-left:8px}
 .dash-loss-bar-row:first-of-type .dash-loss-bar-label{font-weight:800;color:var(--heading)}
-.dash-loss-bar-row:first-of-type .dash-loss-bar-fill{background:linear-gradient(90deg,#ea580c,#dc2626)}
+.dash-loss-bar-row:first-of-type .dash-loss-bar-fill{background:linear-gradient(90deg,#f97316,#ef4444)}
