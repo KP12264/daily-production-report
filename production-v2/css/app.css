@@ -1033,7 +1033,7 @@ input,select,textarea,.grid input,.grid select{
 .dash-line-perf-table tr.dash-line-current td:first-child{padding-left:6px}
 
 /* Loss Time Analysis — horizontal category bars */
-.dash-loss-total-line{font-size:12px;color:var(--muted);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+.dash-loss-total-line{font-size:12px;color:var(--muted);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .dash-loss-total-line b{font-size:17px;color:var(--heading);margin-left:6px}
 .dash-loss-bar-row{display:flex;align-items:center;gap:10px;padding:4px 0;font-size:11.5px}
 .dash-loss-bar-label{flex:0 0 118px;color:var(--text)}
@@ -1268,6 +1268,7 @@ input,select,textarea,.grid input,.grid select{
 #performanceTable{height:auto;min-height:0}
 #performanceTable .table-scroll{height:auto;min-height:0;margin-top:12px;margin-bottom:6px}
 .dv2-main .section-card:has(#performanceTable){padding-top:9px;padding-bottom:8px;height:auto;min-height:0}
+.dv2-main .section-card:has(#dashLossBars),.dv2-main .section-card:has(#dashRecentIssues){padding-top:9px;padding-bottom:9px}
 /* Kills the dashed/boxed .empty-state look whenever a real <table> is
    present, independent of whether the host's class was correctly reset —
    so this holds regardless of that JS detail. The genuine "no data"
@@ -1282,6 +1283,12 @@ input,select,textarea,.grid input,.grid select{
 .dash-perf-wide-table th:nth-child(7),.dash-perf-wide-table td:nth-child(7){width:70px}
 .dash-perf-wide-table th:nth-child(8),.dash-perf-wide-table td:nth-child(8){width:92px}
 .dash-perf-wide-table td:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Achievement (col 7) supporting-information treatment — Gap/Status keep
+   full danger-red emphasis; Achievement's bad state uses the existing
+   neutral secondary text color instead, at normal weight, so it doesn't
+   visually compete. No new color introduced; achClass() itself untouched. */
+#performanceTable .dash-perf-wide-table td:nth-child(7).kpi-bad,
+#performanceTableFull .dash-perf-wide-table td:nth-child(7).kpi-bad{color:var(--muted)!important;font-weight:500}
 
 
 /* Loss Time Analysis / Recent Issues — compact empty state (120-150px)
@@ -1295,6 +1302,5 @@ input,select,textarea,.grid input,.grid select{
 /* Loss Time Analysis — Total Loss Time reads stronger; largest category
    (first row — lossCategoryBars() already sorts by minutes descending)
    gets a slightly bolder label so it's the easiest to spot at a glance */
-.dash-loss-total-line{font-size:12px;margin-bottom:10px;padding-bottom:8px}
 .dash-loss-total-line b{font-size:22px;font-weight:800;margin-left:8px}
 .dash-loss-bar-row:first-of-type .dash-loss-bar-label{font-weight:800;color:var(--heading)}
