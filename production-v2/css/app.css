@@ -1263,7 +1263,13 @@ input,select,textarea,.grid input,.grid select{
    the host, fixed in dashboard.js; this distributes width sensibly once
    the table is genuinely full-width). */
 .dash-perf-wide-table{table-layout:fixed;width:100%}
-#performanceTable .dash-perf-wide-table{width:82%;margin:0 auto}
+#performanceTable .dash-perf-wide-table{width:88%;margin:0 auto}
+/* Card itself was still using the shared, more generous default vertical
+   padding/table-scroll margin every other card uses — tightened here,
+   scoped via :has() to only the card containing #performanceTable, so no
+   other section-card on the page is affected and no HTML change is needed. */
+.dv2-main .section-card:has(#performanceTable){padding-top:9px;padding-bottom:9px}
+#performanceTable .table-scroll{margin-top:6px}
 .dash-perf-wide-table th:nth-child(1),.dash-perf-wide-table td:nth-child(1){width:34px}
 .dash-perf-wide-table th:nth-child(2),.dash-perf-wide-table td:nth-child(2){width:auto}
 .dash-perf-wide-table th:nth-child(3),.dash-perf-wide-table td:nth-child(3){width:60px}
