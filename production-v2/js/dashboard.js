@@ -261,11 +261,11 @@ function charts(labels,p,a,curBlockIdx){
   {label:"Adjusted Plan",data:p,
    backgroundColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.16)":"rgba(37,99,235,.22)";
+    return isFuture?"rgba(148,163,184,.16)":"rgba(59,130,246,.25)";
    },
    borderColor:context=>{
     let isFuture=curBlockIdx!=null&&curBlockIdx>=0&&context.dataIndex>curBlockIdx;
-    return isFuture?"rgba(148,163,184,.45)":planColor;
+    return isFuture?"rgba(148,163,184,.45)":"#3b82f6";
    },
    borderWidth:1,borderRadius:3,barPercentage:.85,categoryPercentage:.76},
   {label:"Actual",data:a,backgroundColor:actualColor,borderColor:actualColor,borderWidth:0,borderRadius:3,barPercentage:.85,categoryPercentage:.76}
@@ -488,7 +488,7 @@ function performanceFull(P,A,keys,hostId){
  hostId=hostId||"performanceTableFull";
  let host=$(hostId);
  if(!host)return;
- if(!keys.length){host.innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
+ if(!keys.length){host.className="empty-state";host.innerHTML='ไม่มี Model/Door สำหรับตัวกรองนี้';return}
  let all=keys.map(x=>{let p=(P[x]||[]).reduce((a,b)=>a+Number(b||0),0),a=(A[x]||[]).reduce((a,b)=>a+Number(b||0),0);return {x,p,a,g:a-p,z:p?a/p*100:0}});
  // แยก 2 กลุ่ม: มีแผน (p>0) เรียง Achievement ต่ำสุดก่อน = ตัวที่แย่จริงต้อง
  // แก้ก่อน — กับ ไม่มีแผน (p=0) ที่ทำเพิ่มนอกแผน เรียง Actual มากสุดก่อน ไม่ให้
@@ -496,7 +496,7 @@ function performanceFull(P,A,keys,hostId){
  let planned=plannedRowsSorted(P,A,keys);
  let unplanned=all.filter(r=>r.p===0).sort((r1,r2)=>r2.a-r1.a);
  let rowHtml=(r,i)=>{let q=splitKey(r.x);return `<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${r.p?achClass(r.z):""}">${r.p?r.z.toFixed(1)+"%":"—"}</td><td data-label="Status">${r.p?statusBadge(r.g):"—"}</td></tr>`};
- let h='<div class="table-scroll"><table class="grid mobile-cards"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ let h='<div class="table-scroll"><table class="grid mobile-cards dash-perf-wide-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
  planned.forEach((r,i)=>h+=rowHtml(r,i));
  if(unplanned.length){
   h+=`<tr><td colspan="8" class="dash-perf-divider">นอกแผน (ผลิตเพิ่มนอกแผนวันนี้)</td></tr>`;
@@ -504,7 +504,7 @@ function performanceFull(P,A,keys,hostId){
  }
  let rows=all,tp=rows.reduce((s,r)=>s+r.p,0),ta=rows.reduce((s,r)=>s+r.a,0),tg=ta-tp,tz=tp?ta/tp*100:0;
  h+=`<tr class="dash-this-block-total"><td data-label=""></td><td data-label="">TOTAL</td><td data-label=""></td><td data-label="Plan">${tp}</td><td data-label="Actual"><b>${ta}</b></td><td data-label="Gap" class="${tg<0?"kpi-bad":"kpi-good"}">${tg>0?"+":""}${tg}</td><td data-label="Ach." class="${tp?achClass(tz):""}">${tz.toFixed(1)}%</td><td data-label="Status">${tp?statusBadge(tg):"—"}</td></tr>`;
- h+='</tbody></table></div>';host.innerHTML=h;
+ h+='</tbody></table></div>';host.className="";host.innerHTML=h;
 }
 // Compact management summary — Top 5 planned rows most needing attention.
 // Reuses plannedRowsSorted() (same function performanceFull() uses for its
@@ -513,16 +513,16 @@ function performanceFull(P,A,keys,hostId){
 function performanceTop5(P,A,keys){
  let host=$("performanceTable");
  if(!host)return;
- if(!keys.length){host.innerHTML='<div class="empty-state">ไม่มี Model/Door สำหรับตัวกรองนี้</div>';return}
+ if(!keys.length){host.className="empty-state";host.innerHTML='ไม่มี Model/Door สำหรับตัวกรองนี้';return}
  let top5=plannedRowsSorted(P,A,keys).slice(0,5);
- if(!top5.length){host.innerHTML='<div class="empty-state">ไม่มี Model/Door ที่มีแผนสำหรับตัวกรองนี้</div>';return}
- let h='<div class="table-scroll"><table class="grid mobile-cards dash-top5-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
+ if(!top5.length){host.className="empty-state";host.innerHTML='ไม่มี Model/Door ที่มีแผนสำหรับตัวกรองนี้';return}
+ let h='<div class="table-scroll"><table class="grid mobile-cards dash-top5-table dash-perf-wide-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
  top5.forEach((r,i)=>{
   let q=splitKey(r.x);
   h+=`<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${achClass(r.z)}">${r.z.toFixed(1)}%</td><td data-label="Status">${statusBadge(r.g)}</td></tr>`;
  });
  h+='</tbody></table></div>';
- host.innerHTML=h;
+ host.className="";host.innerHTML=h;
 }
 function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status){
  let host=$("dashPrimaryKpis");
