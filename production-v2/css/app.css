@@ -1239,7 +1239,7 @@ input,select,textarea,.grid input,.grid select{
    specificity so this card is genuinely compact, matching "approximately
    5 rows visible, compact row height".
    ============================================================ */
-.dv2-main #performanceTable .grid th,.dv2-main #performanceTable .grid td{font-size:11.5px;padding:5px 8px}
+.dv2-main #performanceTable .grid th,.dv2-main #performanceTable .grid td{font-size:11.5px;padding:8px 8px}
 .dv2-main #performanceTable .status-badge{font-size:9.5px;padding:2px 7px}
 #performanceTable table.grid td:nth-child(2),#performanceTableFull table.grid td:nth-child(2){font-weight:700;color:var(--heading)}
 /* Extend the existing numeric-alignment rules to the full-view table too */
@@ -1259,29 +1259,27 @@ input,select,textarea,.grid input,.grid select{
 
 /* Model Performance (Top Gap) / Full — column width distribution so the
    table uses the full card width instead of centering at its natural
-   narrow content width (root cause was the stale .empty-state class on
-   the host, fixed in dashboard.js; this distributes width sensibly once
-   the table is genuinely full-width). */
+   narrow content width. */
 .dash-perf-wide-table{table-layout:fixed;width:100%}
-#performanceTable .dash-perf-wide-table{width:88%;margin:0 auto;height:auto;min-height:0}
-/* Explicit content-driven sizing at every layer — host, scroll wrapper,
-   and table — so nothing can inherit or retain a fixed/min height here.
-   Re-inspected the full cascade: no second hidden height rule was found
-   beyond what was already fixed (.empty-state's 220px, section-card's
-   shared padding) — this is a defensive/explicit reinforcement, not a
-   newly discovered root cause. */
+#performanceTable .dash-perf-wide-table{width:78%;margin:0 auto;height:auto;min-height:0}
 #performanceTable{height:auto;min-height:0}
-#performanceTable .table-scroll{height:auto;min-height:0;margin-top:14px;margin-bottom:0}
-.dv2-main .section-card:has(#performanceTable){padding-top:9px;padding-bottom:6px;height:auto;min-height:0}
+#performanceTable .table-scroll{height:auto;min-height:0;margin-top:12px;margin-bottom:6px}
+.dv2-main .section-card:has(#performanceTable){padding-top:9px;padding-bottom:8px;height:auto;min-height:0}
+/* Kills the dashed/boxed .empty-state look whenever a real <table> is
+   present, independent of whether the host's class was correctly reset —
+   so this holds regardless of that JS detail. The genuine "no data"
+   placeholder (no <table> inside) is unaffected and keeps its dashed box. */
+#performanceTable:has(table){border:0;background:transparent;min-height:0;padding:0;display:block}
 .dash-perf-wide-table th:nth-child(1),.dash-perf-wide-table td:nth-child(1){width:34px}
-.dash-perf-wide-table th:nth-child(2),.dash-perf-wide-table td:nth-child(2){width:auto}
+.dash-perf-wide-table th:nth-child(2),.dash-perf-wide-table td:nth-child(2){width:auto;text-align:left}
 .dash-perf-wide-table th:nth-child(3),.dash-perf-wide-table td:nth-child(3){width:60px}
 .dash-perf-wide-table th:nth-child(4),.dash-perf-wide-table td:nth-child(4),
 .dash-perf-wide-table th:nth-child(5),.dash-perf-wide-table td:nth-child(5),
 .dash-perf-wide-table th:nth-child(6),.dash-perf-wide-table td:nth-child(6),
-.dash-perf-wide-table th:nth-child(7),.dash-perf-wide-table td:nth-child(7){width:80px}
-.dash-perf-wide-table th:nth-child(8),.dash-perf-wide-table td:nth-child(8){width:96px}
+.dash-perf-wide-table th:nth-child(7),.dash-perf-wide-table td:nth-child(7){width:70px}
+.dash-perf-wide-table th:nth-child(8),.dash-perf-wide-table td:nth-child(8){width:92px}
 .dash-perf-wide-table td:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 
 /* Loss Time Analysis / Recent Issues — compact empty state (120-150px)
    instead of the shared .empty-state's min-height:220px. Scoped to these
