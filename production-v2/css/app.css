@@ -588,8 +588,6 @@ input,select,textarea,.grid input,.grid select{
 .dash-kpis .entry-kpi.kpi-spotlight:before{background:#f59e0b;height:4px}
 /* Item 8 — Loss Analysis rows: visible chevron + row-level hover highlight,
    not just the bar color darkening, so it reads as clickable at a glance. */
-.loss-pareto-row{grid-template-columns:16px 110px 1fr 70px;border-radius:8px;padding:6px 8px;margin:0 -8px;transition:background .12s}
-.loss-pareto-row:hover{background:var(--bg,#f8fafc)}
 .loss-pareto-chevron{font-size:11px;color:var(--muted);transition:transform .15s;display:inline-block}
 .loss-cat-toggle.open .loss-pareto-chevron{transform:rotate(90deg)}
 [data-theme="dark"] .loss-pareto-row:hover{background:#1a1a1a}
@@ -647,11 +645,13 @@ input,select,textarea,.grid input,.grid select{
 
 /* DASHBOARD — Loss Analysis, Pareto-style horizontal bars */
 .loss-pareto{display:flex;flex-direction:column;gap:10px}
-.loss-pareto-row{display:grid;grid-template-columns:110px 1fr 70px;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.loss-pareto-row{display:grid;grid-template-columns:16px 120px 1fr 64px 44px;align-items:center;gap:10px;cursor:pointer;user-select:none;border-radius:8px;padding:6px 8px;margin:0 -8px;transition:background .12s}
+.loss-pareto-row:hover{background:var(--bg,#f8fafc)}
 .loss-pareto-label{font-size:12px;font-weight:700;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .loss-pareto-track{height:16px;border-radius:6px;background:var(--bg-soft);overflow:hidden}
 .loss-pareto-fill{height:100%;border-radius:6px;background:var(--blue)}
 .loss-pareto-value{font-size:12px;font-weight:700;color:var(--heading);text-align:right}
+.loss-pareto-pct{font-size:11.5px;font-weight:700;color:var(--muted);text-align:right}
 .loss-pareto-row:hover .loss-pareto-fill{background:var(--blue-deep)}
 
 /* MASTER SETUP — Pallet/Jig Layout row editing */
@@ -671,7 +671,7 @@ input,select,textarea,.grid input,.grid select{
   .exec-hero-num{font-size:40px}
   .dash-status-text{font-size:20px}
   .dash-status-sub{margin-left:0;width:100%}
-  .loss-pareto-row{grid-template-columns:84px 1fr 56px;gap:6px}
+  .loss-pareto-row{grid-template-columns:14px 76px 1fr 50px 36px;gap:6px}
   .loss-pareto-label{font-size:11px}
   .dash-hour-block-title{font-size:12px}
   .theme-toggle-btn{padding:6px 9px;font-size:11px}
@@ -1318,3 +1318,9 @@ input,select,textarea,.grid input,.grid select{
    gets a slightly bolder label so it's the easiest to spot at a glance */
 .dash-loss-total-line b{font-size:22px;font-weight:800;margin-left:8px}
 .dash-loss-bar-row:first-of-type .dash-loss-bar-label{font-weight:800;color:var(--heading)}
+
+/* Pallet/Jig Events empty state — scoped compact override (~90px) instead
+   of the shared .empty-state's min-height:220px. Only this specific class
+   combination is affected — .empty-state itself is untouched everywhere
+   else it's used. */
+.dash-pallet-empty{min-height:90px;padding:14px;margin-top:0;font-size:12px}
