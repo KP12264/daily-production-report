@@ -571,18 +571,15 @@ function palletJigEventsCard(){
  let host=$("dashPalletEvents");
  if(!host)return;
  let events=S.plan?.masterSnapshot?.palletChanges||[];
- if(!events.length){host.innerHTML='<div class="empty-state">No Pallet / Jig change events</div>';return}
+ if(!events.length){host.innerHTML='<div class="empty-state dash-pallet-empty">No Pallet / Jig change events for this shift</div>';return}
  let sorted=[...events].sort((a,b)=>String(a.actualTime||a.effectiveFrom||"").localeCompare(String(b.actualTime||b.effectiveFrom||"")));
- host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Action</th><th>Pallet / Jig</th><th>Change</th><th>Loss</th></tr></thead><tbody>${sorted.map(e=>{
-  let primaryTime=esc(e.actualTime||e.effectiveFrom||"—");
-  let showSecondary=e.actualTime&&e.effectiveFrom&&e.actualTime!==e.effectiveFrom;
-  let timeCell=showSecondary?`${primaryTime}<br><small style="color:var(--muted)">effective ${esc(e.effectiveFrom)}</small>`:primaryTime;
-  let change=e.action==="REPLACE"
-   ?`${esc(e.palletLabel||"—")} → ${esc(e.replacementPalletLabel||"—")}`
-   :`${e.action==="ADD"?"+":"−"} ${esc(e.palletLabel||"—")}`;
+ host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Action</th><th>Pallet / Jig</th><th>Replacement</th><th>Effective From</th><th>Loss</th></tr></thead><tbody>${sorted.map(e=>{
+  let time=esc(e.actualTime||e.effectiveFrom||"—");
+  let replacement=e.action==="REPLACE"&&e.replacementPalletLabel?esc(e.replacementPalletLabel):"—";
+  let effFrom=e.effectiveFrom?esc(e.effectiveFrom):"—";
   let lossMin=Number(e.lossMinutes||0);
   let lossCell=lossMin>0?`${lossMin} min`:`<span style="color:var(--muted)">0 min</span>`;
-  return `<tr><td>${timeCell}</td><td>${esc(e.action||"—")}</td><td>${esc(e.palletLabel||"—")}</td><td>${change}</td><td>${lossCell}</td></tr>`;
+  return `<tr><td>${time}</td><td>${esc(e.action||"—")}</td><td>${esc(e.palletLabel||"—")}</td><td>${replacement}</td><td>${effFrom}</td><td>${lossCell}</td></tr>`;
  }).join("")}</tbody></table>`;
 }
 function lossSummaryCard(){
@@ -673,14 +670,17 @@ function lossView(){
  let groups=groupLossByCategory(lossRows());
  if(!groups.length){$("lossAnalysis").innerHTML='<div class="empty-state">No production loss recorded</div>';return}
  let max=Math.max(...groups.map(g=>g.total),1);
+ let totalAll=groups.reduce((s,g)=>s+g.total,0);
  let h='<div class="loss-pareto">';
  groups.forEach((g,gi)=>{
   let pct=Math.round(g.total/max*100);
+  let sharePct=totalAll?Math.round(g.total/totalAll*100):0;
   h+=`<div class="loss-pareto-row loss-cat-toggle" data-idx="${gi}">
    <span class="loss-pareto-chevron">▸</span>
    <div class="loss-pareto-label">${esc(g.name)}</div>
    <div class="loss-pareto-track"><div class="loss-pareto-fill" style="width:${pct}%"></div></div>
    <div class="loss-pareto-value">${g.total} min</div>
+   <div class="loss-pareto-pct">${sharePct}%</div>
   </div>`;
  });
  h+='</div>';
