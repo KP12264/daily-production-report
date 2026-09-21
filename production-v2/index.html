@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260920-11">
+<link rel="stylesheet" href="css/app.css?v=20260920-12">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -71,16 +71,20 @@
      default so the management flow above stays clean. ===== -->
 <details class="dv2-detail-section" id="dashDetailSection">
   <summary>Detailed / Engineering View</summary>
+  <div class="dv2-eng-heading">Current / Time Block Detail</div>
   <section id="dashThisBlock" class="dash-this-block"></section>
   <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
-  <section id="dashAchievementBar" class="dash-ach-bar"></section>
-  <section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance — Full</h2><p>Plan, Actual, Gap และ Achievement ทั้งหมด · รวม Unplanned และ TOTAL</p></div></div><div id="performanceTableFull" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
-  <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
   <section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
+  <div class="dv2-eng-heading">Model / Door Performance</div>
+  <section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance — Full</h2><p>Plan, Actual, Gap และ Achievement ทั้งหมด · รวม Unplanned และ TOTAL</p></div></div><div id="performanceTableFull" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+  <div class="dv2-eng-heading">Loss Cause Detail</div>
+  <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+  <div class="dv2-eng-heading">Pallet / Jig Events</div>
+  <section class="section-card"><div id="dashPalletEvents" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
 </details>
 </div>
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
-<script src="js/dashboard.js?v=20260920-05"></script>
+<script src="js/dashboard.js?v=20260920-06"></script>
 </body></html>
