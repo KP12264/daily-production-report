@@ -1090,6 +1090,8 @@ input,select,textarea,.grid input,.grid select{
 .dv2-detail-section summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
 .dv2-detail-section[open] summary::before{transform:rotate(90deg)}
 .dv2-detail-section[open] summary{margin-bottom:8px}
+.dv2-eng-heading{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin:14px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+.dv2-eng-heading:first-of-type{margin-top:0;padding-top:0;border-top:0}
 
 /* ---------- Narrow screens ---------- */
 @media(max-width:900px){
