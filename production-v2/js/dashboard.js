@@ -571,8 +571,9 @@ function palletJigEventsCard(){
  let host=$("dashPalletEvents");
  if(!host)return;
  let events=S.plan?.masterSnapshot?.palletChanges||[];
- if(!events.length){host.innerHTML='<div class="empty-state dash-pallet-empty">No Pallet / Jig change events for this shift</div>';return}
+ if(!events.length){host.className="empty-state";host.innerHTML="No Pallet / Jig change events for this shift";return}
  let sorted=[...events].sort((a,b)=>String(a.actualTime||a.effectiveFrom||"").localeCompare(String(b.actualTime||b.effectiveFrom||"")));
+ host.className="";
  host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Action</th><th>Pallet / Jig</th><th>Replacement</th><th>Effective From</th><th>Loss</th></tr></thead><tbody>${sorted.map(e=>{
   let time=esc(e.actualTime||e.effectiveFrom||"—");
   let replacement=e.action==="REPLACE"&&e.replacementPalletLabel?esc(e.replacementPalletLabel):"—";
