@@ -127,7 +127,7 @@ function render(){
  lossSummaryCard(loss,material);
  lossCategoryBars();
  recentIssuesTable();
- achievementBar(plan,actual,ach);
+ palletJigEventsCard();
  // This Block / Hourly Summary / 7-Day Avg ไม่มีความหมายเมื่อดูมากกว่า 1 วัน —
  // ซ่อนไว้แทนที่จะโชว์ข้อมูลที่ตีความผิดได้
  $("dashThisBlock").style.display=agg?"none":"";
@@ -560,6 +560,29 @@ function recentIssuesTable(){
  host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Detail</th><th>Duration</th></tr></thead><tbody>${rows.map(x=>{
   let detail=x.detailCause?`${esc(x.category)} — ${esc(x.detailCause)}`:esc(x.category||"—");
   return `<tr><td>${esc(x.start||"—")}</td><td>${detail}${x.remark?` <small>(${esc(x.remark)})</small>`:""}</td><td>${x.minutes||0} min</td></tr>`;
+ }).join("")}</tbody></table>`;
+}
+// Pallet / Jig Change Events — engineering drill-down. Reads ONLY
+// S.plan.masterSnapshot.palletChanges, which load() already fetches as
+// part of the existing Daily Plan document read — no new Firestore call.
+// Shows exactly what was recorded; never infers a root cause for the
+// change or the loss minutes attached to it.
+function palletJigEventsCard(){
+ let host=$("dashPalletEvents");
+ if(!host)return;
+ let events=S.plan?.masterSnapshot?.palletChanges||[];
+ if(!events.length){host.innerHTML='<div class="empty-state">No Pallet / Jig change events</div>';return}
+ let sorted=[...events].sort((a,b)=>String(a.actualTime||a.effectiveFrom||"").localeCompare(String(b.actualTime||b.effectiveFrom||"")));
+ host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Action</th><th>Pallet / Jig</th><th>Change</th><th>Loss</th></tr></thead><tbody>${sorted.map(e=>{
+  let primaryTime=esc(e.actualTime||e.effectiveFrom||"—");
+  let showSecondary=e.actualTime&&e.effectiveFrom&&e.actualTime!==e.effectiveFrom;
+  let timeCell=showSecondary?`${primaryTime}<br><small style="color:var(--muted)">effective ${esc(e.effectiveFrom)}</small>`:primaryTime;
+  let change=e.action==="REPLACE"
+   ?`${esc(e.palletLabel||"—")} → ${esc(e.replacementPalletLabel||"—")}`
+   :`${e.action==="ADD"?"+":"−"} ${esc(e.palletLabel||"—")}`;
+  let lossMin=Number(e.lossMinutes||0);
+  let lossCell=lossMin>0?`${lossMin} min`:`<span style="color:var(--muted)">0 min</span>`;
+  return `<tr><td>${timeCell}</td><td>${esc(e.action||"—")}</td><td>${esc(e.palletLabel||"—")}</td><td>${change}</td><td>${lossCell}</td></tr>`;
  }).join("")}</tbody></table>`;
 }
 function lossSummaryCard(){
