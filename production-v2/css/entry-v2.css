@@ -1,0 +1,288 @@
+/* ============================================================================
+   PRODUCTION ENTRY — redesign (entry.html ONLY).
+   Load order: app.css -> dashboard-v2.css (shared shell: sidebar, header capsule,
+   segmented filter group, card/title system, dark tokens) -> entry-v2.css (this file).
+
+   Isolation: every rule is scoped under .ev2-shell / #entryTableArea / #saveBadge /
+   #modelOrderModal, or uses an ev2-* class that only this page emits. The old matrix classes
+   shared with Daily Plan (.actual-grid, .production-matrix-viewport, .sum-col, .model-col)
+   and with Loss (.entry-kpi) are NOT used by this page any more, so nothing here can leak.
+   Palette = the approved Production V2 one: Indigo = Plan, Emerald = Actual, Red = behind,
+   Amber = loss/warning, neutral borders #dce4ee.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   1. Context bar actions (Reload Plan · Reorder Model)
+   --------------------------------------------------------------------------- */
+.ev2-shell .ev2-actions{order:5;margin:0 0 0 auto;display:flex;align-items:center;gap:8px}
+.ev2-shell .ev2-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 16px;
+  border:1px solid transparent;border-radius:8px;font:inherit;font-size:13px;font-weight:700;line-height:1;
+  white-space:nowrap;cursor:pointer;user-select:none;transition:background .12s,border-color .12s
+}
+.ev2-shell .ev2-ico{width:16px;height:16px;flex:0 0 auto}
+.ev2-shell .ev2-btn-outline{background:#fff;color:var(--blue-deep);border-color:#bfdbfe}
+.ev2-shell .ev2-btn-outline:hover{background:#eff6ff}
+.ev2-shell .ev2-btn-soft{background:#fff;color:var(--blue-deep);border-color:#bfdbfe;height:34px;padding:0 13px}
+.ev2-shell .ev2-btn-soft:hover{background:#eff6ff}
+/* the proxy is a <label for="openModelOrderBtn">; undo the segmented-filter label styling it would inherit */
+.ev2-shell .dv2-filter-chips .ev2-actions label.ev2-btn{
+  flex:none;flex-direction:row;justify-content:center;align-items:center;min-width:0;margin:0;padding:0 18px;gap:7px;background:var(--blue);color:#fff;
+  border:1px solid var(--blue);border-radius:8px;box-shadow:0 2px 6px rgba(37,99,235,.28)
+}
+.ev2-shell .dv2-filter-chips .ev2-actions label.ev2-btn:hover{background:var(--blue-deep)}
+.ev2-shell .dv2-filter-chips .ev2-actions label.ev2-btn:focus-within{border-color:var(--blue)}
+.ev2-shell .ev2-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+/* read-only mode (class set by the auth layer on #appMain): the proxy must be inert like the real button */
+#appMain.readonly-mode .ev2-reorder-proxy{pointer-events:none;opacity:.5}
+
+/* ---------------------------------------------------------------------------
+   2. KPI row — same six KPIs, Dashboard card language
+   --------------------------------------------------------------------------- */
+.ev2-kpis{display:grid;gap:10px;margin:0 0 10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:900px){.ev2-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1340px){.ev2-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.ev2-kpi{
+  position:relative;display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:9px;row-gap:1px;align-content:start;
+  min-height:96px;padding:12px 14px;background:#f8faff;border:1px solid #dce4ee;border-radius:10px;
+  box-shadow:0 1px 3px rgba(15,39,71,.06)
+}
+.ev2-kpi::before{
+  content:"";grid-column:1;grid-row:1 / span 2;width:30px;height:30px;border-radius:50%;
+  background-color:#eaf2ff;background-repeat:no-repeat;background-position:center;background-size:16px 16px
+}
+.ev2-kpi small{grid-column:2;grid-row:1;align-self:center;font-size:12px;font-weight:800;letter-spacing:0;color:var(--heading);line-height:16px}
+.ev2-kpi b{grid-column:2;grid-row:2;display:block;font-size:23px;font-weight:800;line-height:30px;color:var(--heading);white-space:nowrap}
+.ev2-kpi b .u{font-size:11px;font-weight:600;color:var(--muted)}
+.ev2-kpi em{grid-column:2;margin-top:auto;padding-top:6px;font-style:normal;font-size:10.5px;font-weight:500;line-height:15px;color:var(--muted)}
+.ev2-k-orig::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M16 13H8'/%3E%3Cpath d='M16 17H8'/%3E%3Cpath d='M10 9H8'/%3E%3C/svg%3E")}
+.ev2-k-adj::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='21' x2='14' y1='4' y2='4'/%3E%3Cline x1='10' x2='3' y1='4' y2='4'/%3E%3Cline x1='21' x2='12' y1='12' y2='12'/%3E%3Cline x1='8' x2='3' y1='12' y2='12'/%3E%3Cline x1='21' x2='16' y1='20' y2='20'/%3E%3Cline x1='12' x2='3' y1='20' y2='20'/%3E%3Cline x1='14' x2='14' y1='2' y2='6'/%3E%3Cline x1='8' x2='8' y1='10' y2='14'/%3E%3Cline x1='16' x2='16' y1='18' y2='22'/%3E%3C/svg%3E")}
+.ev2-k-act{background:#f7fcfa}.ev2-k-act::before{background-color:#e7f8ee;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18'/%3E%3Cpath d='M18 17V9'/%3E%3Cpath d='M13 17V5'/%3E%3Cpath d='M8 17v-3'/%3E%3C/svg%3E")}
+.ev2-k-act b{color:#047857}
+.ev2-k-gap{background:#f8faff}
+.ev2-k-gap.is-neg{background:#fff8f8}.ev2-k-gap.is-neg::before{background-color:#fdeaea;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 17 13.5 8.5 8.5 13.5 2 7'/%3E%3Cpolyline points='16 17 22 17 22 11'/%3E%3C/svg%3E")}
+.ev2-k-gap.is-neg b{color:#dc2626}
+.ev2-k-gap.is-pos{background:#f7fcfa}.ev2-k-gap.is-pos::before{background-color:#e7f8ee;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 7 13.5 15.5 8.5 10.5 2 17'/%3E%3Cpolyline points='16 7 22 7 22 13'/%3E%3C/svg%3E")}
+.ev2-k-gap.is-pos b{color:#059669}
+.ev2-k-gap.is-zero::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E")}
+.ev2-k-ach::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='19' x2='5' y1='5' y2='19'/%3E%3Ccircle cx='6.5' cy='6.5' r='2.5'/%3E%3Ccircle cx='17.5' cy='17.5' r='2.5'/%3E%3C/svg%3E")}
+.ev2-k-loss{background:#fffcf5}.ev2-k-loss::before{background-color:#fff3d6;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E")}
+.ev2-k-loss b{color:#b45309}
+
+/* ---------------------------------------------------------------------------
+   3. Production Matrix card — the hero
+   --------------------------------------------------------------------------- */
+.ev2-matrix-card{margin-bottom:10px}
+#saveBadge{padding:5px 11px;border:1px solid transparent;font-size:10px;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+#saveBadge[data-state="saving"]{background:#eaf2ff;color:#1d4ed8;border-color:#bfdbfe}
+#saveBadge[data-state="saved"]{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+#saveBadge[data-state="failed"]{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+#saveBadge[data-state="noplan"]{background:#fffbeb;color:#b45309;border-color:#fde68a}
+#saveBadge[data-state="ready"]{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+
+/* the host keeps the old .empty-state class after a plan loads — neutralise the dashed box once a matrix exists */
+#entryTableArea{margin:6px 0 0}
+#entryTableArea.empty-state{min-height:96px;border:1px dashed #dce4ee;border-radius:10px;background:#f8fafc;font-size:13px;padding:16px}
+#entryTableArea:has(.ev2-matrix-viewport),#entryTableArea:has(.mobile-entry){
+  display:block;min-height:0;padding:0;border:0;background:transparent;
+  /* the stale .empty-state also left place-items:center on the host, which makes a child shrink-to-fit */
+  place-items:normal;align-items:normal;justify-items:normal;text-align:left
+}
+#entryTableArea > .empty-state{min-height:0;margin:0;padding:0;border:0;background:transparent;font-size:13px}
+/* loading: dim the previous matrix (status class is neither .ok nor .err only while "Loading..." is shown) */
+.ev2-main:has(#entryStatus:not(.ok):not(.err)) #entryTableArea{opacity:.55;transition:opacity .15s}
+
+.ev2-matrix-viewport{
+  position:relative;width:100%;max-width:100%;overflow:auto;background:var(--card);border:1px solid #dce4ee;border-radius:10px;
+  max-height:max(300px,calc(100vh - 420px));min-height:250px
+}
+@media(min-width:900px) and (max-width:1339px){.ev2-matrix-viewport{max-height:max(236px,calc(100vh - 520px));min-height:0}}
+.ev2-matrix{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px;color:var(--text)}
+.ev2-matrix th,.ev2-matrix td{padding:6px 6px;border-bottom:1px solid #eef2f7;background:var(--card);text-align:center;white-space:nowrap;vertical-align:middle}
+.ev2-matrix thead th{
+  position:sticky;top:0;z-index:20;height:54px;background:#f1f5f9;border-bottom:1px solid #dce4ee;
+  font-size:11.5px;font-weight:700;line-height:1.3;color:var(--heading)
+}
+.ev2-matrix thead th small{display:block;margin-top:1px;font-size:10px;font-weight:500;color:var(--muted)}
+.ev2-blk{min-width:96px;width:96px}
+
+/* sticky LEFT: # | Model | Door */
+.ev2-sk{position:sticky;z-index:12;background:var(--card)}
+.ev2-sk-no{left:0;width:38px;min-width:38px;color:var(--muted);font-weight:600}
+.ev2-sk-model{left:38px;width:156px;min-width:156px;text-align:left!important;color:var(--heading)}
+.ev2-sk-model b{font-weight:800}
+.ev2-sk-door{left:194px;width:62px;min-width:62px;color:var(--text);font-weight:600;box-shadow:4px 0 8px -4px rgba(15,39,71,.14)}
+.ev2-matrix thead .ev2-sk{z-index:30;background:#f1f5f9}
+.ev2-matrix thead .ev2-sk-model{text-align:left!important}
+
+/* sticky RIGHT: Plan Total | Actual Total | Gap | Ach. (%)  — 268px, was 365px */
+.ev2-sr{position:sticky;z-index:12;background:var(--card);border-left:0}
+.ev2-sr-ach{right:0;width:62px;min-width:62px}
+.ev2-sr-gap{right:62px;width:66px;min-width:66px}
+.ev2-sr-actual{right:128px;width:70px;min-width:70px}
+.ev2-sr-plan{right:198px;width:70px;min-width:70px;box-shadow:-4px 0 8px -4px rgba(15,39,71,.14)}
+.ev2-matrix thead .ev2-sr{z-index:30;background:#f1f5f9}
+.ev2-matrix td.sum-plan b{font-weight:800;color:var(--heading)}
+.ev2-matrix td.sum-actual b{font-weight:800;color:#047857}
+.ev2-matrix td.sum-ach{color:var(--muted);font-weight:600}
+.ev2-matrix td.sum-diff,.ev2-matrix td.ev2-t-gap{font-weight:800;color:var(--muted)}
+.ev2-matrix td.is-neg{color:#dc2626}.ev2-matrix td.is-pos{color:#059669}.ev2-matrix td.is-zero{color:var(--muted)}
+
+/* cells: Plan (small, indigo) above the Actual input */
+.ev2-cell{padding:4px 5px 5px}
+.ev2-plan{margin-bottom:3px;font-size:12px;font-weight:700;line-height:1;color:#4f46e5}
+.ev2-matrix .actual-input{
+  display:block;width:78px;max-width:none;height:42px;margin:0 auto;padding:0 6px;
+  font:inherit;font-size:16px;font-weight:700;text-align:center;color:var(--heading);
+  background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:inset 0 1px 1px rgba(15,39,71,.04);
+  -moz-appearance:textfield;appearance:textfield
+}
+.ev2-matrix .actual-input::-webkit-outer-spin-button,.ev2-matrix .actual-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ev2-matrix .actual-input::placeholder{color:#94a3b8;font-weight:600}
+/* a typed Actual reads as Actual = emerald */
+.ev2-matrix .actual-input:not(:placeholder-shown){color:#047857;background:#f4fbf8;border-color:#a7f3d0}
+.ev2-matrix .actual-input:focus{outline:0;color:var(--heading);background:#fff;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.28)}
+/* the existing current-block highlight: VERY subtle (no badge, no text) */
+.ev2-matrix th.current-block-col,.ev2-matrix td.current-block-col{background:#f1f7ff}
+.ev2-matrix thead th.current-block-col{background:#e8f1ff}
+/* BREAK: still editable (unchanged) — only muted */
+.ev2-matrix th.is-break,.ev2-matrix td.is-break{background:#f6f7f9;color:var(--muted)}
+.ev2-matrix td.is-break .ev2-plan{color:#94a3b8;font-size:10px;letter-spacing:.06em}
+.ev2-matrix td.is-break .actual-input{background:#f1f5f9;border-color:#e2e8f0}
+/* row being edited */
+.ev2-matrix tr.entry-active-row td{background:#f6faff}
+.ev2-matrix tr.entry-active-row td.current-block-col{background:#eaf2ff}
+.ev2-matrix tr.entry-active-row .ev2-sk,.ev2-matrix tr.entry-active-row .ev2-sr{background:#eef5ff}
+
+/* TOTAL row — pinned to the bottom of the viewport */
+.ev2-total-row td{position:sticky;bottom:0;z-index:15;background:#eef5ff;border-top:2px solid #cfe0f7;border-bottom:0;font-weight:800;color:var(--heading)}
+.ev2-matrix .ev2-total-row td.current-block-col{background:#e3eeff}
+.ev2-total-row .ev2-sk-total{left:0;z-index:26;min-width:256px;text-align:left;padding-left:14px;font-size:12.5px;letter-spacing:.02em}
+.ev2-total-row .ev2-sr{z-index:26;background:#eef5ff}
+.ev2-tot-blk{color:#4f46e5;font-size:14px}
+.ev2-tot-blk.is-break{color:#94a3b8;background:#f1f3f7}
+.ev2-t-plan{color:var(--heading)}.ev2-t-actual{color:#047857}.ev2-t-ach{color:var(--muted)}
+
+/* legend + help */
+.ev2-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:10px 2px 0;font-size:11px;color:var(--muted)}
+.ev2-lg{display:inline-flex;align-items:center;gap:7px}
+.ev2-sw{display:inline-block;width:22px;height:12px;border-radius:3px;border:1px solid transparent}
+.ev2-sw-neg{background:#fee2e2;border-color:#fecaca}.ev2-sw-pos{background:#d1fae5;border-color:#a7f3d0}
+.ev2-lg-note{margin-left:auto}
+.ev2-info-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.ev2-info{padding:12px 14px}
+.ev2-info p b{color:var(--heading)}
+
+/* ---------------------------------------------------------------------------
+   4. Model order modal (behaviour untouched — restyle only)
+   --------------------------------------------------------------------------- */
+#modelOrderModal{background:rgba(15,39,71,.45)}
+#modelOrderModal .entry-modal-card{border:1px solid #dce4ee;border-radius:12px;box-shadow:0 20px 50px rgba(15,39,71,.28)}
+#modelOrderModal .entry-modal-head{padding:14px 18px;border-bottom:1px solid #dce4ee}
+#modelOrderModal .entry-modal-head h3{margin:0;font-size:16px;font-weight:800;color:var(--heading)}
+#modelOrderModal .entry-modal-head p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+#modelOrderModal .modal-x{width:32px;height:32px;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:var(--heading);font-size:18px;line-height:1;cursor:pointer}
+#modelOrderModal .order-row{padding:8px 4px;border-bottom:1px solid #eef2f7}
+#modelOrderModal .order-no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#eaf2ff;color:var(--blue-deep);font-size:12px;font-weight:800}
+#modelOrderModal .order-name b{color:var(--heading)}
+#modelOrderModal .order-row button{width:34px;height:34px;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:var(--heading);font-weight:800;cursor:pointer}
+#modelOrderModal .order-row button:hover{background:#eff6ff;border-color:#bfdbfe}
+#modelOrderModal .entry-modal-foot{padding:12px 18px;border-top:1px solid #dce4ee}
+#modelOrderModal .entry-modal-foot .primary{height:38px;padding:0 20px;border:0;border-radius:8px;background:var(--blue);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+
+/* ---------------------------------------------------------------------------
+   5. Mobile carousel (existing concept) — presentation only
+   --------------------------------------------------------------------------- */
+/* the carousel's existing "now" tag is hidden: no NOW wording anywhere on this page */
+.ev2-main .current-block-tag{display:none}
+.ev2-main .mobile-entry{gap:10px}
+.ev2-main .mobile-block-nav{border-color:#dce4ee;border-radius:10px;box-shadow:0 1px 3px rgba(15,39,71,.06)}
+.ev2-main .mobile-entry-row{border-color:#dce4ee;border-radius:10px;padding:8px 12px}
+.ev2-main .mobile-entry-plan{font-weight:700;color:#4f46e5}
+.ev2-main .mobile-entry-input{width:88px;height:46px;font-size:18px;font-weight:700;border:1px solid #cbd5e1;background:#fff;-moz-appearance:textfield}
+.ev2-main .mobile-entry-input::-webkit-outer-spin-button,.ev2-main .mobile-entry-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ev2-main .mobile-entry-input:not(:placeholder-shown){color:#047857;background:#f4fbf8;border-color:#a7f3d0}
+.ev2-main .mobile-entry-input:focus{outline:0;background:#fff;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.28)}
+
+/* ---------------------------------------------------------------------------
+   6. Responsive
+   --------------------------------------------------------------------------- */
+@media(max-width:900px){
+  .ev2-info-row{grid-template-columns:1fr}
+  .ev2-shell .ev2-actions{flex:1 1 100%;margin:0}
+  .ev2-shell .ev2-actions .ev2-btn{flex:1 1 0}
+  .ev2-matrix-viewport{max-height:calc(100vh - 150px)}
+  /* operational page: the stacked top nav becomes ONE scrolling row instead of five wrapped rows */
+  .ev2-shell .dv2-sidebar{padding:8px 10px}
+  .ev2-shell .dv2-sidebar-brand{padding:0 8px 4px 0;font-size:13.5px}
+  .ev2-shell .dv2-sidebar-nav{flex:1 1 100%;order:3;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0}
+  .ev2-shell .dv2-sidebar-nav::-webkit-scrollbar{display:none}
+  .ev2-shell .dv2-nav-item{flex:0 0 auto;white-space:nowrap;padding:7px 11px}
+}
+@media(max-width:640px){
+  .ev2-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
+  .ev2-kpi{display:block;min-height:0;padding:8px 10px}
+  .ev2-kpi::before,.ev2-kpi em{display:none}
+  .ev2-kpi small{display:block;font-size:10.5px;line-height:14px}
+  .ev2-kpi b{font-size:17px;line-height:24px}
+  .ev2-kpi b .u{font-size:9.5px}
+  .ev2-legend{display:none}
+  .ev2-matrix-card .section-title-row p{display:none}
+  .ev2-main{padding:10px 10px 24px}
+}
+@media(max-width:380px){.ev2-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ---------------------------------------------------------------------------
+   7. Dark mode
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] .ev2-shell .ev2-btn-outline,[data-theme="dark"] .ev2-shell .ev2-btn-soft{background:#171f2b;color:#93c5fd;border-color:#26405f}
+[data-theme="dark"] .ev2-shell .ev2-btn-outline:hover,[data-theme="dark"] .ev2-shell .ev2-btn-soft:hover{background:#1c2a3f}
+[data-theme="dark"] .ev2-kpi{background:#131c2c;border-color:#26313f;box-shadow:none}
+[data-theme="dark"] .ev2-kpi::before{background-color:#1b2b45}
+[data-theme="dark"] .ev2-k-act,[data-theme="dark"] .ev2-k-gap.is-pos{background:#10201a}
+[data-theme="dark"] .ev2-k-act::before,[data-theme="dark"] .ev2-k-gap.is-pos::before{background-color:#173a2b}
+[data-theme="dark"] .ev2-k-act b{color:#34d399}
+[data-theme="dark"] .ev2-k-gap.is-neg{background:#241212}
+[data-theme="dark"] .ev2-k-gap.is-neg::before{background-color:#3a1c1c}
+[data-theme="dark"] .ev2-k-gap.is-neg b{color:#f87171}
+[data-theme="dark"] .ev2-k-gap.is-pos b{color:#34d399}
+[data-theme="dark"] .ev2-k-loss{background:#241d0e}
+[data-theme="dark"] .ev2-k-loss::before{background-color:#3a2c10}
+[data-theme="dark"] .ev2-k-loss b{color:#fbbf24}
+[data-theme="dark"] #entryTableArea.empty-state{background:#131c2c;border-color:#26313f}
+[data-theme="dark"] .ev2-matrix-viewport{border-color:#26313f}
+[data-theme="dark"] .ev2-matrix th,[data-theme="dark"] .ev2-matrix td{border-bottom-color:#1c2532}
+[data-theme="dark"] .ev2-matrix thead th,[data-theme="dark"] .ev2-matrix thead .ev2-sk,[data-theme="dark"] .ev2-matrix thead .ev2-sr{background:#1c2532;border-bottom-color:#26313f}
+[data-theme="dark"] .ev2-sk-door,[data-theme="dark"] .ev2-sr-plan{box-shadow:none}
+[data-theme="dark"] .ev2-plan,[data-theme="dark"] .ev2-tot-blk{color:#a5b4fc}
+[data-theme="dark"] .ev2-matrix .actual-input{background:#0f151f;border-color:#334155;color:var(--heading);box-shadow:none}
+[data-theme="dark"] .ev2-matrix .actual-input::placeholder{color:#64748b}
+[data-theme="dark"] .ev2-matrix .actual-input:not(:placeholder-shown){color:#34d399;background:#0f2417;border-color:#1e4030}
+[data-theme="dark"] .ev2-matrix .actual-input:focus{background:#0f151f;color:#fff;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+[data-theme="dark"] .ev2-matrix th.current-block-col,[data-theme="dark"] .ev2-matrix td.current-block-col{background:#14223a}
+[data-theme="dark"] .ev2-matrix thead th.current-block-col{background:#1a2c4a}
+[data-theme="dark"] .ev2-matrix th.is-break,[data-theme="dark"] .ev2-matrix td.is-break{background:#171c25}
+[data-theme="dark"] .ev2-matrix td.is-break .actual-input{background:#131822;border-color:#26313f}
+[data-theme="dark"] .ev2-matrix tr.entry-active-row td{background:#16233a}
+[data-theme="dark"] .ev2-matrix tr.entry-active-row td.current-block-col{background:#1a2c4a}
+[data-theme="dark"] .ev2-matrix tr.entry-active-row .ev2-sk,[data-theme="dark"] .ev2-matrix tr.entry-active-row .ev2-sr{background:#1a2c4a}
+[data-theme="dark"] .ev2-total-row td,[data-theme="dark"] .ev2-total-row .ev2-sr{background:#16233a;border-top-color:#26405f}
+[data-theme="dark"] .ev2-matrix .ev2-total-row td.current-block-col{background:#1a2c4a}
+[data-theme="dark"] .ev2-tot-blk.is-break{background:#171c25}
+[data-theme="dark"] .ev2-matrix td.sum-actual b,[data-theme="dark"] .ev2-t-actual{color:#34d399}
+[data-theme="dark"] .ev2-matrix td.is-neg{color:#f87171}[data-theme="dark"] .ev2-matrix td.is-pos{color:#34d399}
+[data-theme="dark"] .ev2-sw-neg{background:#3a1c1c;border-color:#5a2a2a}[data-theme="dark"] .ev2-sw-pos{background:#173a2b;border-color:#1e4030}
+[data-theme="dark"] #saveBadge[data-state="saving"]{background:#16233a;color:#93c5fd;border-color:#26405f}
+[data-theme="dark"] #saveBadge[data-state="saved"]{background:#10201a;color:#34d399;border-color:#1e4030}
+[data-theme="dark"] #saveBadge[data-state="failed"]{background:#241212;color:#f87171;border-color:#4a2323}
+[data-theme="dark"] #saveBadge[data-state="noplan"]{background:#241d0e;color:#fbbf24;border-color:#4a3a14}
+[data-theme="dark"] #saveBadge[data-state="ready"]{background:#171f2b;color:#9fb0c6;border-color:#26313f}
+[data-theme="dark"] .ev2-info p b{color:#e2e8f0}
+[data-theme="dark"] #modelOrderModal .entry-modal-card{border-color:#26313f;box-shadow:none}
+[data-theme="dark"] #modelOrderModal .entry-modal-head,[data-theme="dark"] #modelOrderModal .entry-modal-foot{border-color:#26313f}
+[data-theme="dark"] #modelOrderModal .modal-x,[data-theme="dark"] #modelOrderModal .order-row button{background:#171f2b;border-color:#26313f;color:#e2e8f0}
+[data-theme="dark"] #modelOrderModal .order-row{border-bottom-color:#1c2532}
+[data-theme="dark"] #modelOrderModal .order-no{background:#1b2b45;color:#93c5fd}
+[data-theme="dark"] .ev2-main .mobile-entry-input{background:#0f151f;border-color:#334155}
+[data-theme="dark"] .ev2-main .mobile-entry-input:not(:placeholder-shown){color:#34d399;background:#0f2417;border-color:#1e4030}
+[data-theme="dark"] .ev2-main .mobile-entry-plan{color:#a5b4fc}
