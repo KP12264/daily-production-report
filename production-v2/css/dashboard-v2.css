@@ -38,40 +38,59 @@
 .dv2-title-block h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.015em;line-height:1.15;color:var(--heading)}
 .dv2-title-block p{margin:3px 0 0;font-size:12.5px;color:var(--muted);opacity:1}
 .dv2-title-block .dv2-header-sep{margin:0 5px}
-.dv2-header-right{gap:14px;flex-wrap:wrap;justify-content:flex-end}
-.dv2-last-updated{align-items:flex-end;font-size:10px;opacity:1}
+/* Status cluster — Last Updated | Isolation | Loaded read as ONE compact capsule
+   (same information, no extra items, no live clock, no "real-time" claim) */
+.dv2-header-right{
+  display:inline-flex;flex:0 0 auto;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:0;
+  padding:5px 2px;border:1px solid var(--dv2-border);border-radius:var(--dv2-radius);
+  background:var(--card);box-shadow:var(--dv2-card-shadow)
+}
+.dv2-header-right > *{position:relative;padding:2px 12px;white-space:nowrap}
+.dv2-header-right > * + *::before{content:"";position:absolute;left:0;top:16%;bottom:16%;width:1px;background:var(--dv2-border)}
+.dv2-last-updated{flex-direction:row;align-items:baseline;gap:6px;font-size:10px;opacity:1}
 .dv2-last-updated b{font-size:12px}
-.dv2-header-right .isolation-pill{font-size:9.5px;padding:3px 9px}
-.dv2-header-right .hero-status{font-size:10.5px}
+.dv2-header-right .isolation-pill{
+  border:0;border-radius:0;background:transparent;padding:2px 12px;
+  font-size:9.5px;letter-spacing:.05em;color:#047857
+}
+/* "Loaded" was pale mint (#7ce5a9, made for a dark header) — unreadable on white */
+.dv2-header-right .hero-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.dv2-header-right .hero-status::before{content:"";flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:currentColor}
+.dv2-header-right .hero-status.ok{color:#047857}
+.dv2-header-right .hero-status.err{color:#dc2626}
 
 /* ---------------------------------------------------------------------------
    3. FILTER BAR — View → Date/Range → Line → Shift → Model → Door → Refresh
       (markup/IDs unchanged; presentation only)
    --------------------------------------------------------------------------- */
 .dv2-main .dv2-filter-chips{
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-  padding:9px 10px;margin-bottom:var(--dv2-gap);overflow:visible;
+  display:flex;flex-wrap:wrap;align-items:stretch;gap:0;
+  padding:8px 10px;margin-bottom:var(--dv2-gap);overflow:visible;
   border:1px solid var(--dv2-border);border-radius:var(--dv2-radius);
   box-shadow:var(--dv2-card-shadow);background:var(--card)
 }
+/* the six controls are ONE segmented group: joined borders, rounded only at the two ends */
 .dv2-main .dv2-filter-chips label{
-  flex:0 1 auto;min-width:0;padding:5px 11px;gap:1px;
-  border:1px solid var(--dv2-border);border-radius:8px;background:#fff
+  flex:0 1 auto;min-width:0;padding:5px 14px;gap:1px;margin-left:-1px;
+  border:1px solid var(--dv2-border);border-radius:0;background:#fff
 }
+.dv2-main .dv2-filter-chips label:first-child{margin-left:0;border-radius:8px 0 0 8px}
+.dv2-main .dv2-filter-chips label:last-of-type{margin-right:12px;border-radius:0 8px 8px 0}
+.dv2-main .dv2-filter-chips label:focus-within{position:relative;z-index:1;border-color:var(--blue)}
 .dv2-main .dv2-filter-chips label span{font-size:9px;letter-spacing:.07em}
 .dv2-main .dv2-filter-chips input,
 .dv2-main .dv2-filter-chips select{height:24px;font-size:13px;font-weight:600;cursor:pointer}
 .dv2-main .dv2-filter-chips input[type="date"]{min-width:124px}
 .dv2-main .dv2-filter-chips select{min-width:84px}
 .dv2-main .dv2-refresh-btn{
-  order:5;margin:0 0 0 auto;align-self:stretch;min-height:40px;padding:0 20px;
+  order:5;margin:0 0 0 auto;align-self:stretch;min-height:42px;padding:0 22px;
   border-radius:8px;font-size:13px;box-shadow:0 2px 6px rgba(37,99,235,.28)
 }
-/* Loaded / status message becomes a quiet line under the controls */
+/* Loaded / status message: quiet line under the group */
 .dv2-main .dv2-filter-chips .notice.info-notice{
-  order:10;flex:1 1 100%;margin:0;padding:1px 2px 0;font-size:10.5px;font-weight:500;
-  text-align:left;color:var(--muted);
-  background:none!important;border:0!important;border-radius:0
+  order:10;flex:1 1 100%;margin:8px 0 0;padding:6px 2px 0;font-size:10.5px;font-weight:500;
+  text-align:left;color:var(--muted);border-radius:0;
+  background:none!important;border:0!important;border-top:1px solid #eef2f7!important
 }
 
 /* ---------------------------------------------------------------------------
@@ -84,7 +103,7 @@
 @media(max-width:380px){.dv2-main .dv2-kpi-6{grid-template-columns:1fr}}
 
 .dv2-main .dv2-kpi-6 .dash-pkpi{
-  min-height:98px;padding:12px 14px;border-radius:var(--dv2-radius);
+  min-height:104px;padding:12px 14px;border-radius:var(--dv2-radius);
   justify-content:flex-start;gap:0;box-shadow:var(--dv2-card-shadow)
 }
 /* icon chip: top-right, round (was left-centre) */
@@ -96,20 +115,24 @@
 .dv2-main .dv2-kpi-6 .dash-pkpi:nth-child(6){padding-left:14px}
 .dv2-main .dv2-kpi-6 .dash-pkpi:nth-child(6)::before{width:30px;height:30px;background-size:16px 16px}
 
+/* label → value → helper: FIXED row heights, so Thai-vs-Latin font metrics can never shift a
+   card's rows relative to its neighbours (helper is bottom-anchored via margin-top:auto) */
 .dv2-main .dv2-kpi-6 .dash-pkpi small{
   font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--heading);
-  padding-right:38px;line-height:1.3
+  padding-right:38px;line-height:16px;min-height:16px
 }
-.dv2-main .dv2-kpi-6 .dash-pkpi b{font-size:25px;margin-top:5px;line-height:1.1}
+.dv2-main .dv2-kpi-6 .dash-pkpi b{display:block;height:36px;margin-top:2px;font-size:25px;line-height:36px}
 .dv2-main .dv2-kpi-6 .dash-pkpi-actual b{font-size:27px}
 .dv2-main .dv2-kpi-6 .dash-pkpi-unit{font-size:11px;font-weight:600;color:var(--muted)}
-.dv2-main .dv2-kpi-6 .dash-pkpi-ref{font-size:10.5px;margin-top:auto;padding-top:6px;opacity:1;color:var(--muted)}
+/* helper: weight 500, not 600 — "Segoe UI" has no Thai glyphs, so at 600 the Thai fallback face
+   renders BOLD while the English renders semibold (the mismatch seen on the live page) */
+.dv2-main .dv2-kpi-6 .dash-pkpi-ref{font-size:10.5px;font-weight:500;line-height:16px;margin-top:auto;padding-top:6px;opacity:1;color:var(--muted)}
 
 /* Production Status — pill, strongest visual signal on the page */
 .dv2-main .dv2-kpi-6 .dash-pkpi:nth-child(6) b{
   display:inline-flex;align-items:center;align-self:flex-start;
-  margin-top:6px;padding:6px 14px;border-radius:8px;
-  font-size:14px;font-weight:800;letter-spacing:.05em;line-height:1.2
+  height:32px;margin-top:4px;padding:0 14px;border-radius:8px;
+  font-size:14px;font-weight:800;letter-spacing:.05em;line-height:1
 }
 .dv2-main .dv2-kpi-6 .dash-pkpi:nth-child(6) b.kpi-bad{background:#dc2626;color:#fff!important}
 .dv2-main .dv2-kpi-6 .dash-pkpi:nth-child(6) b.kpi-good{background:#059669;color:#fff!important}
@@ -128,7 +151,7 @@
 .dv2-main .section-card:has(#performanceTable),
 .dv2-main .section-card:has(#dashLossBars),
 .dv2-main .section-card:has(#dashRecentIssues){padding:12px 14px}
-.dv2-main .dv2-chart-card{padding:12px 14px 10px}
+.dv2-main .dv2-chart-card{padding:12px 14px}
 .dv2-main .dv2-chart-card .section-title-row{padding:0}
 
 .dv2-main > section.section-card,
@@ -136,15 +159,31 @@
 .dv2-two-col{gap:var(--dv2-gap);margin-bottom:var(--dv2-gap)}
 .dv2-two-col > *{min-width:0}
 
-.dv2-main .section-title-row{align-items:center;gap:12px;margin-bottom:6px}
-.dv2-title-wrap{display:flex;align-items:center;gap:10px;min-width:0}
+.dv2-main .section-title-row{align-items:flex-start;gap:12px;margin-bottom:8px}
+/* icon + title share ROW 1 in every card (so titles line up card-to-card); a subtitle, where one
+   exists, hangs underneath in row 2. display:contents flattens the existing inner <div>. */
+.dv2-title-wrap{display:grid;grid-template-columns:28px minmax(0,1fr);column-gap:10px;align-items:center;flex:1 1 0;min-width:0}
+.dv2-title-wrap > div{display:contents}
 .dv2-title-icon{
-  flex:0 0 auto;display:inline-grid;place-items:center;width:28px;height:28px;
+  grid-column:1;grid-row:1;display:grid;place-items:center;width:28px;height:28px;
   border-radius:8px;background:#eaf2ff;color:var(--blue)
 }
 .dv2-title-icon svg{width:16px;height:16px}
-.dv2-main .section-title-row h2{font-size:14px;font-weight:800;margin:0;line-height:1.25}
-.dv2-main .section-title-row p{font-size:10.5px;margin:2px 0 0;opacity:.9}
+.dv2-main .dv2-title-wrap h2{grid-column:2;grid-row:1;font-size:14px;font-weight:800;margin:0;line-height:1.25}
+.dv2-main .dv2-title-wrap p{
+  grid-column:2;grid-row:2;margin:1px 0 0;font-size:10.5px;line-height:1.3;opacity:.9;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+/* right-hand controls (legend / View All) sit on the title row, not floating above it */
+.dv2-main .section-title-row > :not(.dv2-title-wrap){flex:0 0 auto;align-self:flex-start;min-height:28px;display:flex;align-items:center}
+/* side-by-side cards share one header height, so their bodies start at the same y */
+.dv2-two-col .section-title-row{min-height:44px}
+/* only between 1200 and 1360px (side-by-side but narrowest): a slightly tighter legend lets the
+   Cumulative subtitle fit on its single line instead of being ellipsized */
+@media(min-width:1200px) and (max-width:1360px){
+  .dv2-main .dv2-cum-legend{gap:10px;font-size:10px}
+  .dv2-main .dv2-cum-legend-swatch{width:14px}
+}
 .dv2-view-all-link[hidden]{display:none!important}
 .dv2-view-all-link{padding:4px 2px}
 
@@ -248,10 +287,14 @@
   .dv2-sidebar{width:100%;flex:0 0 auto;height:auto;position:relative;overflow:visible}
   .dv2-main{padding:10px 12px 28px}
   .dv2-page-header{flex-wrap:wrap;align-items:flex-start}
+  .dv2-header-right{flex-wrap:wrap;justify-content:flex-start;max-width:100%;padding:4px 2px}
+  .dv2-header-right > *{padding:2px 10px}
   .dv2-title-block h1{font-size:20px}
-  .dv2-main .dv2-filter-chips{flex-direction:row}
-  .dv2-main .dv2-filter-chips label{flex:1 1 140px;border:1px solid var(--dv2-border)}
-  .dv2-main .dv2-filter-chips .notice.info-notice{border:0}
+  .dv2-main .dv2-filter-chips{flex-direction:row;gap:8px}
+  .dv2-main .dv2-filter-chips label,
+  .dv2-main .dv2-filter-chips label:first-child,
+  .dv2-main .dv2-filter-chips label:last-of-type{flex:1 1 140px;margin:0;border-radius:8px}
+  .dv2-main .dv2-filter-chips .notice.info-notice{margin-top:0;border-top:0!important;padding-top:0}
   .dv2-main .dv2-refresh-btn{flex:1 1 100%;order:6;margin:0;justify-content:center}
 }
 
@@ -260,7 +303,12 @@
    --------------------------------------------------------------------------- */
 [data-theme="dark"] .dv2-shell{--dv2-border:#26313f;--dv2-card-shadow:none}
 [data-theme="dark"] .dv2-main .dv2-filter-chips label{background:#171f2b}
+/* light-theme :has() tint rules set border-color:#dce4ee and out-rank the dark base rule, leaving the
+   Gap / Achievement cards with bright white borders in dark mode */
+[data-theme="dark"] .dv2-main .dv2-kpi-6 .dash-pkpi{border-color:var(--dv2-border)}
 [data-theme="dark"] .dv2-title-icon{background:#16233a}
+[data-theme="dark"] .dv2-main .dv2-filter-chips .notice.info-notice{border-top-color:#1c2532!important}
+[data-theme="dark"] .dv2-header-right .isolation-pill,[data-theme="dark"] .dv2-header-right .hero-status.ok{color:#34d399}
 [data-theme="dark"] .dash-mini-bar{background:#26313f}
 [data-theme="dark"] .dash-noplan{background:#1c2532;color:#9fb0c6}
 [data-theme="dark"] #dashOtherLines .dash-line-perf-table tr.dash-line-current td{background:#16233a}
