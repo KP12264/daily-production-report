@@ -1,7 +1,8 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dashboard · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260918-dv2-2">
+<link rel="stylesheet" href="css/app.css?v=20260920-14">
+<link rel="stylesheet" href="css/dashboard-v2.css?v=20261005-01">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -11,10 +12,20 @@
 <aside class="dv2-sidebar">
   <div class="dv2-sidebar-brand">Production System <span>V2</span></div>
   <nav class="dv2-sidebar-nav">
+    <div class="dv2-nav-group">Overview</div>
     <a href="index.html" class="dv2-nav-item active"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</a>
+    <a href="exec.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Executive Summary</a>
+    <div class="dv2-nav-group">Production</div>
     <a href="entry.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Production Entry</a>
     <a href="plan.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>Daily Plan</a>
     <a href="loss.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Loss / Downtime</a>
+    <div class="dv2-nav-group">Planning</div>
+    <a href="cabinet-import.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>Cabinet Plan Import</a>
+    <a href="cabinet-coverage.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Cabinet Coverage</a>
+    <a href="order.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>Order Tracking</a>
+    <div class="dv2-nav-group">Operations</div>
+    <a href="assembly.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Assembly</a>
+    <div class="dv2-nav-group">System</div>
     <a href="master.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Master Setup</a>
   </nav>
   <div class="dv2-sidebar-footer">
@@ -25,13 +36,12 @@
 <div class="dv2-main">
 <div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></div>
 <div class="dv2-page-header">
-  <div><h1>Production V2 <span class="dv2-header-sep">|</span> Door Foam</h1><p>Plan · Produce · Achieve Together</p></div>
-  <div class="dv2-header-right">
-    <div class="dv2-last-updated"><span>Last Updated</span><b id="dashLastUpdated">—</b></div>
-    <div class="dv2-realtime-dot"><span class="dv2-dot-green"></span>Real-time</div>
-    <div class="isolation-pill">ISOLATED V2 · READ ONLY</div>
-    <div id="dashStatus" class="hero-status">Ready</div>
-  </div>
+<div class="dv2-title-block"><h1>Production Dashboard</h1><p>Door Foam Production <span class="dv2-header-sep">|</span> Kabinburi Plant</p></div>
+<div class="dv2-header-right">
+<div class="dv2-last-updated"><span>Last Updated</span><b id="dashLastUpdated">—</b></div>
+<div class="isolation-pill">ISOLATED V2 · READ ONLY</div>
+<div id="dashStatus" class="hero-status">Ready</div>
+</div>
 </div>
 <section class="dash-filters dv2-filter-chips">
 <label><span>VIEW</span><select id="dashViewMode"><option value="day">Day</option><option value="week">Week</option><option value="range">Custom Range</option></select></label>
@@ -45,42 +55,49 @@
 <div id="dashMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วโหลด Dashboard</div>
 </section>
 
-<!-- ===== MANAGEMENT DASHBOARD — STATUS → KPI → WHY → WHERE → ACTION ===== -->
-<section class="section-card dv2-overview-card">
-  <div class="section-title-row"><div><h2>Production Overview</h2><p>Today's performance against production plan</p></div></div>
-  <section id="dashPrimaryKpis" class="dash-primary-kpis dv2-kpi-6"></section>
-  <section id="dashKpis" class="dash-secondary-caption"></section>
+<!-- ===== STATUS / KPI — 6 cards, Production Status strongest ===== -->
+<section class="dv2-kpi-wrap">
+<section id="dashPrimaryKpis" class="dash-primary-kpis dv2-kpi-6"></section>
+<section id="dashKpis" class="dash-secondary-caption"></section>
 </section>
 
-<section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div><div class="dv2-cum-legend"><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-bar-legend-plan"></span>Adjusted Plan</span><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-bar-legend-actual"></span>Actual</span></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
-
+<!-- ===== TREND + WHERE ===== -->
 <div class="dv2-two-col dv2-col-65-35">
-  <section class="section-card dv2-chart-card"><div class="section-title-row"><div><h2>Cumulative Plan vs Actual</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div><div class="dv2-cum-legend"><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-cum-legend-plan"></span>Plan (Cumulative)</span><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-cum-legend-actual"></span>Actual (Cumulative)</span></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
-  <section class="section-card"><div class="section-title-row"><div><h3>LINE PERFORMANCE</h3></div></div><div id="dashOtherLines" class="dash-other-lines"></div></section>
+  <section class="section-card dv2-chart-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></span><div><h2>Cumulative Plan vs Actual</h2><p>ยอดสะสมตามช่วงเวลา · Actual เริ่มหลุดจาก Plan ตั้งแต่ช่วงไหน</p></div></div><div class="dv2-cum-legend"><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-cum-legend-plan"></span>Plan (Cumulative)</span><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-cum-legend-actual"></span>Actual (Cumulative)</span></div></div><div class="chart-box chart-box-lg"><canvas id="cumChart"></canvas></div></section>
+  <section class="section-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span><div><h2>Line Performance</h2></div></div></div><div id="dashOtherLines" class="dash-other-lines"></div></section>
 </div>
 
-<section class="section-card"><div class="section-title-row"><div><h2>Model Performance (Top Gap)</h2><p>5 Model/Door ที่หลุดแผนมากสุด · เรียงจาก Achievement ต่ำสุดก่อน</p></div><button type="button" id="dashViewAllPerf" class="dv2-view-all-link">View All →</button></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+<!-- ===== WHEN ===== -->
+<section class="section-card dv2-chart-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg></span><div><h2 id="hourlyChartH2">Plan vs Actual by Time Block</h2><p id="hourlyChartP">Adjusted Plan เทียบกับยอดผลิตจริง · ช่วงเวลาไหนเริ่มหลุดแผน</p></div></div><div class="dv2-cum-legend"><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-bar-legend-plan"></span>Adjusted Plan</span><span class="dv2-cum-legend-item"><span class="dv2-cum-legend-swatch dv2-bar-legend-actual"></span>Actual</span></div></div><div class="chart-box chart-box-lg"><canvas id="hourlyChart"></canvas></div></section>
 
-<div class="dv2-two-col dv2-col-52-48">
-  <section class="section-card"><div class="section-title-row"><div><h2>Loss Time Analysis</h2></div></div><div id="dashLossBars"></div></section>
-  <section class="section-card"><div class="section-title-row"><div><h2>Recent Issues</h2></div></div><div id="dashRecentIssues"></div></section>
+<!-- ===== MODEL / DOOR + LOSS ===== -->
+<div class="dv2-two-col dv2-col-58-42">
+<section class="section-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span><div><h2>Model Performance (Top Gap)</h2><p>5 Model/Door ที่หลุดแผนมากสุด · เรียงจาก Achievement ต่ำสุดก่อน</p></div></div><button type="button" id="dashViewAllPerf" class="dv2-view-all-link">View All →</button></div><div id="performanceTable" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+<section class="section-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><div><h2>Loss Time Analysis</h2></div></div></div><div id="dashLossBars"></div></section>
 </div>
+
+<!-- ===== RECENT ISSUES ===== -->
+<section class="section-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span><div><h2>Recent Issues</h2></div></div><button type="button" id="dashViewAllIssues" class="dv2-view-all-link" hidden>View All →</button></div><div id="dashRecentIssues"></div></section>
 
 <!-- ===== DETAILED / ENGINEERING VIEW — existing sections, unchanged
      calculations/data/drill-down behavior, just relocated + collapsed by
      default so the management flow above stays clean. ===== -->
 <details class="dv2-detail-section" id="dashDetailSection">
   <summary>Detailed / Engineering View</summary>
+  <div class="dv2-eng-heading">Current / Time Block Detail</div>
   <section id="dashThisBlock" class="dash-this-block"></section>
   <section id="dashThisBlockTable" class="section-card" style="display:none"></section>
-  <section id="dashAchievementBar" class="dash-ach-bar"></section>
-  <section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance — Full</h2><p>Plan, Actual, Gap และ Achievement ทั้งหมด · รวม Unplanned และ TOTAL</p></div></div><div id="performanceTableFull" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
-  <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
   <section id="dashHourlySection" class="section-card"><div class="section-title-row"><div><h2>สรุปรายชั่วโมง</h2><p>Plan, Actual, Diff แยกตาม Model/Door ของแต่ละ Time Block</p></div><div style="display:flex;gap:8px;align-items:center"><select id="dashHourlySelect"><option value="ALL">ทุกช่วงเวลา</option></select><button id="dashHourlyToggle" class="exec-toggle-btn">ดูสรุปรายชั่วโมง</button></div></div><div id="dashHourly" style="display:none"></div></section>
+  <div class="dv2-eng-heading">Model / Door Performance</div>
+  <section class="section-card"><div class="section-title-row"><div><h2>Model / Door Performance — Full</h2><p>Plan, Actual, Gap และ Achievement ทั้งหมด · รวม Unplanned และ TOTAL</p></div></div><div id="performanceTableFull" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+  <div class="dv2-eng-heading">Loss Cause Detail</div>
+  <section class="section-card"><div class="section-title-row"><div><h2>Loss Analysis</h2><p>Pallet Change + Manual Loss · Scheduled Break ไม่นับ · กด Category เพื่อดูช่วงเวลา</p></div></div><div id="lossAnalysis" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
+  <div class="dv2-eng-heading">Pallet / Jig Events</div>
+  <section class="section-card"><div id="dashPalletEvents" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
 </details>
 </div>
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
-<script src="js/dashboard.js?v=20260902-fix49"></script>
+<script src="js/dashboard.js?v=20261005-01"></script>
 </body></html>
