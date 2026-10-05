@@ -3,7 +3,10 @@ let S={lines:[],plan:null,actual:{},modelOrder:[],docId:null,saveTimer:null,savi
 const val=x=>String(x??"").trim();
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
 function note(t,c=""){$("entryMessage").textContent=t;$("entryMessage").className="notice info-notice "+c}
-function stat(t,c=""){$("entryStatus").textContent=t;$("entryStatus").className="hero-status "+c}
+function stat(t,c=""){$("entryStatus").textContent=t;$("entryStatus").className="hero-status "+c;
+ // header "Last Updated" — display only: time of the last successful load/save status
+ if(c==="ok"){let lu=$("entryLastUpdated");if(lu){let d=new Date(),z=n=>String(n).padStart(2,"0");lu.textContent=`${z(d.getDate())} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`}}
+}
 async function all(n){const s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
 function key(blockIndex,model,door){return `${blockIndex}|||${model}|||${door}`}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -52,7 +55,28 @@ function adjustedPlan(){return Number(S.plan?.adjustedPlan??S.plan?.totalPlan??0
 function originalPlan(){return Number(S.plan?.originalPlan??S.plan?.totalPlan??0)}
 function renderKpis(){
  let a=actualTotal(),adj=adjustedPlan(),orig=originalPlan(),gap=a-adj,ach=adj?100*a/adj:0,loss=Number(S.plan?.lossMinutes||0);
- $("entryKpis").innerHTML=`<div class="entry-kpi"><small>ORIGINAL PLAN</small><b>${orig.toLocaleString()}</b></div><div class="entry-kpi"><small>ADJUSTED PLAN</small><b>${adj.toLocaleString()}</b></div><div class="entry-kpi"><small>ACTUAL</small><b>${a.toLocaleString()}</b></div><div class="entry-kpi"><small>GAP vs ADJ.</small><b>${gap>0?"+":""}${gap.toLocaleString()}</b></div><div class="entry-kpi"><small>ACHIEVEMENT</small><b>${ach.toFixed(1)}%</b></div><div class="entry-kpi"><small>LOSS</small><b>${loss} min</b></div>`
+ let gc=gap<0?"is-neg":gap>0?"is-pos":"is-zero";
+ $("entryKpis").innerHTML=`<div class="ev2-kpi ev2-k-orig"><small>Original Plan</small><b>${orig.toLocaleString()} <span class="u">pcs</span></b><em>แผนการผลิตทั้งหมด</em></div><div class="ev2-kpi ev2-k-adj"><small>Adjusted Plan</small><b>${adj.toLocaleString()} <span class="u">pcs</span></b><em>แผนที่ปรับแล้ว</em></div><div class="ev2-kpi ev2-k-act"><small>Actual</small><b>${a.toLocaleString()} <span class="u">pcs</span></b><em>ผลผลิตจริง</em></div><div class="ev2-kpi ev2-k-gap ${gc}"><small>Gap</small><b>${gap>0?"+":""}${gap.toLocaleString()} <span class="u">pcs</span></b><em>ต่างจากแผนที่ปรับแล้ว</em></div><div class="ev2-kpi ev2-k-ach"><small>Achievement</small><b>${ach.toFixed(1)}%</b><em>เทียบกับแผนที่ปรับแล้ว</em></div><div class="ev2-kpi ev2-k-loss"><small>Loss Time</small><b>${loss} <span class="u">min</span></b><em>เวลาสูญเสีย (จากแผน)</em></div>`;
+ // display-only: refresh the TOTAL row and the Gap colours from the numbers already on screen
+ updateTotalRow();paintGap();
+}
+// TOTAL row — sums of the row figures already displayed (no new formula source).
+function updateTotalRow(){
+ let tr=document.querySelector(".ev2-total-row");if(!tr)return;
+ let plan=0,actual=0;
+ document.querySelectorAll(".ev2-matrix tbody tr:not(.ev2-total-row)").forEach(r=>{plan+=Number(r.querySelector(".sum-plan")?.textContent)||0;actual+=Number(r.querySelector(".sum-actual")?.textContent)||0});
+ let gap=actual-plan,ach=plan?100*actual/plan:0;
+ tr.querySelector(".ev2-t-plan").textContent=plan.toLocaleString();
+ tr.querySelector(".ev2-t-actual").textContent=actual.toLocaleString();
+ tr.querySelector(".ev2-t-gap").textContent=`${gap>0?"+":""}${gap.toLocaleString()}`;
+ tr.querySelector(".ev2-t-ach").textContent=`${ach.toFixed(1)}%`;
+}
+// Gap colour classes (red < 0, emerald > 0, neutral = 0) — class toggling only.
+function paintGap(){
+ document.querySelectorAll(".ev2-matrix td.sum-diff,.ev2-matrix td.ev2-t-gap").forEach(td=>{
+  let n=parseFloat(String(td.textContent).replace(/,/g,""))||0;
+  td.classList.toggle("is-neg",n<0);td.classList.toggle("is-pos",n>0);td.classList.toggle("is-zero",n===0);
+ });
 }
 function rowPlanFor(model,door){
  let sum=0;(S.plan?.blocks||[]).forEach(b=>{let c=(b.cells||[]).find(x=>x.model===model&&x.door===door);sum+=Number(c?.plan||0)});
@@ -111,37 +135,55 @@ function render(){
 }
 function renderDesktopMatrix(ps,blocks){
  let curBi=currentBlockIndex(blocks,$("entryDate").value);
- let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
- blocks.forEach((b,bi)=>h+=`<th class="${bi===curBi?"current-block-col":""}">${esc(b.start)}–${esc(b.end)}<br><small>${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}</small></th>`);
- h+='<th class="sum-col sum-plan">Plan</th><th class="sum-col sum-actual">Actual</th><th class="sum-col sum-diff">Diff</th><th class="sum-col sum-ach">Ach.</th></tr></thead><tbody>';
- ps.forEach(p=>{
-   let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${esc(p.model)}</b><small>${esc(p.door||"-")}</small></div></td>`;
+ // keep the matrix scroll position across re-renders (e.g. a model-order move)
+ let oldVp=document.querySelector(".ev2-matrix-viewport"),keepL=oldVp?oldVp.scrollLeft:null,keepT=oldVp?oldVp.scrollTop:null;
+ let gapCls=n=>n<0?"is-neg":n>0?"is-pos":"is-zero";
+ let h='<div class="ev2-matrix-viewport"><table class="ev2-matrix"><thead><tr><th class="ev2-sk ev2-sk-no">#</th><th class="ev2-sk ev2-sk-model">Model</th><th class="ev2-sk ev2-sk-door">Door</th>';
+ blocks.forEach((b,bi)=>h+=`<th data-bi="${bi}" class="ev2-blk${bi===curBi?" current-block-col":""}${b.type==="BREAK"?" is-break":""}">${esc(b.start)} – ${esc(b.end)}<small>${b.type==="BREAK"?"BREAK":"Plan (pcs)"}</small></th>`);
+ h+='<th class="sum-col sum-plan ev2-sr ev2-sr-plan">Plan<br>Total</th><th class="sum-col sum-actual ev2-sr ev2-sr-actual">Actual<br>Total</th><th class="sum-col sum-diff ev2-sr ev2-sr-gap">Gap</th><th class="sum-col sum-ach ev2-sr ev2-sr-ach">Ach.<br>(%)</th></tr></thead><tbody>';
+ ps.forEach((p,ri)=>{
+   let rowPlan=0,rowActual=0;let mk=`${p.model}|||${p.door}`;h+=`<tr><td class="ev2-sk ev2-sk-no">${ri+1}</td><td class="ev2-sk ev2-sk-model"><b>${esc(p.model)}</b></td><td class="ev2-sk ev2-sk-door">${esc(p.door||"-")}</td>`;
    blocks.forEach((b,bi)=>{
      let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door),pl=Number(c?.plan||0),k=key(bi,p.model,p.door),av=S.actual[k]??"";
      rowPlan+=pl;rowActual+=Number(av||0);
      let disabled=pl===0?"":"";
-     h+=`<td class="actual-cell ${bi===curBi?"current-block-col":""}"><div class="cell-plan">${b.type==="BREAK"?"BREAK":"P "+pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
+     h+=`<td data-bi="${bi}" class="ev2-cell${bi===curBi?" current-block-col":""}${b.type==="BREAK"?" is-break":""}"><div class="ev2-plan">${b.type==="BREAK"?"BREAK":pl}</div><input class="actual-input" data-key="${esc(k)}" data-plan="${pl}" data-block-index="${bi}" data-row-index="${ps.indexOf(p)}" type="number" min="0" step="1" value="${esc(av)}" placeholder="0" ${disabled}></td>`
    });
    let diff=rowActual-rowPlan,ach=rowPlan?100*rowActual/rowPlan:0;
-   h+=`<td class="sum-col sum-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach">${ach.toFixed(1)}%</td></tr>`
+   h+=`<td class="sum-col sum-plan ev2-sr ev2-sr-plan"><b>${rowPlan}</b></td><td class="sum-col sum-actual ev2-sr ev2-sr-actual" data-rowactual="${esc(p.model+"|||"+p.door)}"><b>${rowActual}</b></td><td class="sum-col sum-diff ev2-sr ev2-sr-gap ${gapCls(diff)}">${diff>0?"+":""}${diff}</td><td class="sum-col sum-ach ev2-sr ev2-sr-ach">${ach.toFixed(1)}%</td></tr>`
  });
+ // TOTAL row (display only): per-block Plan sums here; the right-hand totals are filled by updateTotalRow()
+ h+='<tr class="ev2-total-row"><td class="ev2-sk-total" colspan="3">TOTAL (pcs)</td>';
+ blocks.forEach((b,bi)=>{let t=0;ps.forEach(p=>{let c=(b.cells||[]).find(x=>x.model===p.model&&x.door===p.door);t+=Number(c?.plan||0)});h+=`<td data-bi="${bi}" class="ev2-tot-blk${bi===curBi?" current-block-col":""}${b.type==="BREAK"?" is-break":""}">${b.type==="BREAK"?"—":t}</td>`});
+ h+='<td class="ev2-sr ev2-sr-plan ev2-t-plan">0</td><td class="ev2-sr ev2-sr-actual ev2-t-actual">0</td><td class="ev2-sr ev2-sr-gap ev2-t-gap">0</td><td class="ev2-sr ev2-sr-ach ev2-t-ach">0.0%</td></tr>';
  h+='</tbody></table></div>';$("entryTableArea").innerHTML=h;
  document.querySelectorAll(".actual-input").forEach(el=>{
    wireActualInput(el);
-   el.addEventListener("focus",()=>{document.querySelectorAll(".actual-grid tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
+   el.addEventListener("focus",()=>{document.querySelectorAll(".ev2-matrix tr.entry-active-row").forEach(r=>r.classList.remove("entry-active-row"));el.closest("tr")?.classList.add("entry-active-row")});el.addEventListener("blur",()=>el.closest("tr")?.classList.remove("entry-active-row"));el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();let bi=Number(el.dataset.blockIndex),ri=Number(el.dataset.rowIndex),next=document.querySelector(`.actual-input[data-block-index="${bi}"][data-row-index="${ri+1}"]`);if(next){next.focus();next.select()}}})
  });
+ // B1: first render of a plan -> bring the existing current block into view (existing
+ // currentBlockIndex only; if no block resolves, nothing moves). Later re-renders keep the scroll.
+ let vp=document.querySelector(".ev2-matrix-viewport");
+ if(vp){
+  if(S.ev2ScrollDoc!==S.docId){
+   S.ev2ScrollDoc=S.docId;
+   let th=vp.querySelector("th.current-block-col");
+   if(th){let sk=0;vp.querySelectorAll("thead th.ev2-sk").forEach(x=>sk+=x.offsetWidth);vp.scrollLeft=Math.max(0,th.offsetLeft-sk-8)}
+  }else if(keepL!=null){vp.scrollLeft=keepL;vp.scrollTop=keepT}
+ }
 }
 // Mobile: one Time Block at a time instead of a wide horizontal table — no
 // horizontal scrolling, Model/Door always visible, big tap targets.
 function renderMobileMatrix(ps,blocks){
  if(!blocks.length){$("entryTableArea").innerHTML='<div class="empty-state">ไม่มี Time Block</div>';return}
- if(S.mobileBlock==null)S.mobileBlock=0;
+ // B4: on a newly loaded plan start at the existing current block; if none resolves keep the existing behaviour
+ if(S.mobileBlock==null||S.ev2MobileDoc!==S.docId){S.ev2MobileDoc=S.docId;let c0=currentBlockIndex(blocks,$("entryDate").value);S.mobileBlock=c0>=0?c0:(S.mobileBlock==null?0:S.mobileBlock)}
  S.mobileBlock=Math.max(0,Math.min(blocks.length-1,S.mobileBlock));
  let bi=S.mobileBlock,b=blocks[bi];
  let curBi=currentBlockIndex(blocks,$("entryDate").value);
  let h=`<div class="mobile-entry"><div class="mobile-block-nav">
   <button id="mbPrev" ${bi===0?"disabled":""}>‹</button>
-  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · ${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}${bi===curBi?' · <span class="current-block-tag">ตอนนี้</span>':""}</small></div>
+  <div class="mobile-block-label"><b>${esc(b.start)}–${esc(b.end)}</b><small>ช่วงที่ ${bi+1} / ${blocks.length} · ${b.type==="BREAK"?"BREAK":"Plan "+Number(b.total||0)}${bi===curBi?'<span class="current-block-tag"> · ตอนนี้</span>':""}</small></div>
   <button id="mbNext" ${bi===blocks.length-1?"disabled":""}>›</button>
  </div><div class="mobile-entry-rows">`;
  ps.forEach((p,ri)=>{
@@ -202,4 +244,26 @@ async function init(){
   $("entryDate").onchange=load;$("entryLine").onchange=load;$("entryShift").onchange=load;
   stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
 }
+// ---- Presentation-only additions (no load / save / calculation logic) ----
+// B2: keep the existing current-block highlight in step with the clock. Class toggling only, using the
+//     existing currentBlockIndex(); never re-renders, so a focused input is never disturbed.
+function refreshCurrentBlock(){
+ if(!S.plan||isMobileView())return;
+ let cur=currentBlockIndex(S.plan.blocks||[],$("entryDate").value);
+ document.querySelectorAll(".ev2-matrix [data-bi]").forEach(el=>el.classList.toggle("current-block-col",Number(el.dataset.bi)===cur));
+}
+// B5: visual state of the save badge. Text is set by the existing code; this only maps it to a colour state.
+function badgeState(t){t=String(t||"");return /FAILED/.test(t)?"failed":/SAVING/.test(t)?"saving":/^SAVED/.test(t)?"saved":/NO PLAN/.test(t)?"noplan":/LOADED|READY/.test(t)?"ready":"idle"}
+function setBadge(text,state){let b=$("saveBadge");if(!b)return;if(text!=null&&b.textContent!==text)b.textContent=text;b.dataset.state=state||badgeState(b.textContent)}
+function initPresentation(){
+ let b=$("saveBadge");
+ if(b){setBadge(null);new MutationObserver(()=>setBadge(null)).observe(b,{childList:true,characterData:true,subtree:true})}
+ setInterval(refreshCurrentBlock,30000);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshCurrentBlock()});
+ // B3: re-render when crossing the mobile breakpoint (desktop matrix <-> mobile carousel)
+ let mq=window.matchMedia("(max-width:640px)");
+ let onMq=()=>{if(S.plan)render()};
+ if(mq.addEventListener)mq.addEventListener("change",onMq);else if(mq.addListener)mq.addListener(onMq);
+}
+addEventListener("DOMContentLoaded",initPresentation);
 addEventListener("DOMContentLoaded",init)})();
