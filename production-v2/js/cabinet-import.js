@@ -33,13 +33,45 @@ function formatDatePretty(dateStr){
 function findCandidateSheets(wb){
   return wb.SheetNames.filter(n=>n.trim().toLowerCase().startsWith("plan daily"));
 }
+const MONTH_ABBR=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+function roundDateToDay(dateObj){
+  // Snap to the nearest whole day using the object's raw epoch timestamp —
+  // resolves a few seconds of noise cleanly; not intended for genuinely
+  // ambiguous times.
+  const dayMs=86400000;
+  return new Date(Math.round(dateObj.getTime()/dayMs)*dayMs);
+}
+function parseCanonicalHeaderDate(cell){
+  const v=cell.v;
+  if(!(v instanceof Date))return null;
+  // Prefer cell.w — Excel's own displayed text for this date cell (e.g.
+  // "25-Jun"), since that's the date planners actually see and intend.
+  const w=String(cell.w||"").trim();
+  const m=w.match(/^(\d{1,2})[-\s\/]([A-Za-z]{3,})$/);
+  if(m){
+    const day=parseInt(m[1],10);
+    const mi=MONTH_ABBR.indexOf(m[2].slice(0,3).toLowerCase());
+    if(mi>=0&&day>=1&&day<=31){
+      // Year context from cell.v, itself first snapped to the nearest whole
+      // day so a few seconds of noise can never push it across a year
+      // boundary (only matters for 31-Dec/1-Jan edge cases).
+      const approx=roundDateToDay(v);
+      return new Date(approx.getUTCFullYear(),mi,day); // local midnight
+    }
+  }
+  // Fallback — cell.w missing/unexpected format: round cell.v's own
+  // timestamp to the nearest whole day instead of trusting its truncated
+  // {y,m,d} fields directly.
+  const rounded=roundDateToDay(v);
+  return new Date(rounded.getUTCFullYear(),rounded.getUTCMonth(),rounded.getUTCDate());
+}
 function findDateHeaderRow(ws,range){
   // scan rows 1..10 for a run of >=2 consecutive columns holding ascending dates
   for(let r=range.s.r;r<=Math.min(range.s.r+10,range.e.r);r++){
     let run=[];
     for(let c=range.s.c;c<=range.e.c;c++){
       let cell=ws[XLSX.utils.encode_cell({r,c})];
-      let d=cell&&cell.t==="d"?cell.v:null;
+      let d=cell&&cell.t==="d"?parseCanonicalHeaderDate(cell):null;
       if(d instanceof Date){
         if(run.length&&isNextDay(run[run.length-1].date,d))run.push({c,date:d});
         else run=[{c,date:d}];
@@ -48,7 +80,7 @@ function findDateHeaderRow(ws,range){
           let cc=c+1;
           while(cc<=range.e.c){
             let cell2=ws[XLSX.utils.encode_cell({r,c:cc})];
-            let d2=cell2&&cell2.t==="d"?cell2.v:null;
+            let d2=cell2&&cell2.t==="d"?parseCanonicalHeaderDate(cell2):null;
             if(d2 instanceof Date&&isNextDay(run[run.length-1].date,d2)){run.push({c:cc,date:d2});cc++}
             else break;
           }
@@ -206,7 +238,11 @@ function renderSampleTable(){
   const {validSheets,dateOwners}=S.detected;
   const selDate=S.previewDate;
   let h=`<div class="table-scroll"><table class="grid"><thead><tr><th>Plan Sheet</th><th>Line Marker (Excel — ไม่ใช่ Production V2 Line)</th><th>Excel Model</th><th>Cab</th><th>Active Days (นับเฉพาะวันที่ sheet นี้เป็นเจ้าของอยู่ตอนนี้)</th><th>Plan Qty · ${formatDatePretty(selDate)}</th></tr></thead><tbody>`;
-  validSheets.forEach(vs=>vs.blocks.forEach(b=>b.rows.forEach(r=>{
+  // Only the sheet that owns the selected Preview Date is shown —
+  // dateOwners[selDate] is already the single resolved answer (sole source,
+  // or the user's explicit choice for a conflicted date). Rows from other
+  // Plan Daily sheets are irrelevant to this date and are not rendered.
+  validSheets.filter(vs=>vs.sheetName===dateOwners[selDate]).forEach(vs=>vs.blocks.forEach(b=>b.rows.forEach(r=>{
     let ownedDates=Object.keys(r.qtyByDate).filter(d=>dateOwners[d]===vs.sheetName&&r.qtyByDate[d]);
     // Plan Qty for the selected date — only shown if THIS row's sheet
     // actually owns that date (post conflict-resolution) and the date has
