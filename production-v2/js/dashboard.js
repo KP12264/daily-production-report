@@ -519,14 +519,20 @@ function performanceTop5(P,A,keys){
  let h='<div class="table-scroll"><table class="grid mobile-cards dash-top5-table dash-perf-wide-table"><thead><tr><th>No.</th><th>Model</th><th>Door</th><th>Plan</th><th>Actual</th><th>Gap</th><th>Ach.</th><th>Status</th></tr></thead><tbody>';
  top5.forEach((r,i)=>{
   let q=splitKey(r.x);
-  h+=`<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${achClass(r.z)}">${r.z.toFixed(1)}%</td><td data-label="Status">${statusBadge(r.g)}</td></tr>`;
+  h+=`<tr><td data-label="No.">${i+1}</td><td data-label="Model">${esc(q.model)}</td><td data-label="Door">${esc(q.door)}</td><td data-label="Plan">${r.p}</td><td data-label="Actual"><b>${r.a}</b></td><td data-label="Gap" class="${r.g<0?"kpi-bad":"kpi-good"}">${r.g>0?"+":""}${r.g}</td><td data-label="Ach." class="${achClass(r.z)}"><span class="dash-ach-cell"><span class="dash-ach-val">${r.z.toFixed(1)}%</span><span class="dash-mini-bar" aria-hidden="true"><i class="dash-mini-fill ${achClass(r.z).replace("kpi-","mini-")}" style="width:${Math.max(0,Math.min(100,r.z)).toFixed(1)}%"></i></span></span></td><td data-label="Status">${statusBadge(r.g)}</td></tr>`;
  });
  h+='</tbody></table></div>';
  host.className="";host.innerHTML=h;
 }
 function primaryKpis(expected,actual,gapExpected,ach,plan,gapPlan,totalLoss,status){
  let host=$("dashPrimaryKpis");
- if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()}</b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div><div class="dash-pkpi"><small>LOSS</small><b>${totalLoss.toLocaleString()} <span class="dash-pkpi-unit">min</span></b></div><div class="dash-pkpi dash-pkpi-wide"><small>PRODUCTION STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b><span class="dash-pkpi-ref">${gapExpected<0?`Short of plan by ${Math.abs(gapExpected).toLocaleString()} pcs`:`Ahead by ${gapExpected.toLocaleString()} pcs`}</span></div>`;
+ // Display-only captions. Wording follows which view this is (Day today / Day
+ // on another date / Week-Range) so it is never inaccurate; no value is computed here.
+ let agg=!!S.multiDay,isToday=!agg&&$("dashDate").value===localDate();
+ let capExp=agg?"แผนรวมทั้งช่วงที่เลือก":isToday?"ตามแผนถึงปัจจุบัน":"ตามแผนของวันที่เลือก";
+ let capAct=agg?"ผลิตจริงรวมทั้งช่วงที่เลือก":isToday?"ผลิตจริงถึงปัจจุบัน":"ผลิตจริงของวันที่เลือก";
+ let capLoss=agg?"เวลาสูญเสียรวมทั้งช่วงที่เลือก":isToday?"เวลาสูญเสียวันนี้":"เวลาสูญเสียของวันที่เลือก";
+ if(host)host.innerHTML=`<div class="dash-pkpi"><small>EXPECTED NOW</small><b>${expected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b><span class="dash-pkpi-ref">${capExp}</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACTUAL</small><b>${actual.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b><span class="dash-pkpi-ref">${capAct}</span></div><div class="dash-pkpi"><small>GAP</small><b class="${gapExpected<0?"kpi-bad":"kpi-good"}">${gapExpected>0?"+":""}${gapExpected.toLocaleString()} <span class="dash-pkpi-unit">pcs</span></b><span class="dash-pkpi-ref">vs Expected Now</span></div><div class="dash-pkpi dash-pkpi-actual"><small>ACHIEVEMENT</small><b class="${achClass(ach)}">${ach.toFixed(1)}%</b><span class="dash-pkpi-ref">vs Adjusted Plan · full shift</span></div><div class="dash-pkpi"><small>LOSS TIME</small><b>${totalLoss.toLocaleString()} <span class="dash-pkpi-unit">min</span></b><span class="dash-pkpi-ref">${capLoss}</span></div><div class="dash-pkpi dash-pkpi-wide"><small>PRODUCTION STATUS</small><b class="${status==="ON TARGET"?"kpi-good":"kpi-bad"}">${status}</b><span class="dash-pkpi-ref">${gapExpected<0?`Short of plan by ${Math.abs(gapExpected).toLocaleString()} pcs`:`Ahead by ${gapExpected.toLocaleString()} pcs`}</span></div>`;
  // Adjusted Plan demoted to a small secondary caption (still visible, not
  // competing visually with Expected Now) — reuses the old #dashKpis host.
  let sec=$("dashKpis");
@@ -544,10 +550,11 @@ function lossCategoryBars(){
  if(!catGroups.length){host.innerHTML='<div class="dash-loss-total-line">Total Loss Time <b>0 min</b></div><div class="empty-state">No production loss recorded</div>';return}
  let total=catGroups.reduce((s,g)=>s+g.total,0);
  host.innerHTML=`<div class="dash-loss-total-line">Total Loss Time <b>${total.toLocaleString()} min</b></div>`+
+  `<div class="dash-loss-table"><div class="dash-loss-head"><span>Loss Category</span><span>Time (min)</span><span>%</span><span></span></div>`+
   catGroups.map(g=>{
    let pct=total?Math.round(g.total/total*100):0;
-   return `<div class="dash-loss-bar-row"><span class="dash-loss-bar-label">${esc(g.name)}</span><div class="dash-loss-bar-track"><div class="dash-loss-bar-fill" style="width:${pct}%"></div></div><span class="dash-loss-bar-val">${g.total} min (${pct}%)</span></div>`;
-  }).join("");
+   return `<div class="dash-loss-bar-row"><span class="dash-loss-bar-label">${esc(g.name)}</span><span class="dash-loss-bar-min">${g.total.toLocaleString()}</span><span class="dash-loss-bar-pct">${pct}%</span><div class="dash-loss-bar-track"><div class="dash-loss-bar-fill" style="width:${pct}%"></div></div></div>`;
+  }).join("")+`</div>`;
 }
 // Recent Issues — no Line column (Dashboard is already single-Line
 // filtered, would just repeat the same value on every row). Reuses
@@ -555,12 +562,19 @@ function lossCategoryBars(){
 function recentIssuesTable(){
  let host=$("dashRecentIssues");
  if(!host)return;
- let rows=[...lossRows()].sort((a,b)=>String(b.start||"").localeCompare(String(a.start||""))).slice(0,8);
- if(!rows.length){host.innerHTML='<div class="empty-state">No records</div>';return}
- host.innerHTML=`<table class="grid"><thead><tr><th>Time</th><th>Detail</th><th>Duration</th></tr></thead><tbody>${rows.map(x=>{
-  let detail=x.detailCause?`${esc(x.category)} — ${esc(x.detailCause)}`:esc(x.category||"—");
-  return `<tr><td>${esc(x.start||"—")}</td><td>${detail}${x.remark?` <small>(${esc(x.remark)})</small>`:""}</td><td>${x.minutes||0} min</td></tr>`;
- }).join("")}</tbody></table>`;
+ let btn=$("dashViewAllIssues");
+ let all=[...lossRows()].sort((a,b)=>String(b.start||"").localeCompare(String(a.start||"")));
+ if(!all.length){host.innerHTML='<div class="empty-state">No records</div>';if(btn)btn.hidden=true;return}
+ // Latest 8 by default; View All expands in place to every record (same list,
+ // same sort — nothing new is read or computed).
+ let LIMIT=8,canExpand=all.length>LIMIT;
+ let rows=(S.issuesExpanded&&canExpand)?all:all.slice(0,LIMIT);
+ if(btn){btn.hidden=!canExpand;btn.textContent=(S.issuesExpanded&&canExpand)?"Show Latest ↑":"View All →"}
+ host.innerHTML=`<div class="table-scroll"><table class="grid dash-issues-table"><thead><tr><th>#</th><th>Time</th><th>Loss Category</th><th>Detail Cause</th><th>Duration</th><th>Remark</th></tr></thead><tbody>${rows.map((x,i)=>{
+  let time=x.start&&x.end?`${esc(x.start)}–${esc(x.end)}`:esc(x.start||"—");
+  let cause=x.detailCause?(x.detailCause==="Other"&&x.customCause?`${esc(x.detailCause)} — ${esc(x.customCause)}`:esc(x.detailCause)):"—";
+  return `<tr><td>${i+1}</td><td>${time}</td><td>${esc(x.category||"—")}</td><td>${cause}</td><td>${(x.minutes||0).toLocaleString()} min</td><td>${x.remark?esc(x.remark):"—"}</td></tr>`;
+ }).join("")}</tbody></table></div>`;
 }
 // Pallet / Jig Change Events — engineering drill-down. Reads ONLY
 // S.plan.masterSnapshot.palletChanges, which load() already fetches as
@@ -827,7 +841,7 @@ async function otherLinesToday(dateList,sh,currentLineId){
   if(!rows.length)return;
   host.innerHTML=`<table class="grid dash-line-perf-table"><thead><tr><th>Line</th><th>Plan</th><th>Actual</th><th>Achieve</th><th>Gap</th><th>Status</th></tr></thead><tbody>${rows.map(r=>{
    let gap=r.actual-r.plan;
-   return `<tr class="${r.lid===currentLineId?"dash-line-current":""}"><td>${esc(r.name)}${r.lid===currentLineId?" <small>(current)</small>":""}</td><td>${r.plan.toLocaleString()}</td><td><b>${r.actual.toLocaleString()}</b></td><td class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</td><td class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</td><td>${r.plan?statusBadge(gap):"—"}</td></tr>`;
+   return `<tr class="${r.lid===currentLineId?"dash-line-current":""}"><td>${esc(r.name)}${r.lid===currentLineId?" <small>(current)</small>":""}</td><td>${r.plan.toLocaleString()}</td><td><b>${r.actual.toLocaleString()}</b></td><td class="${r.plan?achClass(r.ach):""}">${r.plan?r.ach.toFixed(1)+"%":"—"}</td><td class="${gap<0?"kpi-bad":"kpi-good"}">${r.plan?(gap>0?"+":"")+gap.toLocaleString():"—"}</td><td>${r.plan?statusBadge(gap):'<span class="dash-noplan">NO PLAN</span>'}</td></tr>`;
   }).join("")}</tbody></table>`;
  }catch(e){console.error(e)}
 }
@@ -850,6 +864,7 @@ async function init(){
  });
  $("dashHourlySelect")?.addEventListener("change",hourlySummary);
  $("dashRefreshBtn")?.addEventListener("click",load);
+ $("dashViewAllIssues")?.addEventListener("click",()=>{S.issuesExpanded=!S.issuesExpanded;recentIssuesTable()});
  $("dashViewAllPerf")?.addEventListener("click",e=>{
   e.preventDefault();
   S.perfExpanded=!S.perfExpanded;
