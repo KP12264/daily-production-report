@@ -1,34 +1,83 @@
-<!doctype html>
-<html lang="th">
+<!doctype html><html lang="th">
 <head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Production Entry · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix55">
+<link rel="stylesheet" href="css/app.css?v=20260920-14">
+<link rel="stylesheet" href="css/dashboard-v2.css?v=20261005-02">
+<link rel="stylesheet" href="css/entry-v2.css?v=20261005-e1">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-</head><body><div class="site-wrap">
-<header class="app-nav"><div class="app-name">Production System <span>V2</span></div>
-<nav class="app-links"><div class="nav-group"><button class="nav-group-btn" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn current" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html" class="active">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html">Cabinet Plan Import</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button>
-<a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
-<section class="hero"><div><div class="eyebrow">PRODUCTION ENTRY · STEP 6</div><h1>Actual Production Entry</h1><p>กรอกยอดผลิตจริงตาม Model / Door / Time Block โดยตรง</p></div>
-<div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="entryStatus" class="hero-status">Ready</div></div></section>
+</head><body>
+<div class="dv2-shell ev2-shell">
+<aside class="dv2-sidebar">
+  <div class="dv2-sidebar-brand">Production System <span>V2</span></div>
+  <nav class="dv2-sidebar-nav">
+    <div class="dv2-nav-group">Overview</div>
+    <a href="index.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</a>
+    <a href="exec.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Executive Summary</a>
+    <div class="dv2-nav-group">Production</div>
+    <a href="entry.html" class="dv2-nav-item active"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Production Entry</a>
+    <a href="plan.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>Daily Plan</a>
+    <a href="loss.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Loss / Downtime</a>
+    <div class="dv2-nav-group">Planning</div>
+    <a href="cabinet-import.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>Cabinet Plan Import</a>
+    <a href="cabinet-coverage.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Cabinet Coverage</a>
+    <a href="order.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>Order Tracking</a>
+    <div class="dv2-nav-group">Operations</div>
+    <a href="assembly.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Assembly</a>
+    <div class="dv2-nav-group">System</div>
+    <a href="master.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Master Setup</a>
+  </nav>
+  <div class="dv2-sidebar-footer">
+    <div>Door Foam Production</div>
+    <div>Kabinburi Plant</div>
+  </div>
+</aside>
+<div class="dv2-main ev2-main">
+<div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></div>
+<div class="dv2-page-header">
+<div class="dv2-title-block"><h1>Production Entry</h1><p>Door Foam Production <span class="dv2-header-sep">|</span> Kabinburi Plant</p></div>
+<div class="dv2-header-right">
+<div class="dv2-last-updated"><span>Last Updated</span><b id="entryLastUpdated">—</b></div>
+<div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div>
+<div id="entryStatus" class="hero-status">Ready</div>
+</div>
+</div>
 <div id="authGateHost"></div>
-<main class="content" id="appMain">
-<section class="filter-card entry-filters">
-<label><span>DATE</span><input id="entryDate" type="date"></label>
+<main id="appMain" class="ev2-app">
+
+<!-- ===== CONTEXT: Production Date · Line · Shift  |  Reload Plan · Reorder Model ===== -->
+<section class="dv2-filter-chips ev2-filters">
+<label><span>PRODUCTION DATE</span><input id="entryDate" type="date"></label>
 <label><span>LINE</span><select id="entryLine"></select></label>
 <label><span>SHIFT</span><select id="entryShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
-<button id="loadEntryBtn" class="primary">Load Saved Plan</button>
-<div class="filter-note">Actual = จำนวนชิ้นจริง · Auto-save per cell · Enter → ช่องถัดไป</div>
+<div class="ev2-actions">
+<button id="loadEntryBtn" class="ev2-btn ev2-btn-outline" type="button"><svg class="ev2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Reload Plan</button>
+<label for="openModelOrderBtn" class="ev2-btn ev2-btn-primary ev2-reorder-proxy"><svg class="ev2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>Reorder Model</label>
+</div>
+<div id="entryMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วกด Reload Plan</div>
 </section>
-<div id="entryMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วกด Load Saved Plan</div>
-<section id="entryKpis" class="entry-kpis"></section>
-<section class="section-card">
-<div class="section-title-row"><div><h2>Actual Production Matrix</h2><p>Plan ดึงจาก Daily Plan Snapshot ที่ Save ไว้ · Actual กรอกเป็นจำนวนชิ้นจริง</p></div><div class="entry-actions"><button id="openModelOrderBtn" class="secondary-btn">จัดลำดับ Model</button><span id="saveBadge" class="soft-badge">NOT LOADED</span></div></div>
+
+<!-- ===== KPI ROW (same six KPIs; rendered by entry.js renderKpis) ===== -->
+<section id="entryKpis" class="ev2-kpis"></section>
+
+<!-- ===== PRODUCTION MATRIX — the hero ===== -->
+<section class="section-card ev2-matrix-card">
+<div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/></svg></span><div><h2>Production Matrix (Actual Entry)</h2><p>กรอกผลผลิตจริงตาม Model / Door และ Time Block</p></div></div><div class="entry-actions ev2-card-actions"><span id="saveBadge" class="soft-badge" data-state="idle">NOT LOADED</span><button id="openModelOrderBtn" class="ev2-btn ev2-btn-soft" type="button"><svg class="ev2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>Reorder Model</button></div></div>
 <div id="entryTableArea" class="empty-state">ยังไม่ได้โหลด Daily Plan</div>
+<div class="ev2-legend"><span class="ev2-lg"><i class="ev2-sw ev2-sw-neg"></i>Behind Plan (Gap &lt; 0)</span><span class="ev2-lg"><i class="ev2-sw ev2-sw-pos"></i>Ahead of Plan (Gap &gt; 0)</span><span class="ev2-lg ev2-lg-note">ตัวเลขเล็กด้านบน = Plan · ช่องกรอก = Actual (pcs)</span></div>
 </section>
-</main></div>
+
+<!-- ===== HELP ===== -->
+<div class="ev2-info-row">
+<section class="section-card ev2-info"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M8 13h8"/></svg></span><div><h2>Keyboard Shortcuts</h2><p><b>Enter</b> = ลงแถวถัดไป (แนวตั้ง) &nbsp;|&nbsp; <b>Tab</b> = ไปช่องถัดไป (แนวนอน)</p></div></div></section>
+<section class="section-card ev2-info"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span><div><h2>ข้อมูลจะแสดงตามแผนรายวัน (Daily Plan)</h2><p>หากไม่มีแผนสำหรับวันที่ / ไลน์ / กะ นี้ จะไม่สามารถกรอกผลผลิตได้</p></div></div></section>
+</div>
+
+</main>
+</div>
+</div>
 <div id="modelOrderModal" class="entry-modal">
  <div class="entry-modal-card">
   <div class="entry-modal-head"><div><h3>จัดลำดับ Model / Door</h3><p>ใช้ ↑ ↓ เพื่อจัดลำดับเฉพาะหน้ากรอก Production</p></div><button id="closeModelOrderBtn" class="modal-x">×</button></div>
@@ -36,6 +85,6 @@
   <div class="entry-modal-foot"><button id="doneModelOrderBtn" class="primary">เสร็จสิ้น</button></div>
  </div>
 </div>
-<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/entry.js?v=20260902-fix45"></script>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/entry.js?v=20261005-e1"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body></html>
