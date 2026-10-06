@@ -1,6 +1,9 @@
 (()=>{const $=id=>document.getElementById(id);let S={lines:[],shift:null,pallets:[],active:new Set(),baseActive:new Set(),events:[],losses:[],palletOrder:[],matrix:[],loaded:false};
 const val=x=>String(x??"").trim(), lineOf=x=>val(x.lineId||x.line||x.lineCode).toUpperCase(), shiftOf=x=>val(x.shift).toUpperCase();
-function stat(t,c=""){$("planStatus").textContent=t;$("planStatus").className="hero-status "+c}
+function stat(t,c=""){$("planStatus").textContent=t;$("planStatus").className="hero-status "+c;
+ // header "Last Updated" — display only: time of the last successful status
+ if(c==="ok"){let lu=$("planLastUpdated");if(lu){let d=new Date(),z=n=>String(n).padStart(2,"0");lu.textContent=`${z(d.getDate())} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`}}
+}
 function note(t,c=""){$("planMessage").textContent=t;$("planMessage").className="notice info-notice "+c}
 async function all(n){const s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
 function localDate(d=new Date()){const z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`}
@@ -154,20 +157,25 @@ function events(){
   let work=(S.shift.blocks||[]).filter(b=>val(b.type).toUpperCase()==="WORK");
   let palletLabel=p=>`${p.palletName||p.palletCode||p.palletNo||p.name||p.id} — ${posOf(p).map(q=>`${q.model} ${q.door||""}`).join(" + ")}`;
   let opts=orderedPallets().map((p,i)=>`<option value="${p.id}">Position ${i+1} · ${palletLabel(p)}</option>`).join("");
-  host.innerHTML=`<div class="change-controls change-controls-v3">
-    <div><small>FROM POSITION / PALLET</small><select id="chgPallet">${opts}</select></div>
-    <div><small>ACTION</small><select id="chgAction"><option value="REPLACE">Replace Pallet</option><option value="REMOVE">Remove Only</option><option value="ADD">Add Only</option></select></div>
-    <div id="replacementWrap"><small>NEW COMPOSITION</small><select id="chgReplacement">${opts}</select></div>
-    <div><small>ACTUAL CHANGE TIME (24H)</small><input id="chgTime" type="text" inputmode="numeric" maxlength="5" placeholder="14:20" autocomplete="off"></div><div><small>CHANGE / LOSS TIME (MIN)</small><input id="chgLossMin" type="number" min="0" step="1" value="10"></div>
-    <div class="apply-wrap"><button id="addChangeBtn" class="primary">Apply Change</button></div>
-  </div>
-  <div class="change-help">ใส่เวลาที่เครื่องเริ่มหยุดและ Loss Time • ระบบจะให้ Composition ใหม่เริ่มหลัง Loss และที่รอบถัดไป</div>
-  <div class="change-list">${S.events.length?S.events.map((e,i)=>{
-    let from=S.pallets.find(p=>p.id===e.palletId),to=S.pallets.find(p=>p.id===e.replacementPalletId);
-    let text=e.action==="REPLACE"?`POSITION ${((S.palletOrder||[]).indexOf(e.palletId)+1)||'-'} · ${from?palletLabel(from):e.palletLabel} → ${to?palletLabel(to):e.replacementPalletLabel}`:`${e.action} · ${from?palletLabel(from):e.palletLabel}`;
-    let timing=e.actualTime!==e.effectiveFrom?`${e.actualTime} → effective ${e.effectiveFrom}`:e.effectiveFrom;if(e.lossMinutes)timing+=` · Loss ${e.lossMinutes} min`;
-    return `<div class="change-item change-item-v2"><b>${timing}</b><span>${text}</span><button data-del="${i}">×</button></div>`
-  }).join(""):'<span class="change-empty">ยังไม่มีการเปลี่ยน Pallet กลางกะ</span>'}</div>`;
+  const DEL_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+  host.innerHTML=`<div class="plv2-chg">
+   <div class="plv2-chg-form">
+    <div class="plv2-f plv2-f-pal"><small>FROM POSITION / PALLET</small><select id="chgPallet">${opts}</select></div>
+    <div class="plv2-f plv2-f-act"><small>ACTION</small><select id="chgAction"><option value="REPLACE">Replace Pallet</option><option value="REMOVE">Remove Only</option><option value="ADD">Add Only</option></select></div>
+    <div class="plv2-f plv2-f-rep" id="replacementWrap"><small>NEW COMPOSITION (REPLACEMENT PALLET)</small><select id="chgReplacement">${opts}</select></div>
+    <div class="plv2-f plv2-f-time"><small>ACTUAL CHANGE TIME (24H)</small><input id="chgTime" type="text" inputmode="numeric" maxlength="5" placeholder="14:20" autocomplete="off"></div>
+    <div class="plv2-f plv2-f-eff"><small>→ EFFECTIVE FROM</small><div class="plv2-eff">คำนวณโดยระบบ<em>รอบถัดไปหลัง Loss</em></div></div>
+    <div class="plv2-f plv2-f-loss"><small>LOSS TIME (MIN)</small><input id="chgLossMin" type="number" min="0" step="1" value="10"></div>
+    <div class="plv2-f plv2-f-apply apply-wrap"><button id="addChangeBtn" class="plv2-btn plv2-btn-primary" type="button">Apply Change</button></div>
+   </div>
+   <div class="plv2-hint">ใส่เวลาที่เครื่องเริ่มหยุดและ Loss Time • ระบบจะให้ Composition ใหม่เริ่มหลัง Loss และที่รอบถัดไป — Effective From คำนวณโดยระบบ และแสดงในรายการด้านล่างหลังกด Apply</div>
+   <div class="plv2-events">${S.events.length?`<div class="plv2-ev-scroll"><table class="plv2-ev"><thead><tr><th>#</th><th>Position</th><th>Action</th><th>Pallet</th><th>Replacement</th><th>Actual Time</th><th>Effective From</th><th>Loss</th><th></th></tr></thead><tbody>${S.events.map((e,i)=>{
+     let from=S.pallets.find(p=>p.id===e.palletId),to=S.pallets.find(p=>p.id===e.replacementPalletId);
+     let pos=((S.palletOrder||[]).indexOf(e.palletId)+1)||"-";
+     let act=String(e.action||"").toUpperCase(),cls=act==="ADD"?"add":act==="REMOVE"?"remove":"replace";
+     return `<tr><td>${i+1}</td><td>${pos}</td><td><span class="plv2-act plv2-act-${cls}">${act}</span></td><td class="plv2-ev-l">${from?palletLabel(from):(e.palletLabel||"-")}</td><td class="plv2-ev-l">${act==="REPLACE"?(to?palletLabel(to):(e.replacementPalletLabel||"-")):"—"}</td><td>${e.actualTime||"-"}</td><td><b>${e.effectiveFrom||"-"}</b></td><td>${e.lossMinutes?e.lossMinutes+" min":"—"}</td><td><button type="button" class="plv2-del" data-del="${i}" aria-label="ลบรายการ">${DEL_ICON}</button></td></tr>`
+    }).join("")}</tbody></table></div>`:'<div class="plv2-events-empty">ยังไม่มีการเปลี่ยน Pallet กลางกะ</div>'}</div>
+  </div>`;
   let actionEl=document.getElementById("chgAction"),rw=document.getElementById("replacementWrap"),timeEl=document.getElementById("chgTime");
   timeEl.value=work[0]?.start||"08:00";timeEl.onblur=()=>{let t=normalize24h(timeEl.value);if(t)timeEl.value=t};
   function sync(){rw.style.display=actionEl.value==="REPLACE"?"block":"none"} actionEl.onchange=sync;sync();
@@ -201,17 +209,21 @@ function eventBadgeFor(palletId){
 function pallets(){
  if(!S.pallets.length){$("palletArea").innerHTML='<div class="empty-state compact-empty">ไม่พบ Pallet/Jig Layout</div>';return}
  let arr=orderedPallets();
- $("palletArea").innerHTML='<div class="pallet-order-note">Daily Pallet Order — ปรับลำดับเฉพาะวันนี้ ไม่แก้ Physical Master</div><div class="pallet-grid">'+arr.map((p,i)=>{
-  let ch=S.active.has(p.id),comp=posOf(p).map(q=>`${q.model} ${q.door} ×${q.qty}`).join(" + ");
-  let badge=eventBadgeFor(p.id);
-  let badgeHtml=badge?`<span class="pallet-event-badge">${badge.label}${badge.time?" · "+badge.time:""}</span>`:"";
-  return `<div class="pallet-card order-card ${ch?"selected":""} ${badge?"pallet-changed":""}"><input type="checkbox" data-p="${p.id}" ${ch?"checked":""}><div class="pallet-body"><div class="pallet-top"><b>Position ${i+1}</b><span class="physical-id">Pallet ${p.palletName||p.palletCode||p.palletNo||p.name||p.id}</span>${badgeHtml}</div><span>${comp||"No composition"}</span></div><div class="order-tools"><button data-up="${p.id}">↑</button><button data-down="${p.id}">↓</button><input type="number" min="1" max="${arr.length}" value="${i+1}" data-pos="${p.id}"></div></div>`
+ // presentation: compact physical-layout tiles (Active checkbox hook data-p kept; reordering moved to the modal)
+ $("palletArea").innerHTML='<div class="plv2-tiles">'+arr.map((p,i)=>{
+  let ch=S.active.has(p.id),items=posOf(p),first=items[0];
+  let model=first?escH(first.model):"—",extra=items.length>1?` +${items.length-1}`:"";
+  let doors=[...new Set(items.map(q=>q.door).filter(Boolean))].map(escH).join(" / ");
+  let badge=eventBadgeFor(p.id),name=escH(p.palletName||p.palletCode||p.palletNo||p.name||p.id);
+  return `<div class="plv2-tile ${ch?"is-active":"is-inactive"} ${badge?"is-changed":""}" data-tile="${escH(p.id)}" tabindex="0" role="button" title="ดู Composition"><div class="plv2-tile-top"><span class="plv2-tile-no">${String(i+1).padStart(2,"0")}</span><input type="checkbox" data-p="${escH(p.id)}" ${ch?"checked":""} aria-label="Active ${name}"></div><div class="plv2-tile-name">${name}</div><b class="plv2-tile-model">${first?model+extra:"No composition"}</b><span class="plv2-tile-door">${doors||"&nbsp;"}</span>${badge?`<span class="plv2-tile-ev">${badge.label}${badge.time?" · "+badge.time:""}</span>`:`<span class="plv2-tile-state">${ch?"ACTIVE":"INACTIVE"}</span>`}</div>`
  }).join("")+"</div>";
  $("palletArea").querySelectorAll("[data-p]").forEach(e=>e.onchange=()=>{e.checked?S.active.add(e.dataset.p):S.active.delete(e.dataset.p);S.baseActive=new Set(S.active);S.events=[];build();pallets();table();kpis();events();$("snapshotBadge").textContent="NOT SAVED"});
  $("palletArea").querySelectorAll("[data-up]").forEach(e=>e.onclick=()=>movePallet(e.dataset.up,-1));
  $("palletArea").querySelectorAll("[data-down]").forEach(e=>e.onclick=()=>movePallet(e.dataset.down,1));
  $("palletArea").querySelectorAll("[data-pos]").forEach(e=>e.onchange=()=>setPalletPosition(e.dataset.pos,e.value));
  events();
+ $("palletArea").querySelectorAll("[data-tile]").forEach(t=>{t.onclick=ev=>{if(ev.target.closest("input"))return;openComposition(t.dataset.tile)};t.onkeydown=ev=>{if((ev.key==="Enter"||ev.key===" ")&&!ev.target.closest("input")){ev.preventDefault();openComposition(t.dataset.tile)}}});
+ renderOrderModal();
 }
 function kpis(){
   let posEntries=mapForSet(S.baseActive||S.active);
@@ -229,37 +241,29 @@ function table(){
  if(!S.matrix.length){$("planTableArea").innerHTML='<div class="empty-state">ไม่มี WORK Time Block</div>';return}
  let km=new Map;S.matrix.forEach(r=>r.cells.forEach(c=>km.set(c.model+"|||"+c.door,{model:c.model,door:c.door})));
  let ps=[...km.values()].sort((a,b)=>(a.model+a.door).localeCompare(b.model+b.door));
- // Reuses the exact same classes as Production Entry's matrix
- // (production-matrix-viewport / actual-grid / model-col / actual-cell /
- // cell-plan / sum-col) so this looks pixel-consistent with it — same
- // spacing, same "P 7" cell label style, same sticky-left Model/Door
- // column. No <input> here since this table is a read-only Plan reference,
- // not where Actual gets typed (that's still only Production Entry).
- let h='<div class="production-matrix-viewport"><table class="grid actual-grid"><thead><tr><th class="model-col">Model / Door</th>';
- S.matrix.forEach(x=>h+=`<th>${x.start}–${x.end}<br><small>${x.type==="BREAK"?"BREAK":"Plan "+x.total}</small></th>`);
- h+='<th class="sum-col sum-diff">Original</th><th class="sum-col sum-ach">Adjusted</th></tr></thead><tbody>';
- h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Sched. Rounds</b></div></td>';
- S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.type==="BREAK"?"-":Number(x.scheduledRounds).toFixed(2)}</div></td>`);
- h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
- h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Loss</b></div></td>';
- S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.lossMinutes?x.lossMinutes+" min":"-"}</div></td>`);
- h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
- h+='<tr class="plan-meta-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>Adj. Rounds</b></div></td>';
- S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan">${x.type==="BREAK"?"-":Number(x.rounds).toFixed(2)}</div></td>`);
- h+='<td class="sum-col sum-diff">–</td><td class="sum-col sum-ach">–</td></tr>';
- ps.forEach(p=>{
-  h+=`<tr><td class="model-col actual-sticky"><div class="model-cell-clean"><b>${p.model}</b><small>${p.door||"-"}</small></div></td>`;
+ // Presentation only: read-only Plan reference (no inputs). Every figure below is the value already
+ // produced by build() — nothing is recalculated here except the same per-row sums the old table showed.
+ let isB=x=>x.type==="BREAK"?" is-break":"";
+ let h='<div class="plv2-matrix-viewport"><table class="plv2-matrix"><thead><tr><th class="plv2-sk plv2-sk-no">#</th><th class="plv2-sk plv2-sk-model">Model</th><th class="plv2-sk plv2-sk-door">Door</th>';
+ S.matrix.forEach(x=>h+=`<th class="plv2-blk${isB(x)}"><span class="plv2-tm">${x.start} – ${x.end}</span><small>${x.minutes} min</small><small>${x.type==="BREAK"?"BREAK":"Plan (pcs)"}</small></th>`);
+ h+='<th class="plv2-sr plv2-sr-orig">Original</th><th class="plv2-sr plv2-sr-adj">Adjusted</th></tr></thead><tbody>';
+ let meta=(label,fn)=>{let r=`<tr class="plv2-meta"><td class="plv2-sk plv2-sk-no"></td><td class="plv2-sk plv2-sk-model">${label}</td><td class="plv2-sk plv2-sk-door"></td>`;S.matrix.forEach(x=>r+=`<td class="plv2-mc${isB(x)}">${fn(x)}</td>`);return r+'<td class="plv2-sr plv2-sr-orig">–</td><td class="plv2-sr plv2-sr-adj">–</td></tr>'};
+ h+=meta("Sched. Rounds",x=>x.type==="BREAK"?"-":Number(x.scheduledRounds).toFixed(2));
+ h+=meta("Loss",x=>x.lossMinutes?x.lossMinutes+" min":"-");
+ h+=meta("Adj. Rounds",x=>x.type==="BREAK"?"-":Number(x.rounds).toFixed(2));
+ ps.forEach((p,ri)=>{
+  h+=`<tr><td class="plv2-sk plv2-sk-no">${ri+1}</td><td class="plv2-sk plv2-sk-model"><b>${p.model}</b></td><td class="plv2-sk plv2-sk-door">${p.door||"-"}</td>`;
   let origTotal=0,adjTotal=0;
   S.matrix.forEach(x=>{
    let c=x.cells.find(cc=>cc.model===p.model&&cc.door===p.door),pl=Number(c?.plan||0);
    origTotal+=Number(c?.originalPlan||0);adjTotal+=pl;
-   h+=`<td class="actual-cell"><div class="cell-plan"><b>${pl}</b></div></td>`;
+   h+=`<td class="plv2-cell${isB(x)}${pl?"":" is-zero"}">${pl}</td>`;
   });
-  h+=`<td class="sum-col sum-diff">${origTotal}</td><td class="sum-col sum-ach"><b>${adjTotal}</b></td></tr>`;
+  h+=`<td class="plv2-sr plv2-sr-orig">${origTotal}</td><td class="plv2-sr plv2-sr-adj"><b>${adjTotal}</b></td></tr>`;
  });
- h+='<tr class="total-row"><td class="model-col actual-sticky"><div class="model-cell-clean"><b>TOTAL</b></div></td>';
- S.matrix.forEach(x=>h+=`<td class="actual-cell"><div class="cell-plan"><b>${x.total}</b></div></td>`);
- h+=`<td class="sum-col sum-diff">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="sum-col sum-ach"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
+ h+='<tr class="plv2-total-row"><td class="plv2-sk plv2-sk-no"></td><td class="plv2-sk plv2-sk-model">TOTAL (pcs)</td><td class="plv2-sk plv2-sk-door"></td>';
+ S.matrix.forEach(x=>h+=`<td class="plv2-tot${isB(x)}">${x.total}</td>`);
+ h+=`<td class="plv2-sr plv2-sr-orig">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="plv2-sr plv2-sr-adj"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
 async function load(){
@@ -328,4 +332,40 @@ async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=l
  // ตารางค้างข้อมูลของกะก่อนหน้าไว้เหมือนที่แก้ใน entry.js
  $("planDate").onchange=load;$("planLine").onchange=load;$("planShift").onchange=load;
  stat("Ready","ok");let c=ProdV2Context.get();if(c.date&&c.lineId&&c.shift)load()}catch(e){note(e.message,"plan-warn");stat("Load failed","err")}}
+// ---- Presentation-only additions (no calculation / load / save / ordering logic) ----
+function escH(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function palletName(p){return escH(p.palletName||p.palletCode||p.palletNo||p.name||p.id)}
+function compSummary(p){let it=posOf(p);return it.length?it.map(q=>`${escH(q.model)} ${escH(q.door||"")}${q.qty>1?" ×"+q.qty:""}`.trim()).join(" + "):"No composition"}
+// Reorder Pallet modal — a view over the EXISTING order: every control calls the existing movePallet()/setPalletPosition().
+function renderOrderModal(){
+ let host=$("palletOrderList");if(!host)return;
+ let arr=orderedPallets(),top=host.scrollTop;
+ host.innerHTML=arr.length?arr.map((p,i)=>`<div class="plv2-order-row"><span class="plv2-order-no">${i+1}</span><div class="plv2-order-name"><b>${palletName(p)}</b><small>${compSummary(p)}</small></div><div class="plv2-order-tools"><button type="button" data-mup="${escH(p.id)}" aria-label="Move up">↑</button><button type="button" data-mdown="${escH(p.id)}" aria-label="Move down">↓</button><input type="number" min="1" max="${arr.length}" value="${i+1}" data-mpos="${escH(p.id)}" aria-label="Position"></div></div>`).join(""):'<div class="plv2-events-empty">ไม่พบ Pallet/Jig Layout</div>';
+ host.querySelectorAll("[data-mup]").forEach(e=>e.onclick=()=>movePallet(e.dataset.mup,-1));
+ host.querySelectorAll("[data-mdown]").forEach(e=>e.onclick=()=>movePallet(e.dataset.mdown,1));
+ host.querySelectorAll("[data-mpos]").forEach(e=>e.onchange=()=>setPalletPosition(e.dataset.mpos,e.value));
+ host.scrollTop=top;
+}
+// View Composition — read-only: Model / Door / Qty from the pallet's existing positions. Writes nothing.
+function openComposition(id){
+ let arr=orderedPallets(),list=id?arr.filter(p=>p.id===id):arr;
+ $("palletCompTitle").textContent=id&&list[0]?`Composition · Pallet ${list[0].palletName||list[0].palletCode||list[0].palletNo||list[0].name||list[0].id}`:"Composition · ทุก Pallet";
+ $("palletCompBody").innerHTML=list.length?list.map(p=>{let pos=arr.indexOf(p)+1,on=S.active.has(p.id),it=posOf(p);
+  return `<div class="plv2-comp"><div class="plv2-comp-head"><b>Position ${pos} · ${palletName(p)}</b><span class="plv2-comp-state ${on?"on":"off"}">${on?"ACTIVE":"INACTIVE"}</span></div>${it.length?`<table class="plv2-comp-t"><thead><tr><th>Model</th><th>Door</th><th>Qty</th></tr></thead><tbody>${it.map(q=>`<tr><td>${escH(q.model)}</td><td>${escH(q.door||"-")}</td><td>${q.qty}</td></tr>`).join("")}</tbody></table>`:'<div class="plv2-events-empty">No composition</div>'}</div>`}).join(""):'<div class="plv2-events-empty">ไม่พบ Pallet/Jig Layout</div>';
+ $("palletCompModal").classList.add("open");
+}
+function badgeStateSnap(t){t=String(t||"");return /^SAVED$/.test(t)?"saved":/COPIED/.test(t)?"copied":/NOT SAVED/.test(t)?"unsaved":"idle"}
+function badgeStateMaster(t){t=String(t||"");return /VERIFIED/.test(t)?"verified":/PENDING|DRAFT/.test(t)?"pending":"idle"}
+function initPresentation(){
+ let wire=(id,fn)=>{let e=$(id);if(e)e.onclick=fn},close=id=>()=>{$(id).classList.remove("open")};
+ wire("openPalletOrderBtn",()=>{renderOrderModal();$("palletOrderModal").classList.add("open")});
+ wire("closePalletOrderBtn",close("palletOrderModal"));wire("donePalletOrderBtn",close("palletOrderModal"));
+ wire("openCompBtn",()=>openComposition(null));
+ wire("closePalletCompBtn",close("palletCompModal"));wire("donePalletCompBtn",close("palletCompModal"));
+ ["palletOrderModal","palletCompModal"].forEach(id=>{let m=$(id);if(m)m.addEventListener("click",ev=>{if(ev.target===m)m.classList.remove("open")})});
+ document.addEventListener("keydown",ev=>{if(ev.key==="Escape")["palletOrderModal","palletCompModal"].forEach(id=>$(id)&&$(id).classList.remove("open"))});
+ // badge colour states — text is still written by the existing code; this only maps it to a visual state
+ [["snapshotBadge",badgeStateSnap],["masterBadge",badgeStateMaster]].forEach(([id,fn])=>{let b=$(id);if(!b)return;let set=()=>{b.dataset.state=fn(b.textContent)};set();new MutationObserver(set).observe(b,{childList:true,characterData:true,subtree:true})});
+}
+addEventListener("DOMContentLoaded",initPresentation);
 addEventListener("DOMContentLoaded",init)})();
