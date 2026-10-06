@@ -1,16 +1,109 @@
-<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Daily Plan · Production V2</title><link rel="stylesheet" href="css/app.css?v=20260902-fix55">
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script></head><body>
-<div class="site-wrap"><header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn current" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html" class="active">Daily Plan</a><a href="loss.html">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html">Cabinet Plan Import</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
-<section class="hero"><div><div class="eyebrow">DAILY PLAN · V2</div><h1>Daily Production Plan</h1><p>สร้างแผนรายวันจาก Shift Master + Physical Pallet / Jig Layout</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="planStatus" class="hero-status">Ready</div></div></section>
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Plan · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260920-14">
+<link rel="stylesheet" href="css/dashboard-v2.css?v=20261005-02">
+<link rel="stylesheet" href="css/plan-v2.css?v=20261006-p1">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+</head><body>
+<div class="dv2-shell plv2-shell">
+<aside class="dv2-sidebar">
+  <div class="dv2-sidebar-brand">Production System <span>V2</span></div>
+  <nav class="dv2-sidebar-nav">
+    <div class="dv2-nav-group">Overview</div>
+    <a href="index.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</a>
+    <a href="exec.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Executive Summary</a>
+    <div class="dv2-nav-group">Production</div>
+    <a href="entry.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Production Entry</a>
+    <a href="plan.html" class="dv2-nav-item active"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>Daily Plan</a>
+    <a href="loss.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Loss / Downtime</a>
+    <div class="dv2-nav-group">Planning</div>
+    <a href="cabinet-import.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>Cabinet Plan Import</a>
+    <a href="cabinet-coverage.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Cabinet Coverage</a>
+    <a href="order.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>Order Tracking</a>
+    <div class="dv2-nav-group">Operations</div>
+    <a href="assembly.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Assembly</a>
+    <div class="dv2-nav-group">System</div>
+    <a href="master.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Master Setup</a>
+  </nav>
+  <div class="dv2-sidebar-footer">
+    <div>Door Foam Production</div>
+    <div>Kabinburi Plant</div>
+  </div>
+</aside>
+<div class="dv2-main plv2-main">
+<div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></div>
+<div class="dv2-page-header">
+<div class="dv2-title-block"><h1>Daily Production Plan</h1><p>Door Foam Production <span class="dv2-header-sep">|</span> Kabinburi Plant</p></div>
+<div class="dv2-header-right">
+<div class="dv2-last-updated"><span>Last Updated</span><b id="planLastUpdated">—</b></div>
+<div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div>
+<div id="planStatus" class="hero-status">Ready</div>
+</div>
+</div>
 <div id="authGateHost"></div>
-<main class="content" id="appMain">
-<section class="filter-card plan-filter"><label>DATE<input id="planDate" type="date"></label><label>LINE<select id="planLine"></select></label><label>SHIFT<select id="planShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label><div class="plan-actions"><button id="loadPlanBtn" class="primary">Load Master</button><button id="copyPlanBtn">Copy Previous Day</button><button id="savePlanBtn" class="primary">Save Plan</button><button id="deletePlanBtn" class="danger-plan">Delete Saved Plan</button></div></section>
+<main id="appMain" class="plv2-app">
+
+<!-- ===== CONTEXT + ACTIONS ===== -->
+<section class="dv2-filter-chips plv2-filters">
+<label><span>PRODUCTION DATE</span><input id="planDate" type="date"></label>
+<label><span>LINE</span><select id="planLine"></select></label>
+<label><span>SHIFT</span><select id="planShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+<div class="plv2-actions">
+<button id="loadPlanBtn" class="plv2-btn plv2-btn-outline" type="button"><svg class="plv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Load Master</button>
+<button id="copyPlanBtn" class="plv2-btn plv2-btn-outline" type="button"><svg class="plv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy Previous Day</button>
+<button id="deletePlanBtn" class="plv2-btn plv2-btn-danger" type="button"><svg class="plv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Delete Saved Plan</button>
+<button id="savePlanBtn" class="plv2-btn plv2-btn-primary" type="button"><svg class="plv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save Plan</button>
+</div>
 <div id="planMessage" class="notice info-notice">เลือก Date / Line / Shift แล้วกด Load Master</div>
-<section class="kpi-grid plan-kpis"><div class="kpi-card"><div class="kpi-label">PHYSICAL PALLETS</div><div id="kpiPallets" class="kpi-value">—</div><div class="kpi-unit">pallets</div></div><div class="kpi-card accent-purple"><div class="kpi-label">JIG</div><div id="kpiJig" class="kpi-value">—</div><div class="kpi-unit">positions</div></div><div class="kpi-card accent-blue"><div class="kpi-label">ACTIVE POSITIONS</div><div id="kpiPositions" class="kpi-value">—</div><div class="kpi-unit">pcs / full round</div></div><div class="kpi-card accent-green"><div class="kpi-label">PLANNED ROUNDS</div><div id="kpiRounds" class="kpi-value">—</div><div class="kpi-unit">rounds / shift</div></div><div class="kpi-card accent-orange"><div class="kpi-label">TOTAL PLAN</div><div id="kpiPlan" class="kpi-value">—</div><div class="kpi-unit">pcs</div></div></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Active Pallet / Jig Configuration</h2><p>เลือก Pallet ที่ใช้ผลิตวันนี้</p></div><span id="masterBadge" class="soft-badge">MASTER</span></div><div id="palletArea" class="empty-state compact-empty">Load Master เพื่อดู Pallet / Jig</div></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Pallet Change by Time Block</h2><p>Add / Remove Pallet มีผลตั้งแต่ Time Block ที่เลือกเป็นต้นไป • ไม่ย้อนแก้ช่วงก่อนหน้า</p></div><span class="soft-badge blue">EFFECTIVE FROM</span></div><div id="changeArea" class="empty-state compact-empty">Load Master ก่อน</div></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Plan by Time Block</h2><p>Plan Qty = Planned Rounds × Active Position ของ Model / Door</p></div><span id="snapshotBadge" class="soft-badge blue">NOT SAVED</span></div><div id="planTableArea" class="empty-state">ยังไม่มีแผน</div></section>
-</main></div><script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/plan.js?v=20260902-fix60"></script>
+</section>
+
+<!-- ===== KPI ROW (values written by plan.js kpis()) ===== -->
+<section class="plv2-kpis">
+<div class="plv2-kpi plv2-k-pal"><small>Physical Pallets</small><b><span id="kpiPallets">—</span> <span class="u">pallets</span></b><em>จำนวน Pallet ที่เลือกใช้งาน</em></div>
+<div class="plv2-kpi plv2-k-jig"><small>Jig</small><b><span id="kpiJig">—</span> <span class="u">positions</span></b><em>Model / Door ที่ใช้งาน (ไม่ซ้ำ)</em></div>
+<div class="plv2-kpi plv2-k-pos"><small>Active Positions</small><b><span id="kpiPositions">—</span> <span class="u">pcs / full round</span></b><em>ชิ้นงานต่อรอบเต็ม</em></div>
+<div class="plv2-kpi plv2-k-rnd"><small>Planned Rounds</small><b><span id="kpiRounds">—</span> <span class="u">rounds / shift</span></b><em>จำนวนรอบผลิตตามแผน</em></div>
+<div class="plv2-kpi plv2-k-plan"><small>Total Plan</small><b><span id="kpiPlan">—</span> <span class="u">pcs</span></b><em>แผนผลิตรวมทั้งกะ</em></div>
+</section>
+
+<!-- ===== 1. ACTIVE PALLET / JIG CONFIGURATION ===== -->
+<section class="section-card plv2-card">
+<div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></span><div><h2>1. Active Pallet / Jig Configuration</h2><p>เลือก Pallet ที่ใช้ผลิตวันนี้ · คลิกที่ช่องเพื่อดู Composition</p></div></div>
+<div class="plv2-card-actions"><span id="masterBadge" class="soft-badge" data-state="idle">MASTER</span><button id="openPalletOrderBtn" class="plv2-btn plv2-btn-soft" type="button"><svg class="plv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>Reorder Pallet</button><button id="openCompBtn" class="plv2-btn plv2-btn-soft" type="button"><svg class="plv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>View Composition</button></div></div>
+<div id="palletArea" class="empty-state compact-empty">Load Master เพื่อดู Pallet / Jig</div>
+<div class="plv2-legend"><span class="plv2-lg"><i class="plv2-sw plv2-sw-on"></i>Active (ใช้งาน)</span><span class="plv2-lg"><i class="plv2-sw plv2-sw-off"></i>Inactive (ไม่ใช้งาน)</span><span class="plv2-lg plv2-lg-note">Daily Pallet Order — ปรับลำดับเฉพาะวันนี้ ไม่แก้ Physical Master</span></div>
+</section>
+
+<!-- ===== 2. PALLET CHANGE BY TIME BLOCK ===== -->
+<section class="section-card plv2-card">
+<div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></span><div><h2>2. Pallet Change by Time Block</h2><p>Add / Remove / Replace Pallet มีผลตั้งแต่ Time Block ที่เลือกเป็นต้นไป • ไม่ย้อนแก้ช่วงก่อนหน้า</p></div></div><div class="plv2-card-actions"><span class="soft-badge plv2-badge-blue">EFFECTIVE FROM</span></div></div>
+<div id="changeArea" class="empty-state compact-empty">Load Master ก่อน</div>
+</section>
+
+<!-- ===== 3. PLAN BY TIME BLOCK — the hero ===== -->
+<section class="section-card plv2-card plv2-card-plan">
+<div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg></span><div><h2>3. Plan by Time Block</h2><p>Plan Qty = Planned Rounds × Active Position ของ Model / Door</p></div></div><div class="plv2-card-actions"><span id="snapshotBadge" class="soft-badge" data-state="idle">NOT SAVED</span></div></div>
+<div id="planTableArea" class="empty-state">ยังไม่มีแผน</div>
+</section>
+
+<!-- ===== MODALS (presentation only; inside #appMain so read-only styling reaches them) ===== -->
+<div id="palletOrderModal" class="plv2-modal" role="dialog" aria-modal="true" aria-labelledby="palletOrderTitle">
+<div class="plv2-modal-card">
+<div class="plv2-modal-head"><div><h3 id="palletOrderTitle">Reorder Pallet</h3><p>ปรับลำดับ Pallet เฉพาะวันนี้ · ไม่แก้ Physical Master · บันทึกด้วย Save Plan</p></div><button id="closePalletOrderBtn" class="plv2-x" type="button" aria-label="Close">×</button></div>
+<div id="palletOrderList" class="plv2-modal-body"></div>
+<div class="plv2-modal-foot"><button id="donePalletOrderBtn" class="plv2-btn plv2-btn-primary" type="button">เสร็จสิ้น</button></div>
+</div></div>
+<div id="palletCompModal" class="plv2-modal" role="dialog" aria-modal="true" aria-labelledby="palletCompTitle">
+<div class="plv2-modal-card plv2-modal-narrow">
+<div class="plv2-modal-head"><div><h3 id="palletCompTitle">Composition</h3><p>แสดงข้อมูลอย่างเดียว · ไม่แก้ Master</p></div><button id="closePalletCompBtn" class="plv2-x" type="button" aria-label="Close">×</button></div>
+<div id="palletCompBody" class="plv2-modal-body"></div>
+<div class="plv2-modal-foot"><button id="donePalletCompBtn" class="plv2-btn plv2-btn-outline" type="button">ปิด</button></div>
+</div></div>
+
+</main>
+</div>
+</div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/plan.js?v=20261006-p1"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body></html>
