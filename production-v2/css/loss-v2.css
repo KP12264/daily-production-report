@@ -1,0 +1,208 @@
+/* ============================================================================
+   LOSS / DOWNTIME — redesign (loss.html ONLY).
+   Load order: app.css -> dashboard-v2.css (shared shell) -> loss-v2.css (this file).
+   Isolation: every rule is scoped under .lv2-shell / .lv2-main, or targets an ID that exists only
+   on loss.html, or uses an lv2-* class that only loss.html / loss.js emit. The old classes
+   (.loss-form, .loss-filters, .loss-cat, .entry-kpi, .grid) are NOT used by this page any more.
+   Palette = approved Production V2: Amber = loss, Indigo = records, Blue = Pallet Change/primary,
+   Red = delete/problem, neutral borders #dce4ee.
+   ============================================================================ */
+.lv2-shell [hidden]{display:none!important}      /* makes the HTML hidden state visually work (Specify Cause, Cancel) */
+.lv2-main{min-width:0}
+
+/* ---- 1. Context bar ---------------------------------------------------------- */
+.lv2-shell .lv2-actions{order:5;margin:0 0 0 auto;display:flex;align-items:center;gap:8px}
+.lv2-shell .lv2-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 18px;
+  border:1px solid transparent;border-radius:8px;font:inherit;font-size:13px;font-weight:700;line-height:1;
+  white-space:nowrap;cursor:pointer;user-select:none;transition:background .12s,border-color .12s
+}
+.lv2-shell .lv2-ico{width:16px;height:16px;flex:0 0 auto}
+.lv2-shell .lv2-btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 6px rgba(37,99,235,.28)}
+.lv2-shell .lv2-btn-primary:hover{background:var(--blue-deep)}
+.lv2-shell .lv2-btn-outline{background:#fff;color:var(--blue-deep);border-color:#bfdbfe}
+.lv2-shell .lv2-btn-outline:hover{background:#eff6ff}
+.lv2-shell .lv2-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.lv2-main .dv2-filter-chips .notice.plan-warn{color:#b45309!important;font-weight:600}
+
+/* ---- 2. KPI row ---------------------------------------------------------------- */
+.lv2-kpis{display:grid;gap:10px;margin:0 0 10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:900px){.lv2-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.lv2-kpi{
+  position:relative;display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:10px;row-gap:1px;align-content:start;
+  min-height:96px;padding:12px 14px;background:#f8faff;border:1px solid #dce4ee;border-radius:10px;box-shadow:0 1px 3px rgba(15,39,71,.06)
+}
+.lv2-kpi::before{content:"";grid-column:1;grid-row:1 / span 2;width:30px;height:30px;border-radius:50%;background-color:#eaf2ff;background-repeat:no-repeat;background-position:center;background-size:16px 16px}
+.lv2-kpi small{grid-column:2;grid-row:1;align-self:center;padding-right:52px;font-size:12px;font-weight:800;line-height:16px;color:var(--heading)}
+.lv2-kpi b{grid-column:2;grid-row:2;display:block;font-size:24px;font-weight:800;line-height:30px;color:var(--heading);white-space:nowrap}
+.lv2-kpi b .u{font-size:11px;font-weight:600;color:var(--muted)}
+.lv2-kpi em{grid-column:2;margin-top:auto;padding-top:6px;font-style:normal;font-size:10.5px;font-weight:500;line-height:15px;color:var(--muted)}
+.lv2-chip{position:absolute;top:10px;right:12px;padding:2px 9px;border-radius:999px;background:#eaf2ff;color:#1d4ed8;font-size:10.5px;font-weight:800}
+.lv2-chip-amber{background:#fff3d6;color:#b45309}
+.lv2-kpi-mat{grid-column:1 / -1;margin-top:8px;padding:5px 10px;border-radius:8px;background:#fff3d6;color:#92400e;font-size:11px;font-weight:600;text-align:center}
+.lv2-k-total{background:#fffcf5}.lv2-k-total::before{background-color:#fff3d6;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E")}
+.lv2-k-total b{color:#b45309}
+.lv2-k-pal::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 3 4 4-4 4'/%3E%3Cpath d='M20 7H4'/%3E%3Cpath d='m8 21-4-4 4-4'/%3E%3Cpath d='M4 17h16'/%3E%3C/svg%3E")}
+.lv2-k-man{background:#fffcf5}.lv2-k-man::before{background-color:#fff3d6;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E")}
+.lv2-k-rec::before{background-color:#ecebff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z'/%3E%3Cpath d='M14 2v6h6'/%3E%3Cpath d='M16 13H8'/%3E%3Cpath d='M16 17H8'/%3E%3C/svg%3E")}
+
+/* ---- 3. Cards + states ---------------------------------------------------------- */
+.lv2-card{margin-bottom:10px}
+.lv2-card-actions{display:flex;align-items:center;gap:8px}
+.lv2-main .soft-badge{padding:5px 11px;border:1px solid transparent;font-size:10px;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+#lossBadge[data-state="ready"]{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+#lossBadge[data-state="idle"]{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+.lv2-count{font-size:13px;font-weight:700;color:var(--muted)}
+.lv2-main #lossList{margin:6px 0 0}
+.lv2-main .empty-state{min-height:68px;display:grid;place-items:center;text-align:center;padding:14px;border:1px solid #e6ecf4;border-radius:10px;background:#f8fafc;font-size:13px;color:var(--muted)}
+.lv2-main #lossList:has(.lv2-tw){display:block;min-height:0;padding:0;border:0;background:transparent;place-items:normal;text-align:left}
+.lv2-main .empty-state > .empty-state{min-height:0;margin:0;padding:0;border:0;background:transparent}
+.lv2-empty,.lv2-break-empty{padding:14px;border:1px solid #e6ecf4;border-radius:10px;background:#f8fafc;font-size:12.5px;color:var(--muted);text-align:center}
+.lv2-main:has(#lossStatus:not(.ok):not(.err)) #lossList,
+.lv2-main:has(#lossStatus:not(.ok):not(.err)) #categorySummary,
+.lv2-main:has(#lossStatus:not(.ok):not(.err)) #detailSummary{opacity:.55;transition:opacity .15s}
+
+/* ---- 4. Add Manual Loss form ------------------------------------------------------ */
+.lv2-form{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:end;margin-top:6px}
+.lv2-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.lv2-f > span{font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.lv2-f > span i{font-style:normal;color:#dc2626}
+.lv2-f select,.lv2-f input{width:100%;min-width:0;height:40px;padding:0 10px;font:inherit;font-size:13px;font-weight:600;color:var(--heading);background:#fff;border:1px solid #cbd5e1;border-radius:8px;text-overflow:ellipsis}
+.lv2-f select{margin-left:0}                /* app.css has a global "label select{margin-left:5px}" */
+.lv2-f select:focus,.lv2-f input:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.22)}
+.lv2-f input::placeholder{color:#94a3b8;font-weight:500}
+.lv2-f-cat{grid-column:span 3}.lv2-f-det{grid-column:span 3}.lv2-f-cus{grid-column:span 4}
+.lv2-form:has(#lossCustomCauseWrap[hidden]) .lv2-f-det{grid-column:span 7}   /* Detail Cause gets the room when Specify Cause is hidden */
+.lv2-f-sta{grid-column:span 2}.lv2-f-end{grid-column:span 2}.lv2-f-dur{grid-column:span 2}.lv2-f-rem{grid-column:span 4}
+.lv2-f-dur output{display:flex;align-items:center;height:40px;padding:0 12px;border:1px solid #e2e8f0;border-radius:8px;background:#f1f5f9;font-size:14px;font-weight:800;color:var(--heading)}
+.lv2-f-act{grid-column:11 / span 2;grid-row:1 / span 2;display:flex;flex-direction:column;justify-content:flex-end;gap:8px}
+.lv2-f-act .lv2-btn{width:100%}
+
+/* ---- 5. Scheduled Break (read-only) ------------------------------------------------- */
+.lv2-breaks-wrap{display:flex;align-items:center;flex-wrap:wrap;gap:12px 20px}
+.lv2-breaks-wrap .dv2-title-wrap{flex:1 1 340px;min-width:0}
+.lv2-breaks{display:flex;flex-wrap:wrap;gap:10px;flex:2 1 320px;justify-content:flex-end}
+.lv2-break{display:inline-flex;align-items:center;gap:14px;padding:8px 12px;border:1px solid #dbe6f5;border-radius:10px;background:#f3f8ff}
+.lv2-break-time{font-size:13px;font-weight:800;color:var(--heading)}
+.lv2-break-min{font-size:12px;color:var(--muted)}
+.lv2-break-tag{padding:2px 9px;border-radius:6px;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:800;letter-spacing:.05em}
+.lv2-break-empty{flex:1 1 auto;padding:9px 12px}
+
+/* ---- 6. Analysis bars ---------------------------------------------------------------- */
+.lv2-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.lv2-two .lv2-card{margin-bottom:0}
+.lv2-bars{margin-top:6px}
+.lv2-bar-row{display:grid;grid-template-columns:minmax(96px,190px) minmax(0,1fr) 64px 50px;align-items:center;gap:10px;padding:6px 0}
+.lv2-bar-name{min-width:0;font-size:12.5px;font-weight:600;color:var(--heading);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lv2-mat-tag{display:block;font-style:normal;font-size:9.5px;font-weight:600;color:#b45309}
+.lv2-bar-track{height:12px;border-radius:999px;background:#eef2f7;overflow:hidden}
+.lv2-bar-fill{height:100%;border-radius:999px;background:#f97316}
+.lv2-bar-row.is-material .lv2-bar-fill{background:repeating-linear-gradient(135deg,#fdba74 0 6px,#fed7aa 6px 12px)}
+.lv2-bar-min{font-size:12.5px;font-weight:800;text-align:right;color:var(--heading);white-space:nowrap}
+.lv2-bar-pct{font-size:11.5px;text-align:right;color:var(--muted);white-space:nowrap}
+.lv2-bar-foot{margin-top:6px;padding-top:8px;border-top:1px dashed #e2e8f0;font-size:10.5px;color:var(--muted)}
+
+/* ---- 7. Loss Records ------------------------------------------------------------------- */
+.lv2-tw{width:100%;max-width:100%;overflow-x:auto;border:1px solid #dce4ee;border-radius:10px}
+.lv2-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
+.lv2-table th{padding:9px 10px;background:#f1f5f9;border-bottom:1px solid #dce4ee;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-align:center;white-space:nowrap;color:var(--heading)}
+.lv2-table td{padding:9px 10px;border-bottom:1px solid #eef2f7;text-align:center;vertical-align:middle;color:var(--text)}
+.lv2-table tr:last-child td{border-bottom:0}
+.lv2-table td.lv2-det,.lv2-table td.lv2-rem{text-align:left}
+.lv2-table td.lv2-cat{font-weight:700;color:var(--heading)}
+.lv2-table td b{color:var(--heading)}
+.lv2-table tr.is-auto td{background:#fafbfd}
+.source-manual,.source-auto{display:inline-block;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
+.source-manual{background:#eaf2ff;color:#1d4ed8}.source-auto{background:#ecebff;color:#4338ca}
+.lv2-table .muted{font-size:11px;color:var(--muted)}
+.lv2-rb{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;border:1px solid #bfdbfe;border-radius:7px;background:#fff;color:#1d4ed8;font:inherit;font-size:11.5px;font-weight:700;cursor:pointer}
+.lv2-rb:hover{background:#eff6ff}
+.lv2-rb-del{border-color:#fecaca;color:#dc2626}.lv2-rb-del:hover{background:#fef2f2}
+.lv2-act{white-space:nowrap}
+
+/* ---- 8. Responsive ------------------------------------------------------------------------- */
+@media(max-width:1100px){
+  .lv2-form{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .lv2-f-cat,.lv2-f-det{grid-column:span 3}.lv2-f-cus{grid-column:span 6}
+  .lv2-form:has(#lossCustomCauseWrap[hidden]) .lv2-f-det{grid-column:span 3}
+  .lv2-f-sta,.lv2-f-end,.lv2-f-dur{grid-column:span 2}.lv2-f-rem{grid-column:span 6}
+  .lv2-f-act{grid-column:1 / -1;grid-row:auto;flex-direction:row;justify-content:flex-end}
+  .lv2-f-act .lv2-btn{width:auto;min-width:140px}
+}
+@media(max-width:900px){
+  .lv2-two{grid-template-columns:1fr}
+  .lv2-shell .lv2-actions{flex:1 1 100%;margin:0}.lv2-shell .lv2-actions .lv2-btn{flex:1 1 auto}
+  .lv2-breaks{justify-content:flex-start}
+  .lv2-shell .dv2-sidebar{padding:8px 10px}
+  .lv2-shell .dv2-sidebar-brand{padding:0 8px 4px 0;font-size:13.5px}
+  .lv2-shell .dv2-sidebar-nav{flex:1 1 100%;order:3;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0}
+  .lv2-shell .dv2-sidebar-nav::-webkit-scrollbar{display:none}
+  .lv2-shell .dv2-nav-item{flex:0 0 auto;white-space:nowrap;padding:7px 11px}
+}
+@media(max-width:640px){
+  .lv2-main{padding:10px 10px 24px}
+  .lv2-kpi{display:block;min-height:0;padding:10px 12px}
+  .lv2-kpi::before,.lv2-kpi em{display:none}
+  .lv2-kpi small{display:block;padding-right:46px;font-size:11px;line-height:15px}
+  .lv2-kpi b{font-size:20px;line-height:28px}
+  .lv2-chip{top:8px;right:8px}
+  .lv2-card .section-title-row p{display:none}
+  .lv2-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lv2-f-cat,.lv2-f-det,.lv2-f-cus,.lv2-f-rem,.lv2-f-dur{grid-column:1 / -1}
+  .lv2-f-sta,.lv2-f-end{grid-column:span 1}
+  .lv2-f-act .lv2-btn{flex:1 1 0}
+  .lv2-bar-row{grid-template-columns:minmax(0,1fr) 62px 46px;row-gap:3px}
+  .lv2-bar-name{grid-column:1 / -1}.lv2-bar-track{grid-column:1}
+  /* records: stacked cards (same buttons, same data-edit / data-del hooks — pure CSS) */
+  .lv2-tw{border:0;overflow:visible}
+  .lv2-table thead{display:none}
+  .lv2-table,.lv2-table tbody,.lv2-table tr,.lv2-table td{display:block;width:100%}
+  .lv2-table tr{margin-bottom:8px;padding:6px 12px;border:1px solid #dce4ee;border-radius:10px;background:var(--card)}
+  .lv2-table tr.is-auto{background:#fafbfd}
+  .lv2-table td,.lv2-table tr.is-auto td{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:4px 0;border:0;background:transparent;text-align:right}
+  .lv2-table td::before{content:attr(data-label);flex:0 0 92px;font-size:10.5px;font-weight:700;color:var(--muted);text-align:left}
+  .lv2-table td.lv2-det,.lv2-table td.lv2-rem{text-align:right}
+  .lv2-table td:first-child{display:none}
+  .lv2-act{justify-content:flex-end;gap:8px}.lv2-act::before{display:none}
+}
+
+/* ---- 9. Dark mode ------------------------------------------------------------------------------ */
+[data-theme="dark"] .lv2-shell .lv2-btn-outline{background:#171f2b;color:#93c5fd;border-color:#26405f}
+[data-theme="dark"] .lv2-shell .lv2-btn-outline:hover{background:#1c2a3f}
+[data-theme="dark"] .lv2-shell .lv2-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:none}
+[data-theme="dark"] .lv2-shell .lv2-btn-primary:hover{background:#1d4ed8;border-color:#1d4ed8}
+[data-theme="dark"] .lv2-shell .theme-toggle-btn,[data-theme="dark"] .lv2-shell .legacy-link{border-color:#26313f}
+[data-theme="dark"] .lv2-main .dv2-filter-chips .notice.plan-warn{color:#fbbf24!important}
+[data-theme="dark"] .lv2-kpi{background:#131c2c;border-color:#26313f;box-shadow:none}
+[data-theme="dark"] .lv2-kpi::before{background-color:#1b2b45}
+[data-theme="dark"] .lv2-k-total,[data-theme="dark"] .lv2-k-man{background:#241d0e}
+[data-theme="dark"] .lv2-k-total::before,[data-theme="dark"] .lv2-k-man::before{background-color:#3a2c10}
+[data-theme="dark"] .lv2-k-rec::before{background-color:#23234a}
+[data-theme="dark"] .lv2-k-total b{color:#fbbf24}
+[data-theme="dark"] .lv2-chip{background:#16233a;color:#93c5fd}[data-theme="dark"] .lv2-chip-amber{background:#3a2c10;color:#fbbf24}
+[data-theme="dark"] .lv2-kpi-mat{background:#3a2c10;color:#fcd34d}
+[data-theme="dark"] #lossBadge[data-state="ready"]{background:#10201a;color:#34d399;border-color:#1e4030}
+[data-theme="dark"] #lossBadge[data-state="idle"]{background:#171f2b;color:#9fb0c6;border-color:#26313f}
+[data-theme="dark"] .lv2-main .empty-state,[data-theme="dark"] .lv2-empty,[data-theme="dark"] .lv2-break-empty{background:#131c2c;border-color:#26313f}
+[data-theme="dark"] .lv2-f select,[data-theme="dark"] .lv2-f input{background:#0f151f;border-color:#334155;color:var(--heading)}
+[data-theme="dark"] .lv2-f input::placeholder{color:#64748b}
+[data-theme="dark"] .lv2-f select:focus,[data-theme="dark"] .lv2-f input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+[data-theme="dark"] .lv2-f > span i{color:#f87171}
+[data-theme="dark"] .lv2-f-dur output{background:#131c2c;border-color:#26313f}
+[data-theme="dark"] .lv2-break{background:#131c2c;border-color:#26405f}
+[data-theme="dark"] .lv2-break-tag{background:#16233a;color:#93c5fd}
+[data-theme="dark"] .lv2-bar-track{background:#1c2532}
+[data-theme="dark"] .lv2-bar-row.is-material .lv2-bar-fill{background:repeating-linear-gradient(135deg,#a85a1a 0 6px,#8a4a14 6px 12px)}
+[data-theme="dark"] .lv2-mat-tag{color:#fbbf24}
+[data-theme="dark"] .lv2-bar-foot{border-top-color:#26313f}
+[data-theme="dark"] .lv2-tw{border-color:#26313f}
+[data-theme="dark"] .lv2-table th{background:#1c2532;border-bottom-color:#26313f}
+[data-theme="dark"] .lv2-table td{border-bottom-color:#1c2532}
+[data-theme="dark"] .lv2-table tr.is-auto td{background:#121925}
+[data-theme="dark"] .source-manual{background:#16233a;color:#93c5fd}[data-theme="dark"] .source-auto{background:#23234a;color:#a5b4fc}
+[data-theme="dark"] .lv2-rb{background:#171f2b;border-color:#26405f;color:#93c5fd}[data-theme="dark"] .lv2-rb:hover{background:#1c2a3f}
+[data-theme="dark"] .lv2-rb-del{border-color:#4a2323;color:#f87171}[data-theme="dark"] .lv2-rb-del:hover{background:#241212}
+@media(max-width:640px){
+  [data-theme="dark"] .lv2-table tr{border-color:#26313f}
+  [data-theme="dark"] .lv2-table tr.is-auto{background:#121925}
+}
