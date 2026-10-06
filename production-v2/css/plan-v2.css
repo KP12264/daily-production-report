@@ -1,0 +1,303 @@
+/* ============================================================================
+   DAILY PLAN — redesign (plan.html ONLY).
+   Load order: app.css -> dashboard-v2.css (shared shell: sidebar, header capsule, joined filter
+   group, card/title system, dark tokens) -> plan-v2.css (this file).
+
+   Isolation: every rule is scoped under .plv2-shell / .plv2-main, or targets an ID that exists
+   only on plan.html, or uses a plv2-* class that only plan.html / plan.js emit. The old classes
+   (.actual-grid, .production-matrix-viewport, .pallet-*, .change-*, .kpi-*) are NOT used by this
+   page any more, so app.css and every other page are unaffected.
+   Palette = approved Production V2: Indigo = Plan, Emerald = Actual/Active, Red = problem,
+   Amber = warning, neutral borders #dce4ee.
+   ============================================================================ */
+
+/* ---- 1. Context bar actions ------------------------------------------------ */
+.plv2-shell .plv2-actions{order:5;margin:0 0 0 auto;display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.plv2-shell .plv2-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;height:38px;padding:0 15px;
+  border:1px solid transparent;border-radius:8px;font:inherit;font-size:13px;font-weight:700;line-height:1;
+  white-space:nowrap;cursor:pointer;user-select:none;transition:background .12s,border-color .12s
+}
+.plv2-shell .plv2-ico{width:16px;height:16px;flex:0 0 auto}
+.plv2-shell .plv2-btn-outline{background:#fff;color:var(--blue-deep);border-color:#bfdbfe}
+.plv2-shell .plv2-btn-outline:hover{background:#eff6ff}
+.plv2-shell .plv2-btn-primary{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 2px 6px rgba(37,99,235,.28)}
+.plv2-shell .plv2-btn-primary:hover{background:var(--blue-deep)}
+.plv2-shell .plv2-btn-danger{background:#fff;color:#b91c1c;border-color:#fecaca;font-weight:600}
+.plv2-shell .plv2-btn-danger:hover{background:#fef2f2}
+.plv2-shell .plv2-btn-soft{background:#fff;color:var(--blue-deep);border-color:#bfdbfe;height:32px;padding:0 12px;font-size:12px}
+.plv2-shell .plv2-btn-soft:hover{background:#eff6ff}
+.plv2-shell .plv2-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.plv2-main .dv2-filter-chips .notice.plan-warn{color:#b45309!important;font-weight:600}
+
+/* ---- 2. KPI row ------------------------------------------------------------ */
+.plv2-kpis{display:grid;gap:10px;margin:0 0 10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:900px){.plv2-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1200px){.plv2-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.plv2-kpi{
+  position:relative;display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:9px;row-gap:1px;align-content:start;
+  min-height:96px;padding:12px 14px;background:#f8faff;border:1px solid #dce4ee;border-radius:10px;box-shadow:0 1px 3px rgba(15,39,71,.06)
+}
+.plv2-kpi::before{content:"";grid-column:1;grid-row:1 / span 2;width:30px;height:30px;border-radius:50%;background-color:#eaf2ff;background-repeat:no-repeat;background-position:center;background-size:16px 16px}
+.plv2-kpi small{grid-column:2;grid-row:1;align-self:center;font-size:12px;font-weight:800;color:var(--heading);line-height:16px}
+.plv2-kpi b{grid-column:2;grid-row:2;display:block;font-size:24px;font-weight:800;line-height:30px;color:var(--heading);white-space:nowrap}
+.plv2-kpi b .u{font-size:10.5px;font-weight:600;color:var(--muted)}
+.plv2-kpi em{grid-column:2;margin-top:auto;padding-top:6px;font-style:normal;font-size:10.5px;font-weight:500;line-height:15px;color:var(--muted)}
+.plv2-k-pal::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7.5 4.27 9 5.15'/%3E%3Cpath d='M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z'/%3E%3Cpath d='m3.3 7 8.7 5 8.7-5'/%3E%3Cpath d='M12 22V12'/%3E%3C/svg%3E")}
+.plv2-k-jig::before{background-color:#ecebff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='7' height='7' x='3' y='3' rx='1'/%3E%3Crect width='7' height='7' x='14' y='3' rx='1'/%3E%3Crect width='7' height='7' x='14' y='14' rx='1'/%3E%3Crect width='7' height='7' x='3' y='14' rx='1'/%3E%3C/svg%3E")}
+.plv2-k-pos::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='21' x2='14' y1='4' y2='4'/%3E%3Cline x1='10' x2='3' y1='4' y2='4'/%3E%3Cline x1='21' x2='12' y1='12' y2='12'/%3E%3Cline x1='8' x2='3' y1='12' y2='12'/%3E%3Cline x1='21' x2='16' y1='20' y2='20'/%3E%3Cline x1='12' x2='3' y1='20' y2='20'/%3E%3Cline x1='14' x2='14' y1='2' y2='6'/%3E%3Cline x1='8' x2='8' y1='10' y2='14'/%3E%3Cline x1='16' x2='16' y1='18' y2='22'/%3E%3C/svg%3E")}
+.plv2-k-rnd::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8'/%3E%3Cpath d='M21 3v5h-5'/%3E%3Cpath d='M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16'/%3E%3Cpath d='M8 16H3v5'/%3E%3C/svg%3E")}
+.plv2-k-plan{background:#f7f7ff}.plv2-k-plan::before{background-color:#ecebff;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='8' height='4' x='8' y='2' rx='1'/%3E%3Cpath d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/%3E%3Cpath d='M12 11h4'/%3E%3Cpath d='M12 16h4'/%3E%3Cpath d='M8 11h.01'/%3E%3Cpath d='M8 16h.01'/%3E%3C/svg%3E")}
+.plv2-k-plan b{color:#4338ca}
+
+/* ---- 3. Cards -------------------------------------------------------------- */
+.plv2-card{margin-bottom:10px}
+.plv2-card-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.plv2-main .soft-badge{padding:5px 11px;border:1px solid transparent;font-size:10px;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+.plv2-main .plv2-badge-blue{background:#eaf2ff;color:#1d4ed8;border-color:#bfdbfe}
+#snapshotBadge[data-state="saved"]{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+#snapshotBadge[data-state="unsaved"]{background:#fffbeb;color:#b45309;border-color:#fde68a}
+#snapshotBadge[data-state="copied"]{background:#eaf2ff;color:#1d4ed8;border-color:#bfdbfe}
+#masterBadge[data-state="verified"]{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+#masterBadge[data-state="pending"]{background:#fffbeb;color:#b45309;border-color:#fde68a}
+#masterBadge[data-state="idle"]{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+
+/* host elements keep the old .empty-state class after content loads: neutralise it (no big dashed boxes) */
+.plv2-main #palletArea,.plv2-main #changeArea,.plv2-main #planTableArea{margin:6px 0 0}
+.plv2-main .empty-state{
+  min-height:68px;display:grid;place-items:center;text-align:center;padding:14px;
+  border:1px solid #e6ecf4;border-radius:10px;background:#f8fafc;font-size:13px;color:var(--muted)
+}
+.plv2-main #palletArea:has(.plv2-tiles),.plv2-main #changeArea:has(.plv2-chg),.plv2-main #planTableArea:has(.plv2-matrix-viewport){
+  display:block;min-height:0;padding:0;border:0;background:transparent;place-items:normal;align-items:normal;justify-items:normal;text-align:left
+}
+.plv2-main .empty-state > .empty-state{min-height:0;margin:0;padding:0;border:0;background:transparent}
+/* loading / saving / deleting: dim the previous table (status class is neither .ok nor .err) */
+.plv2-main:has(#planStatus:not(.ok):not(.err)) #planTableArea{opacity:.55;transition:opacity .15s}
+
+/* ---- 4. Pallet tiles ------------------------------------------------------- */
+.plv2-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));gap:8px}
+.plv2-tile{
+  position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:8px 10px 9px;cursor:pointer;
+  background:var(--card);border:1px solid #dce4ee;border-radius:10px;color:var(--text);transition:border-color .12s,box-shadow .12s
+}
+.plv2-tile:hover{border-color:#9bb7d2;box-shadow:0 1px 4px rgba(15,39,71,.10)}
+.plv2-tile:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.plv2-tile-top{display:flex;align-items:center;justify-content:space-between}
+.plv2-tile-no{font-size:15px;font-weight:800;line-height:1;color:var(--heading)}
+.plv2-tile input[type="checkbox"]{width:16px;height:16px;margin:0;accent-color:#059669;cursor:pointer}
+.plv2-tile-name{font-size:10px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plv2-tile-model{display:block;font-size:12.5px;font-weight:800;line-height:1.25;color:var(--heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.plv2-tile-door{display:block;min-height:14px;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plv2-tile-state{margin-top:3px;font-size:9px;font-weight:800;letter-spacing:.07em;color:#64748b}
+.plv2-tile-ev{margin-top:3px;align-self:flex-start;font-size:9px;font-weight:800;letter-spacing:.03em;color:#92400e;background:#fef3c7;border-radius:5px;padding:1px 6px}
+.plv2-tile.is-active{background:#fbfefc;border-color:#bfe6d3}
+.plv2-tile.is-active .plv2-tile-state{color:#047857}
+.plv2-tile.is-inactive{background:#f6f7f9;border-style:dashed}
+.plv2-tile.is-inactive .plv2-tile-no,.plv2-tile.is-inactive .plv2-tile-model{color:#94a3b8}
+.plv2-tile.is-changed{border-color:#f59e0b}
+.plv2-legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;padding:10px 2px 0;font-size:11px;color:var(--muted)}
+.plv2-lg{display:inline-flex;align-items:center;gap:7px}
+.plv2-sw{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid transparent}
+.plv2-sw-on{background:#fbfefc;border-color:#86d3ad}.plv2-sw-off{background:#f6f7f9;border:1px dashed #b4bfcc}
+.plv2-lg-note{margin-left:auto}
+
+/* ---- 5. Pallet change form + event list ------------------------------------ */
+.plv2-chg-form{display:grid;gap:10px;align-items:end;grid-template-columns:minmax(0,1.6fr) minmax(0,.9fr) minmax(0,1.6fr) 122px 150px 92px auto}
+.plv2-f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.plv2-f small{font-size:9.5px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.plv2-f select,.plv2-f input{width:100%;height:38px;padding:0 10px;font:inherit;font-size:13px;font-weight:600;color:var(--heading);background:#fff;border:1px solid #cbd5e1;border-radius:8px}
+.plv2-f select:focus,.plv2-f input:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.22)}
+.plv2-eff{height:38px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;font-size:11px;font-weight:600;line-height:1.25;color:var(--muted)}
+.plv2-eff em{font-style:normal;font-weight:500;font-size:10px}
+.plv2-f-eff small{color:#4f46e5}
+.plv2-hint{margin-top:10px;padding:8px 11px;border-radius:8px;background:#f3f8ff;color:#4f6f8e;font-size:11px;line-height:1.5}
+.plv2-events{margin-top:10px}
+.plv2-ev-scroll{overflow-x:auto;border:1px solid #dce4ee;border-radius:10px}
+.plv2-ev{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;white-space:nowrap}
+.plv2-ev th{padding:8px 10px;background:#f1f5f9;border-bottom:1px solid #dce4ee;font-size:10.5px;font-weight:700;letter-spacing:.03em;text-align:center;color:var(--heading)}
+.plv2-ev td{padding:8px 10px;border-bottom:1px solid #eef2f7;text-align:center;color:var(--text)}
+.plv2-ev tr:last-child td{border-bottom:0}
+.plv2-ev td.plv2-ev-l{text-align:left}
+.plv2-ev td b{color:var(--heading)}
+.plv2-act{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.04em}
+.plv2-act-add{background:#ecfdf5;color:#047857}.plv2-act-remove{background:#fef2f2;color:#dc2626}.plv2-act-replace{background:#eaf2ff;color:#1d4ed8}
+.plv2-del{display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid #fecaca;border-radius:7px;background:#fff;color:#dc2626;cursor:pointer}
+.plv2-del:hover{background:#fef2f2}
+.plv2-events-empty{padding:12px;border:1px solid #e6ecf4;border-radius:10px;background:#f8fafc;font-size:12px;color:var(--muted);text-align:center}
+
+/* ---- 6. Plan by Time Block — the hero ----------------------------------------- */
+.plv2-matrix-viewport{position:relative;width:100%;max-width:100%;overflow:auto;background:var(--card);border:1px solid #dce4ee;border-radius:10px;max-height:min(74vh,760px)}
+.plv2-matrix{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px;color:var(--text)}
+.plv2-matrix th,.plv2-matrix td{padding:7px 6px;border-bottom:1px solid #eef2f7;background:var(--card);text-align:center;white-space:nowrap;vertical-align:middle}
+.plv2-matrix thead th{position:sticky;top:0;z-index:20;padding:8px 6px;background:#f1f5f9;border-bottom:1px solid #dce4ee;font-size:11.5px;font-weight:700;line-height:1.3;color:var(--heading)}
+.plv2-matrix thead th small{display:block;font-size:10px;font-weight:500;color:var(--muted)}
+.plv2-tm{display:block;font-weight:800}
+.plv2-blk{min-width:92px}
+/* sticky LEFT: # | Model | Door */
+.plv2-sk{position:sticky;z-index:12;background:var(--card)}
+.plv2-sk-no{left:0;width:34px;min-width:34px;color:var(--muted);font-weight:600}
+.plv2-sk-model{left:34px;width:150px;min-width:150px;text-align:left!important;color:var(--heading)}
+.plv2-sk-model b{font-weight:800}
+.plv2-sk-door{left:184px;width:58px;min-width:58px;color:var(--text);font-weight:600;box-shadow:4px 0 8px -4px rgba(15,39,71,.14)}
+.plv2-matrix thead .plv2-sk{z-index:30;background:#f1f5f9}
+.plv2-matrix thead .plv2-sk-model{text-align:left!important}
+/* sticky RIGHT: Original | Adjusted — 144px (was 176px) */
+.plv2-sr{position:sticky;z-index:12;background:var(--card);width:72px;min-width:72px}
+.plv2-sr-adj{right:0}
+.plv2-sr-orig{right:72px;box-shadow:-4px 0 8px -4px rgba(15,39,71,.14);color:var(--muted)}
+.plv2-matrix thead .plv2-sr{z-index:30;background:#f1f5f9}
+.plv2-matrix td.plv2-sr-adj b{font-weight:800;color:var(--heading)}
+/* plan values: Plan = indigo */
+.plv2-cell{font-size:13.5px;font-weight:800;color:#4f46e5}
+.plv2-cell.is-zero{font-weight:500;color:#7d8aa0}
+.plv2-matrix th.is-break,.plv2-matrix td.is-break{background:#f6f7f9;color:var(--muted)}
+.plv2-matrix td.plv2-cell.is-break{color:#7d8aa0;font-weight:500}
+/* planning meta rows — secondary */
+.plv2-meta td{padding:4px 6px;background:#fafbfd;border-bottom:1px dashed #e6ecf4;font-size:10.5px;font-weight:500;color:var(--muted)}
+.plv2-meta td.plv2-sk-model{font-weight:600;color:#7a8799;font-size:10.5px}
+.plv2-meta td.is-break{background:#f3f4f7}
+.plv2-meta + .plv2-meta td{border-top:0}
+/* TOTAL — pinned to the bottom of the viewport */
+.plv2-total-row td{position:sticky;bottom:0;z-index:15;background:#eef5ff;border-top:2px solid #cfe0f7;border-bottom:0;font-weight:800;color:var(--heading)}
+.plv2-total-row td.plv2-sk,.plv2-total-row td.plv2-sr{z-index:26;background:#eef5ff}
+.plv2-total-row .plv2-sk-model{font-size:12.5px;letter-spacing:.02em}
+.plv2-tot{color:#4f46e5;font-size:14px}
+.plv2-tot.is-break{background:#f1f3f7;color:#7d8aa0}
+
+/* ---- 7. Modals (Reorder Pallet · Composition) ---------------------------------- */
+.plv2-modal{display:none;position:fixed;inset:0;z-index:200;overflow:auto;padding:16px;background:rgba(15,39,71,.45)}
+.plv2-modal.open{display:grid;place-items:center}
+.plv2-modal-card{width:min(600px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:var(--card);border:1px solid #dce4ee;border-radius:12px;box-shadow:0 20px 50px rgba(15,39,71,.28)}
+.plv2-modal-narrow{width:min(460px,100%)}
+.plv2-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #dce4ee}
+.plv2-modal-head h3{margin:0;font-size:16px;font-weight:800;color:var(--heading)}
+.plv2-modal-head p{margin:3px 0 0;font-size:12px;color:var(--muted)}
+.plv2-x{flex:0 0 auto;width:32px;height:32px;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:var(--heading);font-size:18px;line-height:1;cursor:pointer}
+.plv2-modal-body{overflow:auto;padding:6px 18px}
+.plv2-modal-foot{display:flex;justify-content:flex-end;padding:12px 18px;border-top:1px solid #dce4ee}
+.plv2-order-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #eef2f7}
+.plv2-order-row:last-child{border-bottom:0}
+.plv2-order-no{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#eaf2ff;color:var(--blue-deep);font-size:12px;font-weight:800}
+.plv2-order-name{min-width:0}
+.plv2-order-name b{display:block;font-size:13px;color:var(--heading)}
+.plv2-order-name small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plv2-order-tools{display:grid;grid-template-columns:34px 34px 58px;gap:5px}
+.plv2-order-tools button{height:34px;padding:0;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:var(--heading);font-weight:800;cursor:pointer}
+.plv2-order-tools button:hover{background:#eff6ff;border-color:#bfdbfe}
+.plv2-order-tools input{width:100%;height:34px;padding:0 4px;text-align:center;border:1px solid #cbd5e1;border-radius:8px;font:inherit;font-size:13px;font-weight:700;color:var(--heading);background:#fff}
+.plv2-comp{padding:10px 0;border-bottom:1px solid #eef2f7}.plv2-comp:last-child{border-bottom:0}
+.plv2-comp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.plv2-comp-head b{font-size:13px;color:var(--heading)}
+.plv2-comp-state{font-size:9px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:999px}
+.plv2-comp-state.on{background:#ecfdf5;color:#047857}.plv2-comp-state.off{background:#f1f5f9;color:#64748b}
+.plv2-comp-t{width:100%;border-collapse:collapse;font-size:12px}
+.plv2-comp-t th{padding:6px 8px;background:#f1f5f9;font-size:10.5px;font-weight:700;text-align:left;color:var(--heading)}
+.plv2-comp-t td{padding:6px 8px;border-bottom:1px solid #eef2f7}
+/* read-only mode (class set by the auth layer on #appMain): the new controls must be inert like the old inline ones */
+#appMain.readonly-mode #openPalletOrderBtn,
+#appMain.readonly-mode .plv2-order-tools button,
+#appMain.readonly-mode .plv2-order-tools input{pointer-events:none;opacity:.5;background:var(--bg-soft)}
+
+/* ---- 8. Responsive ------------------------------------------------------------ */
+@media(max-width:1340px){.plv2-chg-form{grid-template-columns:repeat(4,minmax(0,1fr))}.plv2-f-apply{grid-column:1 / -1;justify-self:end}}
+@media(max-width:1100px){
+  .plv2-sr{position:static}.plv2-sr-orig{box-shadow:none}
+  .plv2-sr-adj,.plv2-sr-orig{right:auto}      /* header cells keep sticky-top only; no horizontal pin */
+  .plv2-sk-model{width:124px;min-width:124px}.plv2-sk-door{left:158px;width:50px;min-width:50px}
+  .plv2-sk-no{width:28px;min-width:28px}.plv2-sk-model{left:28px}
+}
+@media(max-width:900px){
+  .plv2-shell .plv2-actions{flex:1 1 100%;margin:0;justify-content:stretch}
+  .plv2-shell .plv2-actions .plv2-btn{flex:1 1 auto}
+  .plv2-chg-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .plv2-lg-note{margin-left:0;flex:1 1 100%}
+  /* operational page: the stacked top nav becomes ONE scrolling row */
+  .plv2-shell .dv2-sidebar{padding:8px 10px}
+  .plv2-shell .dv2-sidebar-brand{padding:0 8px 4px 0;font-size:13.5px}
+  .plv2-shell .dv2-sidebar-nav{flex:1 1 100%;order:3;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0}
+  .plv2-shell .dv2-sidebar-nav::-webkit-scrollbar{display:none}
+  .plv2-shell .dv2-nav-item{flex:0 0 auto;white-space:nowrap;padding:7px 11px}
+}
+@media(max-width:640px){
+  .plv2-main{padding:10px 10px 24px}
+  .plv2-kpi{display:block;min-height:0;padding:9px 11px}
+  .plv2-kpi::before,.plv2-kpi em{display:none}
+  .plv2-kpi small{display:block;font-size:10.5px;line-height:14px}
+  .plv2-kpi b{font-size:18px;line-height:26px}
+  .plv2-kpis .plv2-kpi:last-child{grid-column:1 / -1}
+  .plv2-tiles{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+  .plv2-card .section-title-row p{display:none}
+  .plv2-chg-form{grid-template-columns:1fr}.plv2-f-apply{justify-self:stretch}.plv2-f-apply .plv2-btn{width:100%}
+  /* matrix: sticky context shrinks to the Model column only, so Time Blocks stay visible */
+  .plv2-sk-no{display:none}
+  .plv2-sk-model{left:0;width:96px;min-width:96px;font-size:12px}
+  .plv2-sk-door{position:static;left:auto;box-shadow:none;width:44px;min-width:44px}
+  .plv2-sk-model{box-shadow:4px 0 8px -4px rgba(15,39,71,.14)}
+  .plv2-blk{min-width:80px}
+  .plv2-sr{width:64px;min-width:64px}.plv2-sr-orig{right:auto}
+  .plv2-matrix-viewport{max-height:calc(100vh - 140px)}
+  .plv2-order-row{grid-template-columns:26px minmax(0,1fr)}.plv2-order-tools{grid-column:1 / -1}
+}
+
+/* ---- 9. Dark mode -------------------------------------------------------------- */
+/* dark: primary keeps white text on a deeper blue (the dark-theme --blue is too light for white text) */
+[data-theme="dark"] .plv2-shell .plv2-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:none}
+[data-theme="dark"] .plv2-shell .plv2-btn-primary:hover{background:#1d4ed8;border-color:#1d4ed8}
+/* dark: the shared topbar buttons keep a light outline — soften it on this page */
+[data-theme="dark"] .plv2-shell .theme-toggle-btn,[data-theme="dark"] .plv2-shell .legacy-link{border-color:#26313f}
+[data-theme="dark"] .plv2-shell .plv2-btn-outline,[data-theme="dark"] .plv2-shell .plv2-btn-soft{background:#171f2b;color:#93c5fd;border-color:#26405f}
+[data-theme="dark"] .plv2-shell .plv2-btn-outline:hover,[data-theme="dark"] .plv2-shell .plv2-btn-soft:hover{background:#1c2a3f}
+[data-theme="dark"] .plv2-shell .plv2-btn-danger{background:#171f2b;color:#f87171;border-color:#4a2323}
+[data-theme="dark"] .plv2-shell .plv2-btn-danger:hover{background:#241212}
+[data-theme="dark"] .plv2-main .dv2-filter-chips .notice.plan-warn{color:#fbbf24!important}
+[data-theme="dark"] .plv2-kpi{background:#131c2c;border-color:#26313f;box-shadow:none}
+[data-theme="dark"] .plv2-kpi::before{background-color:#1b2b45}
+[data-theme="dark"] .plv2-k-jig::before,[data-theme="dark"] .plv2-k-plan::before{background-color:#23234a}
+[data-theme="dark"] .plv2-k-plan{background:#161a35}
+[data-theme="dark"] .plv2-k-plan b{color:#a5b4fc}
+[data-theme="dark"] .plv2-main .plv2-badge-blue,[data-theme="dark"] #snapshotBadge[data-state="copied"]{background:#16233a;color:#93c5fd;border-color:#26405f}
+[data-theme="dark"] #snapshotBadge[data-state="saved"],[data-theme="dark"] #masterBadge[data-state="verified"]{background:#10201a;color:#34d399;border-color:#1e4030}
+[data-theme="dark"] #snapshotBadge[data-state="unsaved"],[data-theme="dark"] #masterBadge[data-state="pending"]{background:#241d0e;color:#fbbf24;border-color:#4a3a14}
+[data-theme="dark"] #masterBadge[data-state="idle"]{background:#171f2b;color:#9fb0c6;border-color:#26313f}
+[data-theme="dark"] .plv2-main .empty-state{background:#131c2c;border-color:#26313f}
+[data-theme="dark"] .plv2-tile{background:#131c2c;border-color:#26313f}
+[data-theme="dark"] .plv2-tile:hover{border-color:#3a5272;box-shadow:none}
+[data-theme="dark"] .plv2-tile.is-active{background:#10201a;border-color:#1e4030}
+[data-theme="dark"] .plv2-tile.is-active .plv2-tile-state{color:#34d399}
+[data-theme="dark"] .plv2-tile.is-inactive{background:#10151e;border-color:#2a3441}
+[data-theme="dark"] .plv2-tile.is-inactive .plv2-tile-no,[data-theme="dark"] .plv2-tile.is-inactive .plv2-tile-model{color:#5d6b80}
+[data-theme="dark"] .plv2-tile.is-changed{border-color:#a16207}
+[data-theme="dark"] .plv2-tile-ev{color:#fcd34d;background:#3a2e0f}
+[data-theme="dark"] .plv2-sw-on{background:#10201a;border-color:#1e4030}[data-theme="dark"] .plv2-sw-off{background:#10151e;border-color:#3a4658}
+[data-theme="dark"] .plv2-f select,[data-theme="dark"] .plv2-f input,[data-theme="dark"] .plv2-order-tools input{background:#0f151f;border-color:#334155;color:var(--heading)}
+[data-theme="dark"] .plv2-f select:focus,[data-theme="dark"] .plv2-f input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+[data-theme="dark"] .plv2-eff{background:#131c2c;border-color:#334155}
+[data-theme="dark"] .plv2-f-eff small{color:#a5b4fc}
+[data-theme="dark"] .plv2-hint{background:#131c2c;color:#9fb0c6}
+[data-theme="dark"] .plv2-ev-scroll{border-color:#26313f}
+[data-theme="dark"] .plv2-ev th{background:#1c2532;border-bottom-color:#26313f}
+[data-theme="dark"] .plv2-ev td{border-bottom-color:#1c2532}
+[data-theme="dark"] .plv2-act-add{background:#10201a;color:#34d399}[data-theme="dark"] .plv2-act-remove{background:#241212;color:#f87171}[data-theme="dark"] .plv2-act-replace{background:#16233a;color:#93c5fd}
+[data-theme="dark"] .plv2-del{background:#171f2b;border-color:#4a2323;color:#f87171}[data-theme="dark"] .plv2-del:hover{background:#241212}
+[data-theme="dark"] .plv2-events-empty{background:#131c2c;border-color:#26313f}
+[data-theme="dark"] .plv2-matrix-viewport{border-color:#26313f}
+[data-theme="dark"] .plv2-matrix th,[data-theme="dark"] .plv2-matrix td{border-bottom-color:#1c2532}
+[data-theme="dark"] .plv2-matrix thead th,[data-theme="dark"] .plv2-matrix thead .plv2-sk,[data-theme="dark"] .plv2-matrix thead .plv2-sr{background:#1c2532;border-bottom-color:#26313f}
+[data-theme="dark"] .plv2-sk-door,[data-theme="dark"] .plv2-sr-orig,[data-theme="dark"] .plv2-sk-model{box-shadow:none}
+[data-theme="dark"] .plv2-cell,[data-theme="dark"] .plv2-tot{color:#a5b4fc}
+[data-theme="dark"] .plv2-cell.is-zero,[data-theme="dark"] .plv2-matrix td.plv2-cell.is-break{color:#7a889e}
+[data-theme="dark"] .plv2-matrix th.is-break,[data-theme="dark"] .plv2-matrix td.is-break{background:#171c25}
+[data-theme="dark"] .plv2-meta td{background:#121925;border-bottom-color:#1c2532;color:#7d8aa0}
+[data-theme="dark"] .plv2-meta td.plv2-sk-model{color:#7d8aa0}
+[data-theme="dark"] .plv2-meta td.is-break{background:#14191f}
+[data-theme="dark"] .plv2-total-row td,[data-theme="dark"] .plv2-total-row td.plv2-sk,[data-theme="dark"] .plv2-total-row td.plv2-sr{background:#16233a;border-top-color:#26405f}
+[data-theme="dark"] .plv2-tot.is-break{background:#171c25;color:#7a889e}
+[data-theme="dark"] .plv2-modal{background:rgba(2,6,14,.62)}
+[data-theme="dark"] .plv2-modal-card{border-color:#26313f;box-shadow:none}
+[data-theme="dark"] .plv2-modal-head,[data-theme="dark"] .plv2-modal-foot{border-color:#26313f}
+[data-theme="dark"] .plv2-x,[data-theme="dark"] .plv2-order-tools button{background:#171f2b;border-color:#26313f;color:#e2e8f0}
+[data-theme="dark"] .plv2-order-row,[data-theme="dark"] .plv2-comp{border-bottom-color:#1c2532}
+[data-theme="dark"] .plv2-order-no{background:#1b2b45;color:#93c5fd}
+[data-theme="dark"] .plv2-comp-t th{background:#1c2532}[data-theme="dark"] .plv2-comp-t td{border-bottom-color:#1c2532}
+[data-theme="dark"] .plv2-comp-state.on{background:#10201a;color:#34d399}[data-theme="dark"] .plv2-comp-state.off{background:#171f2b;color:#8795ab}
