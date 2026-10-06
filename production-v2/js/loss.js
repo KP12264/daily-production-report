@@ -5,7 +5,10 @@ function mins(t){let [h,m]=String(t).split(":").map(Number);return h*60+m}
 function norm(t){let s=val(t).replace(/[^\d:]/g,"");if(/^\d{4}$/.test(s))s=s.slice(0,2)+":"+s.slice(2);if(!/^\d{1,2}:\d{2}$/.test(s))return null;let [h,m]=s.split(":").map(Number);if(h>23||m>59)return null;return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`}
 function duration(a,b){let x=mins(b)-mins(a);if(x<0)x+=1440;return x}
 function note(t,c=""){$("lossMessage").textContent=t;$("lossMessage").className="notice info-notice "+c}
-function stat(t,c=""){$("lossStatus").textContent=t;$("lossStatus").className="hero-status "+c}
+function stat(t,c=""){$("lossStatus").textContent=t;$("lossStatus").className="hero-status "+c;
+ // header "Last Updated" — display only: time of the last successful status
+ if(c==="ok"){let lu=$("lossLastUpdated");if(lu){let d=new Date(),z=n=>String(n).padStart(2,"0");lu.textContent=`${z(d.getDate())} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`}}
+}
 async function all(n){const s=await ProdV2DB.collection(n).get();return s.docs.map(d=>({id:d.id,...d.data()}))}
 function autoLosses(){return S.plan?.masterSnapshot?.palletChangeLosses||[]}
 function autoRows(){return autoLosses().map((x,i)=>({...x,id:`auto_${i}`,auto:true,category:x.category||"Pallet Change",remark:x.remark||"จาก Daily Plan"}))}
@@ -86,7 +89,9 @@ function breakConflicts(a,b){return scheduledBreaks().filter(x=>overlaps(a,b,x.s
 function renderSummary(rows){
  const totals={}; rows.forEach(x=>{let k=x.category||"Other";totals[k]=(totals[k]||0)+Number(x.minutes||0)});
  const sorted=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
- $("categorySummary").innerHTML=sorted.length?sorted.map(([k,v])=>`<div class="loss-cat"><span>${esc(k)}</span><b>${v} min</b></div>`).join(""):'<div class="empty-inline">ยังไม่มี Loss</div>';
+ // presentation: horizontal bars. % = category minutes / sum of the DISPLAYED category minutes (one decimal).
+ const shown=sorted.reduce((s,[,v])=>s+v,0),maxv=sorted.length?sorted[0][1]:0;
+ $("categorySummary").innerHTML=sorted.length?sorted.map(([k,v])=>{let pct=shown?(v/shown*100).toFixed(1):"0.0",w=maxv?Math.max(2,Math.round(v/maxv*100)):0;return `<div class="lv2-bar-row${k==="Material"?" is-material":""}" data-cat="${esc(k)}" data-min="${v}"><span class="lv2-bar-name">${esc(k)}${k==="Material"?'<em class="lv2-mat-tag">ไม่รวมใน Total KPI</em>':""}</span><div class="lv2-bar-track"><div class="lv2-bar-fill" style="width:${w}%"></div></div><b class="lv2-bar-min">${v} min</b><span class="lv2-bar-pct">${pct}%</span></div>`}).join("")+`<div class="lv2-bar-foot">สัดส่วน = ต่อผลรวมที่แสดง ${shown} min (รวม Material)</div>`:'<div class="lv2-empty">ยังไม่มี Loss</div>';
 }
 function render(){
  // "Material" = waiting for raw material — doesn't stop the machine, so it's
@@ -97,16 +102,22 @@ function render(){
  // (renderSummary, the Loss Records table, RECORDS count) still shows it.
  let rows=allRows(),lossOnly=rows.filter(x=>x.category!=="Material");
  let total=lossOnly.reduce((s,x)=>s+Number(x.minutes||duration(x.start,x.end)||0),0),auto=autoRows().reduce((s,x)=>s+Number(x.minutes||0),0),manual=S.manual.filter(x=>x.category!=="Material").reduce((s,x)=>s+Number(x.minutes||0),0);
- $("lossKpis").innerHTML=`<div class="entry-kpi"><small>TOTAL LOSS</small><b>${total} min</b></div><div class="entry-kpi"><small>PALLET CHANGE</small><b>${auto} min</b></div><div class="entry-kpi"><small>OTHER LOSS</small><b>${manual} min</b></div><div class="entry-kpi"><small>RECORDS</small><b>${rows.length}</b></div>`;
- renderSummary(rows);
- if(!rows.length){$("lossList").innerHTML='<div class="empty-state">ยังไม่มี Loss ในกะนี้</div>';return}
- let h='<div class="table-scroll"><table class="grid loss-table"><thead><tr><th>Start</th><th>End</th><th>Minutes</th><th>Category</th><th>Detail Cause</th><th>Remark</th><th>Source</th><th>Action</th></tr></thead><tbody>';
- rows.sort((a,b)=>mins(a.start||"00:00")-mins(b.start||"00:00")).forEach(x=>{
+ // presentation-only derived values (no calculation line above is changed)
+ let mat=rows.filter(x=>x.category==="Material").reduce((s,x)=>s+Number(x.minutes||0),0),share=v=>total>0?(v/total*100).toFixed(1)+"%":"";
+ $("lossKpis").innerHTML=`<div class="lv2-kpi lv2-k-total"><small>Total Loss (excl. Material)</small><b>${total} <span class="u">min</span></b><em>เวลาสูญเสียทั้งหมด (ไม่รวม Material)</em>${mat>0?`<div class="lv2-kpi-mat">Material: ${mat} min (not included)</div>`:""}</div><div class="lv2-kpi lv2-k-pal"><small>Pallet Change Loss</small>${share(auto)?`<span class="lv2-chip">${share(auto)}</span>`:""}<b>${auto} <span class="u">min</span></b><em>จากการเปลี่ยน Pallet (Daily Plan)</em></div><div class="lv2-kpi lv2-k-man"><small>Other Loss (Manual)</small>${share(manual)?`<span class="lv2-chip lv2-chip-amber">${share(manual)}</span>`:""}<b>${manual} <span class="u">min</span></b><em>จากการหยุดอื่น ๆ (บันทึกโดยผู้ใช้)</em></div><div class="lv2-kpi lv2-k-rec"><small>Total Records</small><b>${rows.length} <span class="u">records</span></b><em>จำนวนรายการ Loss ทั้งหมด</em></div>`;
+ renderSummary(rows);renderDetailSummary(rows);renderBreaks();
+ $("lossRecordCount").textContent=rows.length?`(${rows.length})`:"";
+ if(!rows.length){$("lossList").innerHTML='<div class="empty-state">ยังไม่มี Loss ในกะนี้</div>';updateDurationPreview();return}
+ const ICON_E='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',ICON_D='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+ let h='<div class="lv2-tw"><table class="lv2-table loss-table"><thead><tr><th>#</th><th>Start</th><th>End</th><th>Duration (min)</th><th>Category</th><th>Detail Cause</th><th>Remark</th><th>Source</th><th>Actions</th></tr></thead><tbody>';
+ rows.sort((a,b)=>mins(a.start||"00:00")-mins(b.start||"00:00")).forEach((x,i)=>{
    let detailText=x.auto?"—":!x.detailCause?"ไม่ระบุรายละเอียด (Unspecified)":x.detailCause==="Other"?`อื่น ๆ (Other)${x.customCause?": "+esc(x.customCause):""}`:esc(biLabel(x.detailCause,x.detailCauseTh));
-   h+=`<tr><td>${esc(x.start||"-")}</td><td>${esc(x.end||"-")}</td><td><b>${Number(x.minutes||duration(x.start,x.end)||0)}</b></td><td>${esc(x.category||"-")}</td><td>${detailText}</td><td>${esc(x.remark||"-")}</td><td>${x.auto?'<span class="source-auto">DAILY PLAN</span>':'<span class="source-manual">MANUAL</span>'}</td><td>${x.auto?'<span class="muted">แก้ที่ Daily Plan</span>':`<button class="loss-edit" data-edit="${x.id}">Edit</button> <button class="loss-delete" data-del="${x.id}">Delete</button>`}</td></tr>`
+   h+=`<tr class="${x.auto?"is-auto":"is-manual"}"><td data-label="#">${i+1}</td><td data-label="Start">${esc(x.start||"-")}</td><td data-label="End">${esc(x.end||"-")}</td><td data-label="Duration (min)"><b>${Number(x.minutes||duration(x.start,x.end)||0)}</b></td><td data-label="Category" class="lv2-cat">${esc(x.category||"-")}</td><td data-label="Detail Cause" class="lv2-det">${detailText}</td><td data-label="Remark" class="lv2-rem">${esc(x.remark||"-")}</td><td data-label="Source">${x.auto?'<span class="source-auto" title="จาก Daily Plan">PALLET CHANGE</span>':'<span class="source-manual">MANUAL</span>'}</td><td data-label="Actions" class="lv2-act">${x.auto?'<span class="muted">แก้ที่ Daily Plan</span>':`<button class="loss-edit lv2-rb" data-edit="${x.id}" type="button">${ICON_E}Edit</button> <button class="loss-delete lv2-rb lv2-rb-del" data-del="${x.id}" type="button">${ICON_D}Delete</button>`}</td></tr>`
  }); h+='</tbody></table></div>';$("lossList").innerHTML=h;
  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>remove(b.dataset.del));
  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>beginEdit(b.dataset.edit));
+ // presentation: refresh the (display-only) duration preview after an Edit click; extra listener, existing onclick untouched
+ document.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>setTimeout(updateDurationPreview,0)));updateDurationPreview();
 }
 function clearForm(){
  S.editId=null;$("lossStart").value="";$("lossEnd").value="";$("lossRemark").value="";$("addLossBtn").textContent="Add Loss";$("cancelEditBtn").hidden=true;
@@ -169,6 +180,36 @@ async function remove(id){
  if(!confirm("ลบ Manual Loss รายการนี้?"))return;
  try{await ProdV2DB.delete("prodV2_lossLogs",id);S.manual=S.manual.filter(x=>x.id!==id);if(S.editId===id)clearForm();render();note("ลบ Manual Loss แล้ว","plan-ok")}catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn")}
 }
+// ---- Presentation-only additions (no calculation / validation / Firestore logic) ----
+// Duration preview: READ-ONLY use of the existing norm() + duration(); nothing is stored from it.
+function updateDurationPreview(){
+ let o=$("lossDurPreview");if(!o)return;
+ let a=norm($("lossStart").value),b=norm($("lossEnd").value);
+ o.textContent=(a&&b&&a!==b)?String(duration(a,b)):"—";
+}
+// Loss by Detail Cause (Top 5): aggregation of the rows already loaded. Pallet Change rows (no detailCause) get their own label.
+function renderDetailSummary(rows){
+ let host=$("detailSummary");if(!host)return;
+ let by={};rows.forEach(x=>{let k=x.auto?"__auto__":(x.detailCause||"__unspec__");by[k]??={min:0,th:x.detailCauseTh};by[k].min+=Number(x.minutes||0)});
+ let arr=Object.entries(by).map(([key,i])=>({key,...i})).sort((a,b)=>b.min-a.min);
+ if(!arr.length){host.innerHTML='<div class="lv2-empty">ยังไม่มี Loss</div>';return}
+ let shown=arr.reduce((s,x)=>s+x.min,0),maxv=arr[0].min,top=arr.slice(0,5);
+ let label=x=>x.key==="__auto__"?"Pallet Change (จาก Daily Plan)":x.key==="__unspec__"?"ไม่ระบุรายละเอียด (Unspecified)":x.key==="Other"?"อื่น ๆ (Other)":biLabel(x.key,x.th);
+ host.innerHTML=top.map(x=>{let pct=shown?(x.min/shown*100).toFixed(1):"0.0",w=maxv?Math.max(2,Math.round(x.min/maxv*100)):0;return `<div class="lv2-bar-row" data-detail="${esc(x.key)}" data-min="${x.min}"><span class="lv2-bar-name">${esc(label(x))}</span><div class="lv2-bar-track"><div class="lv2-bar-fill"></div></div><b class="lv2-bar-min">${x.min} min</b><span class="lv2-bar-pct">${pct}%</span></div>`.replace('<div class="lv2-bar-fill"></div>',`<div class="lv2-bar-fill" style="width:${w}%"></div>`)}).join("")+(arr.length>5?`<div class="lv2-bar-foot">แสดง 5 จาก ${arr.length} สาเหตุ · สัดส่วน = ต่อผลรวมที่แสดง ${shown} min</div>`:`<div class="lv2-bar-foot">สัดส่วน = ต่อผลรวมที่แสดง ${shown} min</div>`);
+}
+// Scheduled Break — read-only view of the existing scheduledBreaks() (Shift Master). Never stored, never counted.
+function renderBreaks(){
+ let host=$("lossBreaks");if(!host)return;
+ let br=scheduledBreaks();
+ host.innerHTML=br.length?br.map(x=>`<div class="lv2-break"><span class="lv2-break-time">${esc(x.start)}–${esc(x.end)}</span><span class="lv2-break-min">${duration(x.start,x.end)} min</span><span class="lv2-break-tag">BREAK</span></div>`).join(""):`<div class="lv2-break-empty">${S.shift?"ไม่มี Scheduled Break ในกะนี้":"ไม่พบ Shift Master — ไม่มีข้อมูล Scheduled Break"}</div>`;
+}
+function badgeStateLoss(t){t=String(t||"");return /^LOADED/.test(t)?"ready":"idle"}
+function initPresentation(){
+ ["lossStart","lossEnd"].forEach(id=>{let e=$(id);if(e){e.addEventListener("input",updateDurationPreview);e.addEventListener("blur",updateDurationPreview)}});
+ let c=$("cancelEditBtn");if(c)c.addEventListener("click",()=>setTimeout(updateDurationPreview,0));
+ let b=$("lossBadge");if(b){let set=()=>{b.dataset.state=badgeStateLoss(b.textContent)};set();new MutationObserver(set).observe(b,{childList:true,characterData:true,subtree:true})}
+}
+addEventListener("DOMContentLoaded",initPresentation);
 async function init(){
  $("lossDate").value=localDate();$("loadLossBtn").onclick=load;$("addLossBtn").onclick=saveLoss;$("cancelEditBtn").onclick=()=>{clearForm();note("ยกเลิกการแก้ไขแล้ว")};
  $("lossCategory").onchange=()=>populateDetailCauseDropdown(); // เปลี่ยน Category ต้องรีเซ็ต Detail Cause เสมอ (Case 5)
