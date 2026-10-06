@@ -1,32 +1,100 @@
 <!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Loss / Downtime · Production V2</title>
-<link rel="stylesheet" href="css/app.css?v=20260902-fix55">
+<link rel="stylesheet" href="css/app.css?v=20260920-14">
+<link rel="stylesheet" href="css/dashboard-v2.css?v=20261005-02">
+<link rel="stylesheet" href="css/loss-v2.css?v=20261006-l1">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-</head><body><div class="site-wrap">
-<header class="app-nav"><div class="app-name">Production System <span>V2</span></div><nav class="app-links"><div class="nav-group"><button class="nav-group-btn" type="button">ติดตาม ▾</button><div class="nav-dropdown"><a href="index.html">Dashboard</a><a href="exec.html">Executive</a><a href="order.html">Order Tracking</a><a href="cabinet-coverage.html">Cabinet Plan Coverage</a></div></div><div class="nav-group"><button class="nav-group-btn current" type="button">ทำงาน ▾</button><div class="nav-dropdown"><a href="entry.html">Production Entry</a><a href="plan.html">Daily Plan</a><a href="loss.html" class="active">Loss / Downtime</a><a href="assembly.html">Assembly</a><a href="cabinet-import.html">Cabinet Plan Import</a></div></div><a href="master.html">ตั้งค่า</a></nav><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></header>
-<section class="hero"><div><div class="eyebrow">STEP 7 · LOSS / DOWNTIME</div><h1>Loss & Downtime</h1><p>บันทึกเวลาสูญเสียจริงแยกจาก Scheduled Break</p></div><div class="hero-right"><div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div><div id="lossStatus" class="hero-status">Ready</div></div></section>
+</head><body>
+<div class="dv2-shell lv2-shell">
+<aside class="dv2-sidebar">
+  <div class="dv2-sidebar-brand">Production System <span>V2</span></div>
+  <nav class="dv2-sidebar-nav">
+    <div class="dv2-nav-group">Overview</div>
+    <a href="index.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</a>
+    <a href="exec.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Executive Summary</a>
+    <div class="dv2-nav-group">Production</div>
+    <a href="entry.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Production Entry</a>
+    <a href="plan.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>Daily Plan</a>
+    <a href="loss.html" class="dv2-nav-item active"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Loss / Downtime</a>
+    <div class="dv2-nav-group">Planning</div>
+    <a href="cabinet-import.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>Cabinet Plan Import</a>
+    <a href="cabinet-coverage.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Cabinet Coverage</a>
+    <a href="order.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>Order Tracking</a>
+    <div class="dv2-nav-group">Operations</div>
+    <a href="assembly.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Assembly</a>
+    <div class="dv2-nav-group">System</div>
+    <a href="master.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Master Setup</a>
+  </nav>
+  <div class="dv2-sidebar-footer">
+    <div>Door Foam Production</div>
+    <div>Kabinburi Plant</div>
+  </div>
+</aside>
+<div class="dv2-main lv2-main">
+<div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></div>
+<div class="dv2-page-header">
+<div class="dv2-title-block"><h1>Loss / Downtime</h1><p>Door Foam Production <span class="dv2-header-sep">|</span> Kabinburi Plant</p></div>
+<div class="dv2-header-right">
+<div class="dv2-last-updated"><span>Last Updated</span><b id="lossLastUpdated">—</b></div>
+<div class="isolation-pill">ISOLATED V2 · prodV2_* ONLY</div>
+<div id="lossStatus" class="hero-status">Ready</div>
+</div>
+</div>
 <div id="authGateHost"></div>
-<main class="content" id="appMain">
-<section class="filter-card loss-filters">
-<label><span>DATE</span><input id="lossDate" type="date"></label><label><span>LINE</span><select id="lossLine"></select></label><label><span>SHIFT</span><select id="lossShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label><button id="loadLossBtn" class="primary">Load</button>
-</section>
+<main id="appMain" class="lv2-app">
+
+<!-- ===== CONTEXT BAR (manual Load — unchanged behaviour) ===== -->
+<section class="dv2-filter-chips lv2-filters">
+<label><span>PRODUCTION DATE</span><input id="lossDate" type="date"></label>
+<label><span>LINE</span><select id="lossLine"></select></label>
+<label><span>SHIFT</span><select id="lossShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+<div class="lv2-actions"><button id="loadLossBtn" class="lv2-btn lv2-btn-primary" type="button"><svg class="lv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Load Data</button></div>
 <div id="lossMessage" class="notice info-notice">Scheduled Break ไม่ถือเป็น Loss</div>
-<section id="lossKpis" class="entry-kpis"></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Add Loss / Downtime</h2><p>กรอกช่วงเวลาที่เครื่องหยุดจริง · Pallet Change จาก Daily Plan จะดึงมาให้อัตโนมัติ</p></div></div>
-<div class="loss-form">
-<label><span>CATEGORY</span><select id="lossCategory"></select></label>
-<label><span>DETAIL CAUSE</span><select id="lossDetailCause"></select></label>
-<label id="lossCustomCauseWrap" class="loss-remark" hidden><span>SPECIFY CAUSE</span><input id="lossCustomCause" type="text" placeholder="ระบุสาเหตุ"></label>
-<label><span>START (24H)</span><input id="lossStart" type="text" maxlength="5" placeholder="14:20"></label>
-<label><span>END (24H)</span><input id="lossEnd" type="text" maxlength="5" placeholder="14:30"></label>
-<label class="loss-remark"><span>REMARK</span><input id="lossRemark" type="text" placeholder="รายละเอียด / สาเหตุ"></label>
-<div class="loss-actions"><button id="addLossBtn" class="primary">Add Loss</button><button id="cancelEditBtn" class="secondary" hidden>Cancel</button></div>
+</section>
+
+<!-- ===== KPI ROW (values written by loss.js render()) ===== -->
+<section id="lossKpis" class="lv2-kpis"></section>
+
+<!-- ===== ADD MANUAL LOSS ===== -->
+<section class="section-card lv2-card">
+<div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></span><div><h2>Add Manual Loss</h2><p>บันทึกการหยุดเครื่อง / Downtime (ไม่รวม Pallet Change และ Scheduled Break) · Pallet Change จาก Daily Plan จะดึงมาให้อัตโนมัติ</p></div></div></div>
+<div class="lv2-form">
+<label class="lv2-f lv2-f-cat"><span>CATEGORY <i>*</i></span><select id="lossCategory"></select></label>
+<label class="lv2-f lv2-f-det"><span>DETAIL CAUSE <i>*</i></span><select id="lossDetailCause"></select></label>
+<label id="lossCustomCauseWrap" class="lv2-f lv2-f-cus" hidden><span>SPECIFY CAUSE</span><input id="lossCustomCause" type="text" placeholder="ระบุสาเหตุ"></label>
+<label class="lv2-f lv2-f-sta"><span>START TIME (24H) <i>*</i></span><input id="lossStart" type="text" maxlength="5" placeholder="14:20" inputmode="numeric" autocomplete="off"></label>
+<label class="lv2-f lv2-f-end"><span>END TIME (24H) <i>*</i></span><input id="lossEnd" type="text" maxlength="5" placeholder="14:30" inputmode="numeric" autocomplete="off"></label>
+<div class="lv2-f lv2-f-dur"><span>DURATION (MIN)</span><output id="lossDurPreview" aria-live="polite">—</output></div>
+<label class="lv2-f lv2-f-rem"><span>REMARK</span><input id="lossRemark" type="text" placeholder="รายละเอียด / สาเหตุ"></label>
+<div class="lv2-f-act"><button id="addLossBtn" class="lv2-btn lv2-btn-primary" type="button"><svg class="lv2-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>Add Loss</button><button id="cancelEditBtn" class="lv2-btn lv2-btn-outline" type="button" hidden>Cancel</button></div>
 </div></section>
-<section class="section-card"><div class="section-title-row"><div><h2>Loss by Category</h2><p>รวมเวลาสูญเสียตามประเภท · รวม Pallet Change จาก Daily Plan</p></div></div><div id="categorySummary" class="loss-category-summary"></div></section><section class="section-card"><div class="section-title-row"><div><h2>Loss Records</h2><p>รายการจาก Daily Plan และรายการที่กรอกเพิ่ม</p></div><span id="lossBadge" class="soft-badge">NOT LOADED</span></div><div id="lossList" class="empty-state">ยังไม่ได้โหลดข้อมูล</div></section>
-</main></div>
-<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-2-2-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/loss.js?v=20260902-fix5"></script>
+
+<!-- ===== SCHEDULED BREAK (read-only reference from Shift Master) ===== -->
+<section class="section-card lv2-card lv2-breaks-card">
+<div class="lv2-breaks-wrap"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg></span><div><h2>Scheduled Break (จาก Shift Master)</h2><p>ช่วงเวลาที่ตั้งไว้ใน Shift Master จะไม่สามารถบันทึกทับเป็น Manual Loss ได้</p></div></div>
+<div id="lossBreaks" class="lv2-breaks"><div class="lv2-break-empty">กด Load Data เพื่อดู Scheduled Break</div></div></div>
+</section>
+
+<!-- ===== ANALYSIS ===== -->
+<div class="lv2-two">
+<section class="section-card lv2-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span><div><h2>Loss by Category</h2><p>สัดส่วนเวลาสูญเสียตามหมวดหมู่ · รวม Pallet Change จาก Daily Plan</p></div></div></div>
+<div id="categorySummary" class="lv2-bars"><div class="lv2-empty">กด Load Data เพื่อดูข้อมูล</div></div></section>
+<section class="section-card lv2-card"><div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span><div><h2>Loss by Detail Cause (Top 5)</h2><p>สาเหตุการสูญเสีย 5 อันดับแรก</p></div></div></div>
+<div id="detailSummary" class="lv2-bars"><div class="lv2-empty">กด Load Data เพื่อดูข้อมูล</div></div></section>
+</div>
+
+<!-- ===== LOSS RECORDS ===== -->
+<section class="section-card lv2-card">
+<div class="section-title-row"><div class="dv2-title-wrap"><span class="dv2-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span><div><h2>Loss Records <span id="lossRecordCount" class="lv2-count"></span></h2><p>รายการจาก Daily Plan และรายการที่กรอกเพิ่ม</p></div></div><div class="lv2-card-actions"><span id="lossBadge" class="soft-badge" data-state="idle">NOT LOADED</span></div></div>
+<div id="lossList" class="empty-state">ยังไม่ได้โหลดข้อมูล</div>
+</section>
+
+</main>
+</div>
+</div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/context-v2.js?v=20260901-step7-2-2-1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/loss.js?v=20261006-l1"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body></html>
