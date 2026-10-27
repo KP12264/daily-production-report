@@ -8,6 +8,19 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <style>
+    /* Shift & Time page-scoped styles (app.css untouched) */
+    #shiftSummary.shift-err{border-left-color:#dc2626;background:#fef2f2;color:#991b1b}
+    [data-theme="dark"] #shiftSummary.shift-err{background:#2a1517;color:#fca5a5}
+    .cb-table input,.cb-table select{width:100%;min-width:70px}
+    .cb-table .cb-min{white-space:nowrap;color:var(--muted);font-size:12px}
+    .cb-sum{font-size:12px;color:var(--muted)}
+    .cb-split{margin-left:6px;padding:2px 8px;font-size:11px;white-space:nowrap}
+    .cb-msgs{list-style:none;margin:8px 0;padding:0;font-size:12.5px}
+    .cb-msgs li{padding:3px 0}.cb-msgs .cb-e{color:#b91c1c}.cb-msgs .cb-w{color:#b45309}
+    [data-theme="dark"] .cb-msgs .cb-e{color:#f87171}[data-theme="dark"] .cb-msgs .cb-w{color:#fbbf24}
+    #recalcRoundsBtn:disabled,#cbSubmit:disabled{opacity:.5;cursor:not-allowed}
+  </style>
 </head>
 <body>
 
@@ -96,17 +109,41 @@
           <button id="initShiftC" class="primary">Initialize Line C</button>
           <label>Line <select id="shiftLineFilter"></select></label>
           <label>Shift <select id="shiftTypeFilter"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+          <button id="openCreateShiftBtn" class="primary" type="button">+ Create Shift Master</button>
         </div>
       </div>
       <div id="shiftSummary" class="notice info-notice">เลือก Line / Shift เพื่อดู Time Blocks</div>
+      <div id="shiftEmptyAction" class="notice info-notice" style="display:none"><span id="shiftEmptyText"></span> <button id="shiftEmptyCreateBtn" class="primary" type="button">สร้าง Shift Master…</button></div>
       <div class="toolbar" style="gap:10px">
-        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">Cycle Time ทั้งกะ (min/round) <input id="shiftCycleInput" type="number" min="1" style="width:70px"></label>
-        <button id="recalcRoundsBtn" class="primary">Recalculate &amp; Save Rounds</button>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">Cycle Time ทั้งกะ (min/round) <input id="shiftCycleInput" type="number" min="1" style="width:70px" disabled></label>
+        <button id="recalcRoundsBtn" class="primary" disabled>Recalculate &amp; Save Rounds</button>
       </div>
       <table class="grid">
         <thead><tr><th>Time</th><th>Type</th><th>Minutes</th><th>Cycle</th><th>Planned Rounds</th><th>Status</th><th></th></tr></thead>
         <tbody id="shiftRows"></tbody>
       </table>
+    </div>
+    <div id="shiftCreatePanel" class="section-card" style="display:none">
+      <div class="pagehead"><div><h2>Create Shift Master</h2><div class="sub">สร้างเวลากะของ Line ใดก็ได้ที่ Active — DAY และ NIGHT แยกกันอิสระ • ไม่คัดลอกตารางของ Line อื่น • ไม่ทับเอกสารที่มีอยู่</div></div></div>
+      <div class="toolbar" style="gap:10px;flex-wrap:wrap">
+        <label>Line <select id="cbLine"></select></label>
+        <label>Shift <select id="cbShift"><option value="DAY">Day</option><option value="NIGHT">Night</option></select></label>
+        <label>Cycle (min/round) <input id="cbCycle" type="number" min="1" step="any" style="width:80px" placeholder="เช่น 10"></label>
+      </div>
+      <table class="grid cb-table">
+        <thead><tr><th>#</th><th>Start (HH:MM)</th><th>End (HH:MM)</th><th>Type</th><th>Minutes</th><th></th></tr></thead>
+        <tbody id="cbRows"></tbody>
+      </table>
+      <div class="toolbar" style="gap:10px">
+        <button id="cbAddBlock" type="button">+ Add block</button>
+        <button id="cbClear" type="button">Clear all</button>
+        <span id="cbSummary" class="cb-sum"></span>
+      </div>
+      <ul id="cbMessages" class="cb-msgs"></ul>
+      <div class="toolbar" style="gap:10px;justify-content:flex-end">
+        <button id="cbCancel" type="button">Cancel</button>
+        <button id="cbSubmit" class="primary" type="button" disabled>Create Shift Master</button>
+      </div>
     </div>
     <div class="section-card">
       <div class="pagehead"><div><h2>Sync Future Daily Plans</h2><div class="sub">อัปเดต Plan ของ Daily Plan ที่ Save ไว้แล้ว ให้ตรงกับ Cycle Time ล่าสุดใน Shift Master — เฉพาะวันนี้เป็นต้นไปเท่านั้น วันที่ผ่านไปแล้วจะไม่ถูกแตะเลย</div></div></div>
@@ -152,7 +189,7 @@
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/auth-v2.js?v=20260902-fix7"></script>
-<script src="js/master.js?v=20260902-fix41"></script>
+<script src="js/master.js?v=20261007-sf1"></script>
 <script>ProdV2Auth.mountGate({hostId:"authGateHost",logoutHostId:"authBar",lockTargetId:"appMain",onReady:()=>{document.getElementById("appMain").style.display=""}});</script>
 </body>
 </html>
