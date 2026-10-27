@@ -36,6 +36,7 @@ async function loadLines(){
     if(snap.empty){
       lineBody.innerHTML='<tr><td colspan="6" class="empty">ยังไม่มี Line ใน V2 — กด Add Line เพื่อเริ่มสร้าง Master</td></tr>';
       modelLineFilter.innerHTML='<option value="">No active lines</option>';
+      shiftLineCache=[];syncShiftLineOptions();
       return;
     }
     lineBody.innerHTML='';
@@ -47,6 +48,7 @@ async function loadLines(){
     if(lines.some(x=>x.lineId===current&&x.active!==false)) modelLineFilter.value=current;
     const mergeLineSel=document.getElementById('mergeLine');
     if(mergeLineSel){const cur2=mergeLineSel.value;mergeLineSel.innerHTML=opts;if(lines.some(x=>x.lineId===cur2&&x.active!==false))mergeLineSel.value=cur2;}
+    shiftLineCache=lines;syncShiftLineOptions();   // Shift & Time dropdown follows the Lines tab (no extra read)
   }catch(e){
     setStatus(e.message,'err');
     lineBody.innerHTML='<tr><td colspan="6" class="empty">โหลดไม่ได้ — ตรวจ Firestore Rules/Internet</td></tr>';
@@ -536,39 +538,149 @@ async function initABShiftDraft(cycleMin=12){
     await saveShift(`shift_${lineId}_NIGHT`,shiftRecord(lineId,'NIGHT',C_NIGHT_BLOCKS,'PENDING',cycleMin));
   }
 }
+/* ===== Shift & Time — stale-state guard, validated writes, Create Shift Master =====
+   Fixes the "Line undefined / undefined" bug: loadShiftMaster() used to leave the previous Line's blocks
+   (window.currentShiftBlockMeta) and Cycle value on screen when the selected Line/Shift had no Master, and
+   Recalculate then wrote a partial document (no lineId / shift / verificationStatus, every minutes = 0). */
+const gid=id=>document.getElementById(id);
+let shiftLineCache=null;        // lines already read by loadLines() — shared, so no extra Firestore read
+let shiftLoadSeq=0;             // incremented per load; a response from an older load is discarded
+let shiftCtx=null;              // {id,lineId,shift,meta} of the Master CURRENTLY on screen — null = nothing valid loaded
+let shiftListenersBound=false;
+const HM_RE=/^([01]?\d|2[0-3]):([0-5]\d)$/;
+const sameKey=(a,b)=>String(a??'').trim().toUpperCase()===String(b??'').trim().toUpperCase();
+function normHM(v){
+  const raw=String(v??'').trim();let h,m;
+  if(/[:.]/.test(raw)){const p=raw.split(/[:.]/);if(p.length!==2)return '';h=p[0];m=p[1]}
+  else{const d=raw.replace(/\D/g,'');if(d.length===3){h=d.slice(0,1);m=d.slice(1)}else if(d.length===4){h=d.slice(0,2);m=d.slice(2)}else return ''}
+  if(!/^\d{1,2}$/.test(h)||!/^\d{2}$/.test(m))return '';
+  const hh=Number(h),mi=Number(m);if(hh>23||mi>59)return '';
+  return `${String(hh).padStart(2,'0')}:${String(mi).padStart(2,'0')}`;
+}
+const hmMin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
+const hmSpan=(a,b)=>(hmMin(b)-hmMin(a)+1440)%1440;      // overnight-safe (23:10→00:00 = 50); 0 means "same time" = invalid
+const minToHM=m=>{m=((m%1440)+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+
+/* Daily Plan (plan.js, not changed by this fix) mis-plans a WORK block that crosses midnight or ends exactly at 00:00
+   (measured: 22:00→06:00 gave 109 rounds instead of 61). BREAK blocks may cross midnight freely. */
+function workCrossesMidnight(st,en,ty){return String(ty||'').toUpperCase()==='WORK'&&!!st&&!!en&&st!==en&&(hmMin(en)<hmMin(st)||en==='00:00')}
+/* Validate a user-entered list of blocks [{start,end,type}] + cycle. Blocks must be listed in time order;
+   overlaps, 24h overrun, zero durations and bad times are ERRORS; gaps are WARNINGS (needs confirmation). */
+function validateBlocks(list,cycleMin){
+  const errors=[],warnings=[],tuples=[],norm=[];
+  if(!Number.isFinite(cycleMin)||cycleMin<=0)errors.push('Cycle Time ต้องมากกว่า 0');
+  if(!list.length)errors.push('ต้องมีอย่างน้อย 1 Time Block');
+  list.forEach((b,i)=>{
+    const n=i+1,st=normHM(b.start),en=normHM(b.end),ty=String(b.type||'').toUpperCase();
+    if(!st)errors.push(`บล็อก #${n}: เวลาเริ่มไม่ถูกต้อง (HH:MM 00:00–23:59)`);
+    if(!en)errors.push(`บล็อก #${n}: เวลาสิ้นสุดไม่ถูกต้อง (HH:MM 00:00–23:59)`);
+    if(ty!=='WORK'&&ty!=='BREAK')errors.push(`บล็อก #${n}: ต้องเลือก WORK หรือ BREAK`);
+    if(st&&en&&st===en)errors.push(`บล็อก #${n}: เวลาเริ่มและสิ้นสุดเท่ากัน (ระยะเวลา 0 นาที)`);
+    if(workCrossesMidnight(st,en,ty))errors.push(`บล็อก #${n} (WORK ${st}→${en}): ข้ามเที่ยงคืน/สิ้นสุด 00:00 — Daily Plan คำนวณผิดสำหรับ WORK แบบนี้ ให้กด "แยกที่เที่ยงคืน" (${st}→23:59 + 00:00→${en} เสีย 1 นาที) หรือคั่นด้วย BREAK ที่เที่ยงคืนเหมือน Line C`);
+    norm.push({st,en,ty,n});
+  });
+  let stats=null;
+  if(!errors.length){
+    const base=hmMin(norm[0].st);let prevEnd=0,work=0,brk=0;
+    norm.forEach(b=>{
+      const off=(hmMin(b.st)-base+1440)%1440,len=hmSpan(b.st,b.en);
+      if(off<prevEnd)errors.push(`บล็อก #${b.n}: เริ่ม ${b.st} ซ้อนทับกับบล็อกก่อนหน้า หรือเรียงเวลาไม่ถูกต้อง`);
+      else if(off>prevEnd)warnings.push(`มีช่องว่าง ${off-prevEnd} นาที ก่อนบล็อก #${b.n} (${b.st})`);
+      prevEnd=off+len;
+      if(prevEnd>1440)errors.push(`บล็อก #${b.n}: ช่วงเวลารวมของกะเกิน 24 ชั่วโมง`);
+      if(b.ty==='WORK')work+=len;else brk+=len;
+      tuples.push([b.st,b.en,b.ty,len]);
+    });
+    if(!errors.length&&work<=0)errors.push('ต้องมีบล็อก WORK อย่างน้อย 1 บล็อก');
+    if(!errors.length)stats={work,brk,rounds:work/cycleMin,span:prevEnd,endTime:minToHM(base+prevEnd)};
+  }
+  return {ok:errors.length===0,errors,warnings,tuples,stats};
+}
+/* Validate a Master document that is already stored, against the Line/Shift the user selected. */
+function validateShiftDoc(d,lineId,shift){
+  const errors=[];
+  if(!d||typeof d!=='object')return {ok:false,errors:['ไม่มีข้อมูลเอกสาร']};
+  if(!d.lineId)errors.push('ไม่มี lineId');else if(!sameKey(d.lineId,lineId))errors.push(`lineId (${d.lineId}) ไม่ตรงกับ Line ที่เลือก`);
+  if(!d.shift)errors.push('ไม่มี shift');else if(!sameKey(d.shift,shift))errors.push(`shift (${d.shift}) ไม่ตรงกับกะที่เลือก`);
+  if(d.blocks==null){/* legacy draft record (no blocks yet): displayable, never editable */}
+  else if(!Array.isArray(d.blocks))errors.push('blocks ไม่ใช่รายการ');
+  else d.blocks.forEach((b,i)=>{
+    if(!b||!HM_RE.test(String(b.start||''))||!HM_RE.test(String(b.end||'')))errors.push(`block #${i+1}: เวลา start/end ไม่ถูกต้อง`);
+    else if(b.type!=='WORK'&&b.type!=='BREAK')errors.push(`block #${i+1}: type ไม่ถูกต้อง`);
+    else if(!Number.isFinite(Number(b.minutes))||Number(b.minutes)<0)errors.push(`block #${i+1}: minutes ไม่ถูกต้อง`);
+  });
+  if(d.standardCycleMinPerRound!=null&&!(Number(d.standardCycleMinPerRound)>0))errors.push('standardCycleMinPerRound ไม่ถูกต้อง');
+  return {ok:errors.length===0,errors};
+}
+function syncShiftLineOptions(){
+  const lineSel=gid('shiftLineFilter');if(!lineSel||shiftLineCache==null)return;
+  const prev=lineSel.value;
+  const lines=[...shiftLineCache].sort((a,b)=>(a.order||999)-(b.order||999));
+  lineSel.innerHTML=lines.map(l=>`<option value="${esc(l.lineId)}">Line ${esc(l.lineId)}</option>`).join('');
+  if(lines.some(l=>String(l.lineId)===prev))lineSel.value=prev;          // keep a still-valid selection
+  else if(lines.length)lineSel.selectedIndex=0;                           // otherwise the first line by order (no A/B/C hardcode)
+  syncCreateLineOptions();
+  if(prev&&lineSel.value!==prev)loadShiftMaster();                        // the selected line disappeared → reload for the new one
+}
+function setShiftControls(on){
+  const r=gid('recalcRoundsBtn'),c=gid('shiftCycleInput');
+  if(r)r.disabled=!on;if(c)c.disabled=!on;
+}
+function clearShiftState(){
+  shiftCtx=null;window.currentShiftBlockMeta=[];window.currentShiftMetaId=null;
+  const c=gid('shiftCycleInput');if(c)c.value='';
+  setShiftControls(false);
+  const ea=gid('shiftEmptyAction');if(ea)ea.style.display='none';
+}
+function shiftNote(text,cls){const sum=gid('shiftSummary');sum.textContent=text;sum.className='notice info-notice'+(cls?' '+cls:'')}
+function bindShiftListeners(){
+  if(shiftListenersBound)return;shiftListenersBound=true;
+  gid('shiftLineFilter').addEventListener('change',()=>{loadShiftMaster()});
+  gid('shiftTypeFilter').addEventListener('change',()=>{loadShiftMaster()});
+}
 async function loadShiftMaster(){
-  const lineSel=document.getElementById('shiftLineFilter');
-  const shiftSel=document.getElementById('shiftTypeFilter');
+  const lineSel=gid('shiftLineFilter'),shiftSel=gid('shiftTypeFilter');
   if(!lineSel||!shiftSel)return;
-  if(!lineSel.options.length){
-    const lines=await v2ReadAll(LINE_COLLECTION);
-    lineSel.innerHTML=lines.sort((a,b)=>(a.order||999)-(b.order||999))
-      .map(l=>`<option value="${esc(l.lineId)}">Line ${esc(l.lineId)}</option>`).join('');
-    if([...lineSel.options].some(o=>o.value==='C'))lineSel.value='C';
-    lineSel.addEventListener('change',loadShiftMaster);
-    shiftSel.addEventListener('change',loadShiftMaster);
-  }
-  const id=`shift_${lineSel.value}_${shiftSel.value}`;
-  const all=await v2ReadAll(SHIFT_COLLECTION);
-  const rec=all.find(x=>x.id===id);
-  const body=document.getElementById('shiftRows'), sum=document.getElementById('shiftSummary');
-  if(!rec){
-    sum.textContent=`Line ${lineSel.value} / ${shiftSel.value}: ยังไม่มี Shift Master`;
-    body.innerHTML='<tr><td colspan="7">ยังไม่มีข้อมูล</td></tr>'; return;
-  }
-  const blocks=rec.blocks||[];
-  const workMin=blocks.filter(b=>b.type==='WORK').reduce((s,b)=>s+Number(b.minutes||0),0);
-  const rounds=blocks.reduce((s,b)=>s+Number(b.plannedRounds||0),0);
-  const state=rec.verificationStatus||'PENDING';
-  sum.textContent=`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds.toFixed(2)} planned rounds • ${state}`;
-  const cycleInput=document.getElementById('shiftCycleInput');
-  if(cycleInput)cycleInput.value=rec.standardCycleMinPerRound||'';
-  window.currentShiftBlockMeta=blocks.map(b=>({start:b.start,end:b.end,type:b.type})); // start/end/type aren't editable — Recalculate reads them from here, not from the DOM
-  if(!blocks.length){
-    body.innerHTML=`<tr><td colspan="7">Draft only — provisional ${rec.provisionalRoundsPerHour||'-'} rounds/hour. Time blocks Pending Verification.</td></tr>`;
-    return;
-  }
-  body.innerHTML=blocks.map((b,i)=>`<tr data-block-index="${i}">
+  const seq=++shiftLoadSeq,body=gid('shiftRows');
+  bindShiftListeners();
+  clearShiftState();                                    // nothing from a previous selection may survive
+  try{
+    if(shiftLineCache==null){                           // only if loadLines() has not delivered the lines yet
+      const lines=await v2ReadAll(LINE_COLLECTION);if(seq!==shiftLoadSeq)return;
+      shiftLineCache=lines;syncShiftLineOptions();
+    }
+    if(!lineSel.options.length){shiftNote('ยังไม่มี Line — สร้าง Line ที่แท็บ Lines ก่อน');body.innerHTML='<tr><td colspan="7">ยังไม่มีข้อมูล</td></tr>';return}
+    const lineId=lineSel.value,shift=shiftSel.value,id=`shift_${lineId}_${shift}`;
+    shiftNote(`Line ${lineId} / ${shift}: กำลังโหลด…`);body.innerHTML='<tr><td colspan="7">กำลังโหลด…</td></tr>';
+    const all=await v2ReadAll(SHIFT_COLLECTION);
+    if(seq!==shiftLoadSeq||lineSel.value!==lineId||shiftSel.value!==shift)return;   // a newer selection took over — drop this response
+    const rec=all.find(x=>x.id===id);
+    if(!rec){
+      shiftNote(`Line ${lineId} / ${shift}: ยังไม่มี Shift Master`);
+      body.innerHTML='<tr><td colspan="7">ยังไม่มีข้อมูล</td></tr>';
+      const ea=gid('shiftEmptyAction');if(ea){ea.style.display='';gid('shiftEmptyText').textContent=`Line ${lineId} / ${shift} ยังไม่มี Shift Master`;}
+      return;
+    }
+    const chk=validateShiftDoc(rec,lineId,shift);
+    if(!chk.ok){                                         // malformed existing document: show, never edit, never auto-repair
+      shiftNote(`Line ${lineId} / ${shift}: เอกสาร ${id} ไม่สมบูรณ์ (${chk.errors.join('; ')}) — ปิดการ Save / Recalculate เพื่อความปลอดภัย (ต้องซ่อมข้อมูลแยกต่างหาก)`,'shift-err');
+      body.innerHTML='<tr><td colspan="7">ไม่สามารถแสดง/แก้ไขเอกสารที่ไม่สมบูรณ์ได้</td></tr>';
+      return;
+    }
+    const blocks=rec.blocks||[];
+    const workMin=blocks.filter(b=>b.type==='WORK').reduce((s,b)=>s+Number(b.minutes||0),0);
+    const rounds=blocks.reduce((s,b)=>s+Number(b.plannedRounds||0),0);
+    const state=rec.verificationStatus||'PENDING';
+    shiftNote(`Line ${rec.lineId} / ${rec.shift} • Cycle ${rec.standardCycleMinPerRound||'-'} min/round • ${workMin} work min • ${rounds.toFixed(2)} planned rounds • ${state}`);
+    if(!blocks.length){
+      body.innerHTML=`<tr><td colspan="7">Draft only — provisional ${rec.provisionalRoundsPerHour||'-'} rounds/hour. Time blocks Pending Verification.</td></tr>`;
+      return;                                            // draft record: displayed, but nothing to edit → controls stay disabled
+    }
+    shiftCtx={id,lineId,shift,meta:blocks.map(b=>({start:b.start,end:b.end,type:b.type}))};
+    window.currentShiftBlockMeta=shiftCtx.meta;window.currentShiftMetaId=id;
+    const cycleInput=gid('shiftCycleInput');if(cycleInput)cycleInput.value=rec.standardCycleMinPerRound||'';
+    setShiftControls(true);
+    body.innerHTML=blocks.map((b,i)=>`<tr data-block-index="${i}">
     <td>${esc(b.start)}–${esc(b.end)}</td><td>${esc(b.type)}</td>
     <td><input type="number" min="0" value="${b.minutes}" data-k="minutes" ${b.type!=="WORK"?"disabled":""}></td>
     <td>${b.cycleMin??'-'}</td>
@@ -576,56 +688,180 @@ async function loadShiftMaster(){
     <td>${state}</td>
     <td class="right"><button data-save-block="${i}">Save</button></td>
   </tr>`).join('');
+  }catch(e){
+    if(seq!==shiftLoadSeq)return;                        // an error from a superseded load must not touch the screen
+    clearShiftState();
+    shiftNote(`โหลด Shift Master ไม่สำเร็จ: ${e.message||e}`,'shift-err');
+    gid('shiftRows').innerHTML='<tr><td colspan="7">โหลดข้อมูลไม่สำเร็จ</td></tr>';
+    setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,'err');
+  }
 }
-document.getElementById('recalcRoundsBtn')?.addEventListener('click',async()=>{
-  const lineId=document.getElementById('shiftLineFilter').value,shift=document.getElementById('shiftTypeFilter').value;
-  const id=`shift_${lineId}_${shift}`;
-  const cycleMin=Number(document.getElementById('shiftCycleInput')?.value)||0;
-  const meta=window.currentShiftBlockMeta||[];
+/* Re-read the ONE document right before writing, and require that it (a) exists, (b) matches the selected
+   Line/Shift, (c) is a complete Master and (d) still has the Time Blocks that are on screen. */
+async function verifiedShiftDoc(ctx){
+  const lineId=gid('shiftLineFilter').value,shift=gid('shiftTypeFilter').value,id=`shift_${lineId}_${shift}`;
+  if(!ctx||id!==ctx.id)throw new Error('Line/Shift ที่เลือกไม่ตรงกับข้อมูลที่แสดงอยู่ — กรุณาโหลดใหม่');
+  const snap=await ProdV2DB.collection(SHIFT_COLLECTION).doc(id).get();
+  if(!snap.exists)throw new Error(`ไม่พบ Shift Master ${id} — จะไม่สร้างเอกสารใหม่ผ่านปุ่มนี้ (ใช้ Create Shift Master)`);
+  const cur=snap.data(),chk=validateShiftDoc(cur,lineId,shift);
+  if(!chk.ok)throw new Error(`เอกสาร ${id} ไม่สมบูรณ์: ${chk.errors.join('; ')}`);
+  const cb=cur.blocks||[];
+  if(cb.length!==ctx.meta.length||cb.some((b,i)=>b.start!==ctx.meta[i].start||b.end!==ctx.meta[i].end||b.type!==ctx.meta[i].type))
+    throw new Error('Time Blocks ใน Firestore ไม่ตรงกับที่แสดงอยู่ — กรุณาโหลดใหม่');
+  return {id,cur};
+}
+gid('recalcRoundsBtn')?.addEventListener('click',async()=>{
+  const ctx=shiftCtx;
+  if(!ctx)return alert('ยังไม่มี Shift Master ที่โหลดและตรวจสอบแล้ว — ไม่สามารถ Recalculate ได้');
+  const cycleMin=Number(gid('shiftCycleInput')?.value)||0;
   if(!cycleMin)return alert('กรอก Cycle Time (min/round) ก่อน');
-  if(!meta.length)return alert('ยังไม่มี Time Block ให้คำนวณ — เลือก Line/Shift ที่มีข้อมูลก่อน');
-  // Read whatever Minutes are currently showing in each row's input (so any
-  // manual edits made before clicking Recalculate are respected), pair them
-  // back up with each row's fixed start/end/type, then run the exact same
-  // carry-forward + round-up algorithm used everywhere else in the app —
-  // single source of truth, no separate calculation invented for this button.
   const rows=[...document.querySelectorAll('#shiftRows tr[data-block-index]')];
-  const tuples=meta.map((m,i)=>{
-    const row=rows.find(r=>Number(r.dataset.blockIndex)===i);
-    const minutesInput=row?.querySelector('[data-k="minutes"]');
-    const minutes=m.type==='WORK'?(Number(minutesInput?.value)||0):Number(minutesInput?.value)||0;
-    return [m.start,m.end,m.type,minutes];
-  });
-  const computed=carryForwardRounds(tuples,cycleMin);
-  const blocks=computed.map((b,i)=>({order:i+1,...b}));
-  const btn=document.getElementById('recalcRoundsBtn');
+  if(rows.length!==ctx.meta.length)return alert('ตารางที่แสดงไม่ครบทุก Time Block — กรุณาโหลดใหม่ก่อน');
+  // Read the Minutes currently showing in each row, pair them with each row's fixed start/end/type, then run the
+  // exact same carry-forward algorithm used everywhere else (unchanged function) — never a zero-filled guess.
+  const tuples=[];
+  for(let i=0;i<ctx.meta.length;i++){
+    const row=rows.find(r=>Number(r.dataset.blockIndex)===i),inp=row?.querySelector('[data-k="minutes"]');
+    const v=Number(inp?.value);
+    if(!row||!inp||!Number.isFinite(v)||v<0)return alert(`ค่า Minutes ของบล็อก #${i+1} ไม่ถูกต้อง`);
+    tuples.push([ctx.meta[i].start,ctx.meta[i].end,ctx.meta[i].type,v]);
+  }
+  const btn=gid('recalcRoundsBtn');
   try{
     btn.disabled=true;setStatus('Recalculating & saving…');
-    await ProdV2DB.set(SHIFT_COLLECTION,id,{blocks,standardCycleMinPerRound:cycleMin},{merge:true});
+    const {id}=await verifiedShiftDoc(ctx);
+    const blocks=carryForwardRounds(tuples,cycleMin).map((b,i)=>({order:i+1,...b}));
+    await ProdV2DB.update(SHIFT_COLLECTION,id,{blocks,standardCycleMinPerRound:cycleMin});   // update: fails if the doc is missing — never creates
     setStatus('✓ Recalculated & saved','ok');
     await loadShiftMaster();
-  }catch(e){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,'err');}
-  finally{btn.disabled=false;}
+  }catch(e){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,'err');alert(e.message||e);btn.disabled=!shiftCtx;}
 });
-document.getElementById('shiftRows')?.addEventListener('click',async e=>{
+gid('shiftRows')?.addEventListener('click',async e=>{
   const btn=e.target.closest('[data-save-block]');
   if(!btn)return;
-  const lineId=document.getElementById('shiftLineFilter').value,shift=document.getElementById('shiftTypeFilter').value;
-  const id=`shift_${lineId}_${shift}`;
-  const idx=Number(btn.dataset.saveBlock);
-  const tr=btn.closest('tr');
-  const newMinutes=Number(tr.querySelector('[data-k="minutes"]').value)||0;
-  const newRounds=Number(tr.querySelector('[data-k="plannedRounds"]').value)||0;
+  const ctx=shiftCtx;
+  if(!ctx)return alert('ยังไม่มี Shift Master ที่โหลดและตรวจสอบแล้ว — ไม่สามารถ Save ได้');
+  const idx=Number(btn.dataset.saveBlock),tr=btn.closest('tr');
+  if(!(idx>=0&&idx<ctx.meta.length))return alert('ไม่พบ Time Block ที่เลือก — กรุณาโหลดใหม่');
+  const newMinutes=Number(tr.querySelector('[data-k="minutes"]').value),newRounds=Number(tr.querySelector('[data-k="plannedRounds"]').value);
+  if(!Number.isFinite(newMinutes)||newMinutes<0||!Number.isFinite(newRounds)||newRounds<0)return alert('ค่า Minutes / Planned Rounds ไม่ถูกต้อง');
   try{
     setStatus('Saving…');btn.disabled=true;
-    const snap=await ProdV2DB.collection(SHIFT_COLLECTION).doc(id).get();
-    const data=snap.data();
-    const blocks=(data.blocks||[]).map((b,i)=>i===idx?{...b,minutes:newMinutes,plannedRounds:newRounds}:b);
-    await ProdV2DB.set(SHIFT_COLLECTION,id,{blocks},{merge:true});
+    const {id,cur}=await verifiedShiftDoc(ctx);
+    const blocks=cur.blocks.map((b,i)=>i===idx?{...b,minutes:newMinutes,plannedRounds:newRounds}:b);
+    await ProdV2DB.update(SHIFT_COLLECTION,id,{blocks});
     setStatus('✓ Block saved — ปรับ Rounds เองแล้ว (Shift Master ไม่คำนวณสูตรทับให้อีกจนกว่าจะกด Initialize ใหม่)','ok');
     await loadShiftMaster();
-  }catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');btn.disabled=false;}
+  }catch(err){setStatus(window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message,'err');alert(err.message||err);btn.disabled=false;}
 });
+
+/* ---- Create Shift Master: independent DAY / NIGHT blocks for ANY active Line (no template copied, no A/B/C names) ---- */
+function createLines(){return (shiftLineCache||[]).filter(l=>l.active!==false).sort((a,b)=>(a.order||999)-(b.order||999))}
+function syncCreateLineOptions(){
+  const sel=gid('cbLine');if(!sel)return;const prev=sel.value,ls=createLines();
+  sel.innerHTML=ls.map(l=>`<option value="${esc(l.lineId)}">Line ${esc(l.lineId)}</option>`).join('');
+  if(ls.some(l=>String(l.lineId)===prev))sel.value=prev;
+}
+function cbRowHtml(b={}){
+  return `<tr class="cb-row">
+    <td class="cb-n"></td>
+    <td><input class="cb-start" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="${esc(b.start||'')}"></td>
+    <td><input class="cb-end" type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" value="${esc(b.end||'')}"></td>
+    <td><select class="cb-type"><option value="WORK" ${b.type!=='BREAK'?'selected':''}>WORK</option><option value="BREAK" ${b.type==='BREAK'?'selected':''}>BREAK</option></select></td>
+    <td class="cb-min">–</td>
+    <td class="right"><button type="button" class="cb-del" title="ลบบล็อกนี้">✕</button></td>
+  </tr>`;
+}
+function readCreateForm(){
+  const blocks=[...document.querySelectorAll('#cbRows .cb-row')].map(tr=>({start:tr.querySelector('.cb-start').value,end:tr.querySelector('.cb-end').value,type:tr.querySelector('.cb-type').value}));
+  return {lineId:gid('cbLine').value,shift:gid('cbShift').value,cycle:Number(gid('cbCycle').value),blocks};
+}
+function revalidateCreate(){
+  const f=readCreateForm(),v=validateBlocks(f.blocks,f.cycle),msgs=[];
+  const lineOk=createLines().some(l=>String(l.lineId)===String(f.lineId));
+  if(!lineOk)v.errors.unshift('เลือก Line ที่ Active');
+  document.querySelectorAll('#cbRows .cb-row').forEach((tr,i)=>{
+    tr.querySelector('.cb-n').textContent=i+1;
+    const st=normHM(f.blocks[i].start),en=normHM(f.blocks[i].end),m=tr.querySelector('.cb-min');
+    // update the text in place and keep the split button element alive unless its state changes — re-creating it on every
+    // revalidate (blur→change fires between mousedown and mouseup) would swallow the user's first click
+    let tt=m.querySelector('.cb-min-t');if(!tt){m.innerHTML='<span class="cb-min-t"></span>';tt=m.firstChild}
+    tt.textContent=(st&&en&&st!==en)?`${hmSpan(st,en)}${hmMin(en)<hmMin(st)?' ↷ ข้ามเที่ยงคืน':''}`:'–';
+    const needSplit=workCrossesMidnight(st,en,f.blocks[i].type),hasSplit=m.querySelector('.cb-split');
+    if(needSplit&&!hasSplit)m.insertAdjacentHTML('beforeend','<button type="button" class="cb-split">แยกที่เที่ยงคืน</button>');
+    else if(!needSplit&&hasSplit)hasSplit.remove();
+    if(needSplit)m.querySelector('.cb-split').title='แยกเป็น '+st+'→23:59'+(en!=='00:00'?' และ 00:00→'+en:'')+' (เสีย 1 นาที)';
+  });
+  v.errors.forEach(t=>msgs.push(`<li class="cb-e">✕ ${esc(t)}</li>`));
+  v.warnings.forEach(t=>msgs.push(`<li class="cb-w">⚠ ${esc(t)}</li>`));
+  gid('cbMessages').innerHTML=msgs.join('');
+  gid('cbSummary').textContent=v.stats?`${f.blocks.length} บล็อก • WORK ${v.stats.work} นาที • BREAK ${v.stats.brk} นาที • ${v.stats.rounds.toFixed(2)} planned rounds (${v.stats.work}÷${f.cycle}) • ครอบคลุม ${normHM(f.blocks[0].start)} → ${v.stats.endTime}`:'';
+  gid('cbSubmit').disabled=!(v.ok&&lineOk);
+  return {f,v};
+}
+function openCreatePanel(){
+  const panel=gid('shiftCreatePanel');syncCreateLineOptions();
+  const curLine=gid('shiftLineFilter').value,curShift=gid('shiftTypeFilter').value;
+  if(createLines().some(l=>String(l.lineId)===curLine))gid('cbLine').value=curLine;
+  gid('cbShift').value=curShift;
+  if(!document.querySelector('#cbRows .cb-row'))gid('cbRows').innerHTML='';
+  panel.style.display='';revalidateCreate();panel.scrollIntoView({block:'nearest'});
+}
+function closeCreatePanel(){gid('shiftCreatePanel').style.display='none'}
+async function createDocOnce(collection,id,data){
+  // atomic "create only if it does not exist" — an existing (even malformed) Master is NEVER overwritten
+  const ref=ProdV2DB.collection(collection).doc(id);
+  if(ProdV2DB.db&&ProdV2DB.db().runTransaction){
+    await ProdV2DB.db().runTransaction(async tx=>{const s=await tx.get(ref);if(s.exists)throw new Error('EXISTS');tx.set(ref,data)});
+  }else{
+    const s=await ref.get();if(s.exists)throw new Error('EXISTS');await ProdV2DB.set(collection,id,data);
+  }
+}
+async function submitCreateShift(){
+  const {f,v}=revalidateCreate();
+  if(!v.ok)return;
+  const line=createLines().find(l=>String(l.lineId)===String(f.lineId));
+  if(!line)return alert('เลือก Line ที่ Active');
+  const id=`shift_${f.lineId}_${f.shift}`;
+  const warn=v.warnings.length?`\n\n⚠ ${v.warnings.join('\n⚠ ')}`:'';
+  if(!confirm(`สร้าง Shift Master ใหม่\n\nLine ${f.lineId} / ${f.shift}  (${id})\n${f.blocks.length} บล็อก • WORK ${v.stats.work} นาที • Cycle ${f.cycle} min/round\nสถานะเริ่มต้น: PENDING\n\nถ้ามีเอกสารนี้อยู่แล้ว ระบบจะหยุดและไม่ทับ${warn}`))return;
+  const btn=gid('cbSubmit');
+  try{
+    btn.disabled=true;setStatus(`Creating Shift Master ${id}…`);
+    const data=shiftRecord(f.lineId,f.shift,v.tuples,'PENDING',f.cycle);          // same record builder as the seeds (unchanged)
+    await createDocOnce(SHIFT_COLLECTION,id,data);
+    setStatus(`✓ สร้าง Shift Master ${id} แล้ว`,'ok');
+    closeCreatePanel();gid('cbRows').innerHTML='';
+    gid('shiftLineFilter').value=f.lineId;gid('shiftTypeFilter').value=f.shift;
+    await loadShiftMaster();
+  }catch(e){
+    const msg=e.message==='EXISTS'?`มี Shift Master ${id} อยู่แล้ว — ระบบไม่ทับเอกสารเดิม (ถ้าต้องการแก้ไข ใช้ Recalculate / Save ที่ตารางด้านบน)`:(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message);
+    setStatus(msg,'err');alert(msg);btn.disabled=false;
+  }
+}
+gid('openCreateShiftBtn')?.addEventListener('click',openCreatePanel);
+gid('shiftEmptyCreateBtn')?.addEventListener('click',openCreatePanel);
+gid('cbCancel')?.addEventListener('click',closeCreatePanel);
+gid('cbAddBlock')?.addEventListener('click',()=>{
+  const rows=document.querySelectorAll('#cbRows .cb-row'),last=rows[rows.length-1];
+  const prevEnd=last?normHM(last.querySelector('.cb-end').value):'';
+  gid('cbRows').insertAdjacentHTML('beforeend',cbRowHtml({start:prevEnd,type:'WORK'}));
+  revalidateCreate();gid('cbRows').lastElementChild.querySelector(prevEnd?'.cb-end':'.cb-start').focus();
+});
+gid('cbClear')?.addEventListener('click',()=>{gid('cbRows').innerHTML='';revalidateCreate()});
+gid('cbRows')?.addEventListener('input',revalidateCreate);
+gid('cbRows')?.addEventListener('change',revalidateCreate);
+gid('cbRows')?.addEventListener('click',e=>{
+  if(e.target.closest('.cb-del')){e.target.closest('.cb-row').remove();revalidateCreate();return}
+  if(e.target.closest('.cb-split')){                                   // explicit user action: split a WORK block at midnight
+    const tr=e.target.closest('.cb-row'),st=normHM(tr.querySelector('.cb-start').value),en=normHM(tr.querySelector('.cb-end').value);
+    if(!workCrossesMidnight(st,en,'WORK'))return;
+    const parts=[{start:st,end:'23:59',type:'WORK'}];if(en!=='00:00')parts.push({start:'00:00',end:en,type:'WORK'});
+    tr.insertAdjacentHTML('beforebegin',parts.map(cbRowHtml).join(''));tr.remove();revalidateCreate();
+  }
+});
+['cbLine','cbShift','cbCycle'].forEach(id=>{gid(id)?.addEventListener('input',revalidateCreate);gid(id)?.addEventListener('change',revalidateCreate)});
+gid('cbSubmit')?.addEventListener('click',submitCreateShift);
 
 document.getElementById('initShiftC')?.addEventListener('click',async()=>{
   if(!confirm('Initialize Line C Shift Master?\n\nDAY = confirmed 63 rounds / 630 work min\nNIGHT = confirmed 63 rounds / 630 work min (19:50–08:00)'))return;
