@@ -92,12 +92,17 @@ const BOM=[
  ]},
 ];
 
+// O1: นับรอบการโหลด — คำตอบ (สำเร็จหรือ Error) ของรอบเก่าที่กลับมาช้า จะไม่ทับผลของรอบล่าสุด
+let loadSeq=0;
 async function load(){
+ const seq=++loadSeq;
  const date=$("asmDate").value,shift=$("asmShift").value;
- if(!date)return note("เลือกวันที่ก่อน","plan-warn");
+ if(!date){if($("asmStatus").textContent==="Loading…")stat("Ready");return note("เลือกวันที่ก่อน","plan-warn");}
  stat("Loading…");note("กำลังโหลด…");
  try{
-  const logs=await all("prodV2_actualLogs");
+  // O1: อ่านเฉพาะเอกสารของวันที่เลือก (เดิมอ่านทั้ง Collection แล้วกรองในเบราว์เซอร์)
+  const logs=(await ProdV2DB.collection("prodV2_actualLogs").where("date","==",date).get()).docs.map(d=>({id:d.id,...d.data()}));
+  if(seq!==loadSeq)return; // มีการโหลดรอบใหม่แล้ว
   const matched=logs.filter(x=>x.date===date&&(!shift||x.shift===shift));
   const totals={}; // "Model|||Door" -> qty
   matched.forEach(doc=>{
@@ -110,7 +115,7 @@ async function load(){
   render(totals,matched.length);
   note(`โหลดแล้ว · ${date}${shift?" · "+shift:" · ทุกกะ"} · รวม ${matched.length} Actual Log`,"plan-ok");
   stat("Loaded","ok");
- }catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Load failed","err");}
+ }catch(e){if(seq!==loadSeq)return;note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Load failed","err");}
 }
 function poolTotal(poolKey,totals){return (POOLS[poolKey]||[]).reduce((s,[m,d])=>s+Number(totals[m+"|||"+d]||0),0)}
 function render(totals,logCount){
