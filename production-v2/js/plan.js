@@ -266,17 +266,42 @@ function table(){
  h+=`<td class="plv2-sr plv2-sr-orig">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="plv2-sr plv2-sr-adj"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
-async function load(){
+// A1-I3 P2: Shift Master and Jig Layouts are read once per page and reused when only
+// Date / Line / Shift changes (or on Copy / Delete). The Load button always reads them
+// again. Save never trusts this copy: it reads the masters again and compares them with
+// the ones the plan on screen was built from (see save()). The query results are kept,
+// not the objects (every use maps fresh copies), and a failed read is never kept.
+let masterReads=null;
+function readMasters(){let p=Promise.all([ProdV2DB.collection("prodV2_shiftMaster").get(),ProdV2DB.collection("prodV2_jigLayouts").get()]);masterReads=p;p.catch(()=>{if(masterReads===p)masterReads=null});return p}
+const mapMasters=snaps=>snaps.map(s=>s.docs.map(d=>({id:d.id,...d.data()})));
+function masterData(fresh){return(fresh||!masterReads?readMasters():masterReads).then(mapMasters)}
+// The masters a plan for Line l / Shift sh is built from, selected exactly as load() does.
+function masterBasis(ss,ls,l,sh){return{shift:ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null,pallets:ls.filter(x=>lineOf(x)===l&&x.active!==false)}}
+// Stable text of a value: object keys sorted, Firestore Timestamps / references normalised.
+function stableText(v){
+ const norm=x=>{
+  if(x===null||typeof x!=="object")return x===undefined?null:x;
+  if(typeof x.toMillis==="function"&&"seconds" in x&&"nanoseconds" in x)return{"~ts":[x.seconds,x.nanoseconds]};
+  if(typeof x.toDate==="function")return{"~date":x.toDate().getTime()};
+  if(x.path&&x.firestore)return{"~ref":x.path};
+  if(Array.isArray(x))return x.map(norm);
+  let o={};Object.keys(x).sort().forEach(k=>{o[k]=norm(x[k])});return o;
+ };
+ return JSON.stringify(norm(v));
+}
+async function load(opts){
  let d=$("planDate").value,l=val($("planLine").value).toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;
  ProdV2Context.set({date:d,lineId:l,shift:sh});
+ S.basis=null;S.masterChanged=false; // a plan is savable only after a successful load of this Date / Line / Shift
  try{
   stat("Loading...");
-  let [ss,ls,savedDoc]=await Promise.all([
-   all("prodV2_shiftMaster"),all("prodV2_jigLayouts"),
+  let [[ss,ls],savedDoc]=await Promise.all([
+   masterData(opts&&opts.fresh===true),
    ProdV2DB.collection("prodV2_dailyPlans").doc(id).get()
   ]);
-  S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;
-  S.pallets=ls.filter(x=>lineOf(x)===l&&x.active!==false);
+  let b=masterBasis(ss,ls,l,sh);
+  S.shift=b.shift;
+  S.pallets=b.pallets;
   if(!S.shift){note(`ไม่พบ Shift Master: Line ${l} / ${sh}`,"plan-warn");stat("Master missing","err");return}
   let avail=new Set(S.pallets.map(x=>x.id));
   if(savedDoc.exists){
@@ -287,12 +312,12 @@ async function load(){
    S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];
    S.events=(ms.palletChanges||[]).filter(e=>!e.palletId||avail.has(e.palletId));
    S.losses=(ms.palletChangeLosses||[]).filter(x=>!x.palletId||avail.has(x.palletId));
-   S.loaded=true; $("masterBadge").textContent=S.shift.verificationStatus||"MASTER";
+   S.loaded=true; S.basis={date:d,line:l,shift:sh,text:stableText(b)}; $("masterBadge").textContent=S.shift.verificationStatus||"MASTER";
    build(); pallets(); table(); kpis(); events();
    $("snapshotBadge").textContent="SAVED";
    note(`โหลด Saved Daily Plan แล้ว • ${d} • Line ${l} / ${sh}`,"plan-ok"); stat("Saved plan loaded","ok");
   }else{
-   S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.losses=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;
+   S.active=new Set(S.pallets.map(x=>x.id));S.baseActive=new Set(S.active);S.events=[];S.losses=[];S.palletOrder=S.pallets.map(x=>x.id);S.loaded=true;S.basis={date:d,line:l,shift:sh,text:stableText(b)};
    $("masterBadge").textContent=S.shift.verificationStatus||"MASTER";build();pallets();table();kpis();events();
    $("snapshotBadge").textContent="NOT SAVED";
    if(!S.matrix.length)note(`Line ${l} / ${sh} ยังไม่มี WORK Time Block — ไม่สร้างตัวเลข Plan`,"plan-warn");else note(`ยังไม่มี Saved Daily Plan • โหลด Master เริ่มต้นแล้ว`,"plan-warn");
@@ -312,7 +337,27 @@ async function save(){
   stat("Too many active pallets","err");
   return;
  }
- let d=$("planDate").value,sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;try{stat("Saving...");await ProdV2DB.set("prodV2_dailyPlans",id,snap(),true);$("snapshotBadge").textContent="SAVED";note(`บันทึก Daily Plan แล้ว • ${d} • Line ${l} • ${sh}`,"plan-ok");stat("Saved","ok")}catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Save failed","err")}
+ let d=$("planDate").value,sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;
+ if(S.saving){note("กำลังตรวจ Master / บันทึก Plan อยู่ — กรุณารอสักครู่","plan-warn");return}
+ // A1-I3 P2: the plan on screen must belong to this Date / Line / Shift and have been built from a
+ // successful load; otherwise nothing is saved.
+ let basis=S.basis;
+ if(!basis||basis.date!==d||basis.line!==val(l)||basis.shift!==sh){note("Save ไม่ได้: Plan บนหน้าจอยังไม่ได้โหลดสำเร็จสำหรับ Date / Line / Shift นี้ — กด Load ก่อน","plan-warn");stat("Save blocked","err");return}
+ // Capture what would be written now, then check the masters against Firestore (never the cache).
+ let payload=snap(),btn=$("savePlanBtn");
+ S.saving=true;if(btn)btn.disabled=true;
+ try{
+  stat("Checking master...");
+  let ss,ls;
+  try{[ss,ls]=mapMasters(await readMasters())}
+  catch(e){console.error(e);note(`Save ไม่สำเร็จ: ตรวจ Master ล่าสุดไม่ได้ (${window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message}) — ยังไม่ได้บันทึก Plan และการแก้ไขบนหน้าจอยังอยู่ ลองกด Save อีกครั้ง`,"plan-warn");stat("Save blocked","err");return}
+  if(stableText(masterBasis(ss,ls,basis.line,basis.shift))!==basis.text){
+   S.masterChanged=true;
+   note(`Save ถูกระงับ: Shift Master หรือ Jig Layouts ของ Line ${basis.line} / ${basis.shift} มีการแก้ไขหลังจากโหลด Plan นี้ — ยังไม่ได้บันทึก และการแก้ไขบนหน้าจอยังอยู่ กด Load เพื่อใช้ Master ล่าสุด (การแก้ไขที่ยังไม่ Save จะถูกแทนที่) แล้วตรวจ Plan ก่อน Save อีกครั้ง`,"plan-warn");
+   stat("Master changed","err");return;
+  }
+  try{stat("Saving...");await ProdV2DB.set("prodV2_dailyPlans",id,payload,true);$("snapshotBadge").textContent="SAVED";note(`บันทึก Daily Plan แล้ว • ${d} • Line ${l} • ${sh}`,"plan-ok");stat("Saved","ok")}catch(e){note(window.ProdV2Auth?ProdV2Auth.friendlyError(e):e.message,"plan-warn");stat("Save failed","err")}
+ }finally{S.saving=false;if(btn)btn.disabled=false}
 }
 
 async function deleteSavedPlan(){
@@ -327,7 +372,11 @@ async function deleteSavedPlan(){
 }
 
 async function copy(){let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,p=prevDate(d),id=`plan_${p}_${l}_${sh}`;try{let doc=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();if(!doc.exists){note(`ไม่พบ Daily Plan ของวันก่อน (${p})`,"plan-warn");return}await load();let avail=new Set(S.pallets.map(x=>x.id)),ids=doc.data().masterSnapshot?.activePalletIds||[];S.active=new Set(ids.filter(x=>avail.has(x)));S.baseActive=new Set(S.active);let oo=doc.data().masterSnapshot?.palletOrder||[];S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];S.events=(doc.data().masterSnapshot?.palletChanges||[]).filter(e=>avail.has(e.palletId));S.losses=(doc.data().masterSnapshot?.palletChangeLosses||[]).filter(l=>!l.palletId||avail.has(l.palletId));build();pallets();table();kpis();events();$("snapshotBadge").textContent="COPIED · NOT SAVED";note(`คัดลอกจาก ${p} แล้ว • ตรวจสอบก่อน Save Plan`,"plan-ok")}catch(e){note(e.message,"plan-warn")}}
-async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=load;$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;let dp=$("deletePlanBtn");if(dp)dp.onclick=deleteSavedPlan;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.lineName||x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("planDate"),$("planLine"),$("planShift"));
+function loadFresh(){
+ if(S.masterChanged&&/NOT SAVED/.test($("snapshotBadge").textContent||"")&&!confirm("Master มีการแก้ไข — โหลด Master ล่าสุดแล้วสร้าง Plan ใหม่?\nการแก้ไขบนหน้าจอที่ยังไม่ได้ Save จะถูกแทนที่"))return;
+ return load({fresh:true});
+}
+async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=loadFresh;$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;let dp=$("deletePlanBtn");if(dp)dp.onclick=deleteSavedPlan;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.lineName||x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("planDate"),$("planLine"),$("planShift"));
  // เปลี่ยน Date/Line/Shift แล้วโหลด Master/Saved Plan ของกะนั้นใหม่ทันที — กัน
  // ตารางค้างข้อมูลของกะก่อนหน้าไว้เหมือนที่แก้ใน entry.js
  $("planDate").onchange=load;$("planLine").onchange=load;$("planShift").onchange=load;
