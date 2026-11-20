@@ -120,7 +120,7 @@
       progress(100, 'เสร็จสิ้น'); preview(model);
       const q = model.quality, done = model.completeness.complete;
       note(`ดาวน์โหลด ${name} แล้ว · ${model.units.length} Line×Shift×วัน · Firestore reads ${model.meta.reads}${data.cached ? ' (ใช้ข้อมูลที่โหลดไว้)' : ''}`
-        + (done ? ' · ข้อมูลครบทุกหน่วย' : ` · ⚠ ข้อมูลไม่ครบ: ไม่มีแผน ${q.noPlan} · มีแผนแต่ไม่มียอดผลิต ${q.noEntry} · มียอดผลิตแต่ไม่มีแผน ${q.actualWithoutPlan} — ยอดรวมยังไม่ใช่ยอดที่ยืนยันครบ`), done ? 'plan-ok' : 'plan-warn');
+        + (done ? ' · ข้อมูลครบทุกหน่วย' : ` · ⚠ ข้อมูลไม่ครบ: ไม่มีทั้งแผนและยอดผลิต ${q.noPlan} · มีแผนแต่ไม่มียอดผลิต ${q.noEntry} · มียอดผลิตแต่ไม่มีแผน ${q.actualWithoutPlan} (${q.actualWithoutPlanQty} ชิ้น ไม่นับใน Actual) — ยอดรวมยังไม่ใช่ยอดที่ยืนยันครบ`), done ? 'plan-ok' : 'plan-warn');
       stat('Exported', 'ok');
     } catch (e) {
       if (e && e.message === 'CANCELLED') { note('ยกเลิกการ Export แล้ว — ไม่ได้สร้างไฟล์', 'plan-warn'); stat('Cancelled', 'err'); }

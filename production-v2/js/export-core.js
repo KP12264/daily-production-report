@@ -88,7 +88,7 @@
     const lines = [...lineIds].map(id => master.get(id) || { id, name: 'Line ' + id + ' (not in Master)', order: 9999, active: false })
       .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 
-    const units = [], blocks = [], cells = new Map(), lossRows = [], rawCells = [], quality = { noPlan: 0, noEntry: 0, actualWithoutPlan: 0, staleKeys: 0, staleQty: 0, planMismatch: 0, overlaps: 0, overlapMinutes: 0, zeroPlan: 0 };
+    const units = [], blocks = [], cells = new Map(), lossRows = [], rawCells = [], quality = { noPlan: 0, noEntry: 0, actualWithoutPlan: 0, actualWithoutPlanQty: 0, staleKeys: 0, staleQty: 0, planMismatch: 0, overlaps: 0, overlapMinutes: 0, zeroPlan: 0 };
     for (const date of period.dates) for (const line of lines) for (const shift of shifts) {
       const k = ukey(date, line.id, shift), p = plans.get(k) || null, a = actuals.get(k) || null, man = manual.get(k) || [];
       if (!p && !a && !man.length && !line.active) continue;          // inactive line, nothing recorded that day
@@ -109,8 +109,8 @@
         rawCells.push({ date, lineId: line.id, shift, blockIndex: parts.length >= 3 ? Number(parts[0]) : '', model: parts[1] || '', door: parts[2] || '', qty: q, planned: planned ? 'YES' : 'NO', key });
         if (planned) act += q; else { stale += q; if (q) staleKeys.push(key); }
       });
-      u.actual = a ? act : null; u.unplannedActual = stale; u.staleKeys = staleKeys;
-      if (!p) quality.noPlan++; if (p && !a) quality.noEntry++; if (!p && a) quality.actualWithoutPlan++;
+      u.actual = p && a ? act : null; u.unplannedActual = stale; u.staleKeys = staleKeys;   // entry without plan: Actual blank, qty reported as Unplanned
+      if (!p && !a) quality.noPlan++; if (p && !a) quality.noEntry++; if (!p && a) { quality.actualWithoutPlan++; quality.actualWithoutPlanQty += stale; }   // mutually exclusive
       if (staleKeys.length) { quality.staleKeys += staleKeys.length; quality.staleQty += stale; }
       if (p && !u.adjustedPlan) quality.zeroPlan++;
       u.status = !p ? (a ? 'ACTUAL WITHOUT PLAN' : 'NO PLAN') : (!a ? 'NO ENTRY' : 'OK');
@@ -147,7 +147,7 @@
     const ratio = (a, p) => p > 0 ? a / p : null;
     const totals = { plan: sum(units, 'adjustedPlan'), originalPlan: sum(units, 'originalPlan'), actual: sum(units, 'actual'), unplannedActual: sum(units, 'unplannedActual'), lossExclMaterial: sum(units, 'lossExclMaterial'), material: sum(units, 'material') };
     totals.gap = totals.actual - totals.plan; totals.achievement = ratio(totals.actual, totals.plan); totals.lossInclMaterial = totals.lossExclMaterial + totals.material;
-    const group = (keyFn, labelFn) => { const m = new Map(); units.forEach(u => { const k = keyFn(u); if (!m.has(k)) m.set(k, { ...labelFn(u), plan: 0, actual: 0, units: 0, planned: 0, entered: 0, lossExclMaterial: 0, material: 0 }); const g = m.get(k); g.plan += u.adjustedPlan || 0; g.actual += u.actual || 0; g.units++; if (u.hasPlan) g.planned++; if (u.hasActual) g.entered++; g.lossExclMaterial += u.lossExclMaterial; g.material += u.material; });
+    const group = (keyFn, labelFn) => { const m = new Map(); units.forEach(u => { const k = keyFn(u); if (!m.has(k)) m.set(k, { ...labelFn(u), plan: 0, actual: 0, units: 0, planned: 0, entered: 0, counted: 0, lossExclMaterial: 0, material: 0 }); const g = m.get(k); g.plan += u.adjustedPlan || 0; g.actual += u.actual || 0; g.units++; if (u.hasPlan) g.planned++; if (u.hasActual) g.entered++; if (u.hasPlan && u.hasActual) g.counted++; g.lossExclMaterial += u.lossExclMaterial; g.material += u.material; });
       return [...m.values()].map(g => ({ ...g, gap: g.actual - g.plan, achievement: ratio(g.actual, g.plan) })); };
     const byLine = group(u => u.lineId, u => ({ lineId: u.lineId, lineName: u.lineName }));
     const byDate = group(u => u.date, u => ({ date: u.date }));
@@ -162,9 +162,9 @@
   // Data completeness: incomplete units mean the totals are NOT fully verified production totals.
   function completenessOf(q) {
     const issues = [];
-    if (q.noPlan) issues.push(`NO PLAN: ${q.noPlan} Line×Shift×Date unit(s) without a saved Daily Plan (can include non-production days or dates not reached yet)`);
+    if (q.noPlan) issues.push(`NO PLAN: ${q.noPlan} Line×Shift×Date unit(s) with neither a saved Daily Plan nor a Production Entry (can include non-production days or dates not reached yet)`);
     if (q.noEntry) issues.push(`NO ENTRY: ${q.noEntry} unit(s) with a plan but no Production Entry — their Plan is in the totals, their Actual is missing`);
-    if (q.actualWithoutPlan) issues.push(`ACTUAL WITHOUT PLAN: ${q.actualWithoutPlan} unit(s) with Production Entry but no Daily Plan — that Actual is NOT counted`);
+    if (q.actualWithoutPlan) issues.push(`ACTUAL WITHOUT PLAN: ${q.actualWithoutPlan} unit(s) with Production Entry but no Daily Plan — ${q.actualWithoutPlanQty} pcs NOT counted in Actual (shown as Unplanned; Actual left blank)`);
     const notes = [];
     if (q.staleKeys) notes.push(`${q.staleKeys} unplanned / stale actual key(s), ${q.staleQty} pcs, not counted in Actual`);
     if (q.overlaps) notes.push(`${q.overlaps} manual loss event(s) overlap Pallet Change Loss: up to ${q.overlapMinutes} min may be counted twice in the loss event-minute sums`);
@@ -275,7 +275,7 @@
   // `data` tells a missing record apart from a real zero: No data / No plan / No entry / Partial / Complete.
   const dataStatus = g => !g.planned && !g.entered ? 'No data' : !g.planned ? 'No plan' : !g.entered ? 'No entry' : (g.planned < g.units || g.entered < g.units) ? 'Partial' : 'Complete';
   function lineRows(model) {
-    return model.byLine.map(g => ({ name: g.lineName, plan: g.planned ? g.plan : null, actual: g.entered ? g.actual : null, gap: g.planned && g.entered ? g.gap : null, ach: g.planned && g.entered ? blank(g.achievement) : null, data: dataStatus(g) }))
+    return model.byLine.map(g => ({ name: g.lineName, plan: g.planned ? g.plan : null, actual: g.counted ? g.actual : null, gap: g.counted ? g.gap : null, ach: g.counted ? blank(g.achievement) : null, data: dataStatus(g) }))
       .sort((a, b) => (a.gap == null) - (b.gap == null) || (a.gap ?? 0) - (b.gap ?? 0) || a.name.localeCompare(b.name));
   }
   // What to draw (data, kind, size, place). Missing plan / entry stays null → a gap, never 0; a category
@@ -287,7 +287,7 @@
   const pxOf = cols => cols.reduce((t, w) => t + colPx(w), 0);
   function chartSpec(model) {
     const daily = model.period.period === 'daily';
-    const pa = (rows, tag, c1, c2) => [{ label: 'Adjusted Plan' + tag, data: rows.map(g => g ? (g.planned ? g.plan : null) : null), color: c1 }, { label: 'Actual' + tag, data: rows.map(g => g ? (g.entered ? g.actual : null) : null), color: c2 }];
+    const pa = (rows, tag, c1, c2) => [{ label: 'Adjusted Plan' + tag, data: rows.map(g => g ? (g.planned ? g.plan : null) : null), color: c1 }, { label: 'Actual' + tag, data: rows.map(g => g ? (g.counted ? g.actual : null) : null), color: c2 }];
     const name = g => g.lineName + (!g.planned && !g.entered ? ' (no data)' : '');
     const left = { title: 'Plan vs Actual by Line (pcs)', kind: 'bar', labels: model.byLine.map(name), series: pa(model.byLine, '', NAVY, BLUE) };
     let right;
@@ -299,7 +299,7 @@
         subtitle: shifts.length > 1 ? 'Each Line: DAY Plan · DAY Actual   |   NIGHT Plan · NIGHT Actual   (missing bar = no saved plan / no entry)' : `Each Line: ${shifts[0]} Plan · ${shifts[0]} Actual   (missing bar = no saved plan / no entry)`,
         series: shifts.flatMap(sh => { const night = sh === 'NIGHT', rows = cell(sh);
           return [{ label: `${sh} · Adjusted Plan`, data: rows.map(g => g && g.planned ? g.plan : null), color: night ? NIGHT_PLAN : NAVY },
-            { label: `${sh} · Actual`, data: rows.map(g => g && g.entered ? g.actual : null), color: night ? NIGHT_ACT : BLUE }]; }) };
+            { label: `${sh} · Actual`, data: rows.map(g => g && g.counted ? g.actual : null), color: night ? NIGHT_ACT : BLUE }]; }) };
     } else right = { title: `Production Trend by Production Date (pcs) — ${model.period.start} – ${model.period.end}; gaps = no saved plan / no entry`, kind: model.byDate.length > 10 ? 'line' : 'bar', trend: true, labels: model.byDate.map(g => g.date.slice(5)), series: pa(model.byDate, '', NAVY, BLUE) };
     const stacked = model.byLine.length > LINES_ON_PAGE_1, all = pxOf(EXEC_COLS) - 14;
     if (stacked) {
@@ -394,7 +394,7 @@
     title(r, 1, 'Production Trend — daily totals by Production Date (blank = no saved plan / no entry)');
     const trendTop = r + 1;
     r = table(ws, r + 1, ['Production Date', 'Units planned', 'Adjusted Plan', 'Actual', 'Gap', 'Achievement', 'Loss excl. Material', 'Material'],
-      model.byDate.map(g => [g.date, `${g.planned}/${g.units}`, g.planned ? g.plan : null, g.entered ? g.actual : null, g.planned && g.entered ? g.gap : null, g.planned && g.entered ? blank(g.achievement) : null, g.lossExclMaterial, g.material]),
+      model.byDate.map(g => [g.date, `${g.planned}/${g.units}`, g.planned ? g.plan : null, g.counted ? g.actual : null, g.counted ? g.gap : null, g.counted ? blank(g.achievement) : null, g.lossExclMaterial, g.material]),
       { fmt: [null, null, NUM, NUM, NUM, PCT, MIN, MIN], total: ['label', null, 'sum', 'sum', { gap: [4, 3] }, { ach: [4, 3] }, 'sum', 'sum'], ach: [6], gap: [5], filter: false });
     ws.getRow(trendTop).height = 24; for (let x = trendTop + 1; x <= r; x++) ws.getRow(x).height = 14.5;
     if (model.byDate.length > 14) ws.getRow(r).addPageBreak();   // long trend (Monthly): Data Quality on the next page
@@ -413,7 +413,8 @@
       ['Achievement', 'Total Actual ÷ Total Adjusted Plan for every row and total; daily percentages are never added. Blank when Plan = 0.'],
       ['Loss', `Sum of the minutes of every loss event (Pallet Change from the Daily Plan + Manual Loss), shown as "Loss excl. Material" and "Material". This is an event-minute sum: overlapping events are not merged, so overlapping time can be counted twice. Events are kept as entered; overlaps are flagged (${Q.overlaps} event(s), up to ${Q.overlapMinutes} min).`],
       ['Production Date', 'The date saved on each document. Night shift after midnight stays on its Production Date.'],
-      ['Missing data', `NO PLAN: ${Q.noPlan} · NO ENTRY (plan saved, no actual): ${Q.noEntry} · Actual without plan: ${Q.actualWithoutPlan} · Zero-plan units: ${Q.zeroPlan}`],
+      ['Missing data', `Each unit is in one class only. NO PLAN (no plan, no entry): ${Q.noPlan} · NO ENTRY (plan, no entry): ${Q.noEntry} · ACTUAL WITHOUT PLAN (entry, no plan; Actual blank, ${Q.actualWithoutPlanQty} pcs in Unplanned): ${Q.actualWithoutPlan} · Zero-plan units: ${Q.zeroPlan}`],
+      ['Inactive lines', 'A Line marked inactive in Master appears only on the Line × Shift × Date units where it has a plan, entry or loss record; other dates are not listed as NO PLAN.'],
       ['Data checks', `Stale actual keys: ${Q.staleKeys} (${Q.staleQty} pcs) · Plan total vs cells mismatch: ${Q.planMismatch} · Manual loss overlapping Pallet Change: ${Q.overlaps}`],
       ['Not included', 'Scrap and Quality metrics (no source in Production V2).'],
       ['Data as of', `${model.meta.dataAsOf} · Firestore documents read: ${model.meta.reads ?? 'n/a'}`]];
@@ -489,7 +490,7 @@
     ws = wb.addWorksheet('06 Raw Data', { properties: { tabColor: { argb: C.grey } } });
     setupSheet(ws, 'Raw Data — source documents for audit', model, [14, 10, 9, 30, 30, 9, 12, 12, 12, 12, 13, 40]);
     let rr = table(ws, 4, ['Production Date', 'Line', 'Shift', 'Plan document', 'Actual document', 'Plan version', 'Stored Adjusted Plan', 'Sum of plan cells', 'Original Plan', 'Actual (planned cells)', 'Unplanned / stale qty', 'Stale keys'],
-      model.units.map(u => [u.date, u.lineId, u.shift, u.planId || 'NO PLAN', u.actualId || 'NO ENTRY', u.planVersion === '' ? null : u.planVersion, blank(u.adjustedPlan), blank(u.cellsPlan), blank(u.originalPlan), blank(u.actual), u.unplannedActual || null, u.staleKeys.join(' ; ')]),
+      model.units.map(u => [u.date, u.lineId, u.shift, u.planId || 'NO PLAN', u.actualId || 'NO ENTRY', u.planVersion === '' ? null : u.planVersion, blank(u.adjustedPlan), blank(u.cellsPlan), blank(u.originalPlan), u.hasActual ? (u.actual ?? 0) : null, u.unplannedActual || null, u.staleKeys.join(' ; ')]),
       { fmt: [null, null, null, null, null, '0', NUM, NUM, NUM, NUM, NUM, null], total: ['label', null, null, null, null, null, 'sum', 'sum', 'sum', 'sum', 'sum', null], freeze: true, freezeCols: 3 });
     rr += 3;
     ws.getCell(rr - 1, 1).value = 'Actual cells (actualByCell)'; ws.getCell(rr - 1, 1).font = { bold: true, size: 12, color: { argb: C.navy } };
