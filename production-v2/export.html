@@ -1,0 +1,86 @@
+<!doctype html><html lang="th"><head><script>(function(){try{if(localStorage.getItem("prodv2-theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Export Excel · Production V2</title>
+<link rel="stylesheet" href="css/app.css?v=20260920-14">
+<link rel="stylesheet" href="css/dashboard-v2.css?v=20261005-02">
+<link rel="stylesheet" href="css/export-v2.css?v=20261120-x2">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+</head><body>
+<div class="dv2-shell xv2-shell">
+<aside class="dv2-sidebar">
+  <div class="dv2-sidebar-brand">Production System <span>V2</span></div>
+  <nav class="dv2-sidebar-nav">
+    <div class="dv2-nav-group">Overview</div>
+    <a href="index.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</a>
+    <a href="exec.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Executive Summary</a>
+    <div class="dv2-nav-group">Production</div>
+    <a href="entry.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Production Entry</a>
+    <a href="plan.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>Daily Plan</a>
+    <a href="loss.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Loss / Downtime</a>
+    <div class="dv2-nav-group">Planning</div>
+    <a href="cabinet-import.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>Cabinet Plan Import</a>
+    <a href="cabinet-coverage.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>Cabinet Coverage</a>
+    <a href="order.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>Order Tracking</a>
+    <div class="dv2-nav-group">Operations</div>
+    <a href="assembly.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Assembly</a>
+    <div class="dv2-nav-group">Reports</div>
+    <a href="export.html" class="dv2-nav-item active"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>Export Excel</a>
+    <div class="dv2-nav-group">System</div>
+    <a href="master.html" class="dv2-nav-item"><svg class="dv2-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Master Setup</a>
+  </nav>
+  <div class="dv2-sidebar-footer">
+    <div>Door Foam Production</div>
+    <div>Kabinburi Plant</div>
+  </div>
+</aside>
+<div class="dv2-main xv2-main">
+<div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a><span id="authBar"></span></div>
+<div class="dv2-page-header">
+<div class="dv2-title-block"><h1>Export Excel</h1><p>Reports <span class="dv2-header-sep">|</span> Daily · Weekly · Monthly Production Report (.xlsx)</p></div>
+<div class="dv2-header-right">
+<div class="isolation-pill">READ-ONLY · prodV2_* ONLY</div>
+<div id="expStatus" class="hero-status">Checking access…</div>
+</div>
+</div>
+<div id="authGateHost"></div>
+<main id="appMain" class="xv2-app">
+<div id="expLocked" class="notice info-notice plan-warn xv2-locked">กำลังตรวจสิทธิ์การใช้งาน…</div>
+<section id="expForm" class="section-card xv2-form is-locked">
+<div class="xv2-grid">
+<label><span>REPORT PERIOD</span><select id="expPeriod"><option value="daily">Daily — 1 Production Date</option><option value="weekly">Weekly — date range (max 31 days)</option><option value="monthly">Monthly — calendar month</option></select></label>
+<label id="expDailyWrap"><span>PRODUCTION DATE</span><input id="expDate" type="date"></label>
+<div id="expWeeklyWrap" class="xv2-range"><label><span>FROM</span><input id="expStart" type="date"></label><label><span>TO</span><input id="expEnd" type="date"></label></div>
+<label id="expMonthlyWrap"><span>MONTH</span><input id="expMonth" type="month"></label>
+<label><span>LINE</span><select id="expLine"><option value="ALL">All Lines</option></select></label>
+<label><span>SHIFT</span><select id="expShift"><option value="BOTH">DAY + NIGHT</option><option value="DAY">DAY</option><option value="NIGHT">NIGHT</option></select></label>
+</div>
+<div class="xv2-actions">
+<button id="expRunBtn" class="xv2-btn xv2-btn-primary" type="button">⬇ Export Excel</button>
+<button id="expCancelBtn" class="xv2-btn" type="button" hidden>Cancel</button>
+</div>
+<div id="expProgress" class="xv2-progress" hidden><div class="xv2-progress-track"><div id="expProgressBar" class="xv2-progress-bar"></div></div><span id="expProgressText"></span></div>
+<div id="expMessage" class="notice info-notice">ไฟล์มี 6 Sheets: Executive Summary · Daily Production · Model &amp; Door · Hourly (Time Block) · Loss Analysis · Raw Data</div>
+</section>
+<section id="expPreview" class="xv2-preview" hidden></section>
+<section class="section-card xv2-notes">
+<h2>How the numbers are calculated</h2>
+<ul>
+<li><b>Adjusted Plan</b> = the saved Daily Plan (same value as Production Entry).</li>
+<li><b>Actual</b> = Production Entry cells that exist in that day's plan. Old / renamed keys are listed separately as <i>Unplanned / stale</i> and are not counted.</li>
+<li><b>Achievement</b> = total Actual ÷ total Adjusted Plan (daily percentages are never added). Blank when there is no plan.</li>
+<li><b>Loss</b> = Pallet Change (Daily Plan) + Manual Loss, shown as <i>Loss excl. Material</i> and <i>Material</i> separately. These are <i>event-minute sums</i>: overlapping events are not merged, so overlapping time can be counted twice (overlaps are flagged in the file).</li>
+<li>The file states whether the data is <b>complete</b>. When any Line × Shift × Date has NO PLAN, NO ENTRY or ACTUAL WITHOUT PLAN, the totals are marked <b>not fully verified</b>.</li>
+<li><b>Production Date</b> is the date saved with the data: a Night shift after midnight stays on its Production Date.</li>
+<li>Missing data is shown as <i>NO PLAN</i> / <i>NO ENTRY</i>, never as 0. Scrap and Quality are not included (no source in Production V2).</li>
+</ul>
+</section>
+<div id="expChartHost" class="xv2-chart-host" aria-hidden="true"></div>
+</main>
+</div>
+</div>
+<script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script><script src="js/auth-v2.js?v=20260902-fix7"></script><script src="js/export-core.js?v=20261121-x6"></script><script src="js/export.js?v=20261121-x6"></script>
+</body></html>

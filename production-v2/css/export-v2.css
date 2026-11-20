@@ -1,0 +1,40 @@
+/* Production V2 — Export Excel page only (export.html). Uses the shared tokens from app.css. */
+.xv2-app{display:flex;flex-direction:column;gap:16px;padding-bottom:32px}
+.xv2-locked{font-weight:600}
+.xv2-form{padding:18px 20px;border-radius:14px}
+.xv2-form.is-locked{opacity:.55;pointer-events:none}
+.xv2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;align-items:end}
+.xv2-grid label,.xv2-range label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.xv2-grid label[hidden],.xv2-range[hidden]{display:none}
+.xv2-grid span{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted)}
+.xv2-grid select,.xv2-grid input{height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:14px;background:var(--card);color:var(--heading);min-width:0;width:100%;box-sizing:border-box}
+.xv2-grid select:focus,.xv2-grid input:focus{outline:2px solid var(--blue);outline-offset:1px}
+.xv2-range{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0}
+.xv2-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 12px}
+.xv2-btn{height:44px;padding:0 20px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--heading);font-weight:700;font-size:14px;cursor:pointer}
+.xv2-btn-primary{background:var(--navy);border-color:var(--navy);color:#fff;min-width:180px}
+.xv2-btn-primary:hover:not(:disabled){background:var(--blue-deep,var(--blue))}
+.xv2-btn:disabled{opacity:.5;cursor:not-allowed}
+.xv2-progress{display:flex;align-items:center;gap:12px;margin-bottom:12px;font-size:13px;color:var(--muted)}
+.xv2-progress[hidden]{display:none}
+.xv2-progress-track{flex:1;height:8px;border-radius:999px;background:var(--bg-soft,var(--line));overflow:hidden}
+.xv2-progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--navy),var(--blue));transition:width .25s}
+.xv2-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.xv2-preview[hidden]{display:none}
+.exp-kpi{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--navy);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.exp-kpi small{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.exp-kpi b{display:block;font-size:22px;color:var(--heading);margin-top:4px}
+.exp-kpi.is-neg b{color:var(--red)}
+.exp-complete{grid-column:1/-1;border-radius:12px;padding:12px 14px;font-size:13px;font-weight:600;line-height:1.5;border:1px solid}
+.exp-complete.is-ok{background:var(--green-soft,#dcfce7);border-color:var(--green,#16a34a);color:#166534}
+.exp-complete.is-bad{background:#fee2e2;border-color:var(--red,#dc2626);color:#991b1b}
+.xv2-notes{padding:16px 20px;border-radius:14px}
+.xv2-notes h2{font-size:15px;margin:0 0 8px;color:var(--heading)}
+.xv2-notes ul{margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--text)}
+.xv2-chart-host{position:absolute;left:-10000px;top:0;width:1120px;height:560px;overflow:hidden}
+@media (max-width:640px){
+ .xv2-form{padding:14px}
+ .xv2-grid{grid-template-columns:1fr}
+ .xv2-btn-primary{width:100%}
+ .xv2-actions .xv2-btn{flex:1}
+}
