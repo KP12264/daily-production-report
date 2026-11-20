@@ -267,34 +267,44 @@
   // Production Trend table, Data Quality and calculation notes. Many lines → extra pages, never hidden.
   const EXEC_COLS = [16, 10, 10, 10, 12, 12, 10, 10, 10, 10, 10, 10];   // E/F hold "Achievement"
   const colPx = w => Math.floor(w * 7 + 5);                      // Excel column width → pixels (Calibri 11)
-  const ROW_PT = 17, ROW_PX = ROW_PT * 96 / 72;                  // chart band row height
+  const ROW_PT = 16, ROW_PX = ROW_PT * 96 / 72;                  // chart band row height
   const LINES_ON_PAGE_1 = 8;                                     // more lines → Line table moves to its own page
   const dateText = p => p.period === 'daily' ? `Production Date ${p.start}` : p.period === 'monthly' ? `${p.start.slice(0, 7)} · Production Dates ${p.start} – ${p.end}` : `Production Dates ${p.start} – ${p.end} (${p.dates.length} days)`;
   const periodWord = p => p.period === 'daily' ? 'Daily' : p.period === 'monthly' ? 'Monthly' : 'Weekly / Range';
   // Rows of the Line Performance table: every line, most negative Gap first, lines without a Gap last.
+  // `data` tells a missing record apart from a real zero: No data / No plan / No entry / Partial / Complete.
+  const dataStatus = g => !g.planned && !g.entered ? 'No data' : !g.planned ? 'No plan' : !g.entered ? 'No entry' : (g.planned < g.units || g.entered < g.units) ? 'Partial' : 'Complete';
   function lineRows(model) {
-    return model.byLine.map(g => ({ name: g.lineName, plan: g.planned ? g.plan : null, actual: g.entered ? g.actual : null, gap: g.planned && g.entered ? g.gap : null, ach: g.planned && g.entered ? blank(g.achievement) : null }))
+    return model.byLine.map(g => ({ name: g.lineName, plan: g.planned ? g.plan : null, actual: g.entered ? g.actual : null, gap: g.planned && g.entered ? g.gap : null, ach: g.planned && g.entered ? blank(g.achievement) : null, data: dataStatus(g) }))
       .sort((a, b) => (a.gap == null) - (b.gap == null) || (a.gap ?? 0) - (b.gap ?? 0) || a.name.localeCompare(b.name));
   }
-  // What to draw (data, kind, size). Missing plan / entry stays null → a gap in the chart, never 0.
-  // Chart height is capped so a chart always fits on the first A4 landscape page (never split / clipped).
-  const NAVY = '#0B1F3A', BLUE = '#3B82F6', SLATE = '#64748B', SKY = '#93C5FD', CHART_MIN = 230, CHART_MAX = 500;
+  // What to draw (data, kind, size, place). Missing plan / entry stays null → a gap, never 0; a category
+  // with no record at all is labelled "(no data)". Layouts (all fit one A4 landscape page, never clipped):
+  //   side    — ≤ 8 lines: two charts side by side (Monthly / long ranges: the Trend gets the wider part);
+  //   stacked — > 8 lines: both charts full width, one above the other, vertical bars with room per line.
+  const NAVY = '#0B1F3A', BLUE = '#3B82F6', SLATE = '#64748B', SKY = '#93C5FD';
+  const SIDE_H = 210, STACK_H = 230;
+  const pxOf = cols => cols.reduce((t, w) => t + colPx(w), 0);
   function chartSpec(model) {
     const daily = model.period.period === 'daily';
     const pa = (rows, tag, c1, c2) => [{ label: 'Adjusted Plan' + tag, data: rows.map(g => g ? (g.planned ? g.plan : null) : null), color: c1 }, { label: 'Actual' + tag, data: rows.map(g => g ? (g.entered ? g.actual : null) : null), color: c2 }];
-    const left = { title: 'Plan vs Actual by Line (pcs)', kind: 'bar', labels: model.byLine.map(g => g.lineName), series: pa(model.byLine, '', NAVY, BLUE) };
+    const name = g => g.lineName + (!g.planned && !g.entered ? ' (no data)' : '');
+    const left = { title: 'Plan vs Actual by Line (pcs)', kind: 'bar', labels: model.byLine.map(name), series: pa(model.byLine, '', NAVY, BLUE) };
     let right;
-    if (daily) {   // one category per Line; DAY / NIGHT as separate series
+    if (daily) {   // one group per Line; DAY / NIGHT as separate series
       const shifts = model.filter.shift === 'BOTH' ? ['DAY', 'NIGHT'] : [model.filter.shift];
       const by = new Map(model.byLineShift.map(g => [g.lineId + '|' + g.shift, g]));
-      right = { title: 'Plan vs Actual by Line and Shift (pcs)', kind: 'bar', labels: model.byLine.map(g => g.lineName),
+      right = { title: `Plan vs Actual by Line and Shift (pcs) — ${shifts.join(' / ')}`, kind: 'bar', grouped: true, labels: model.byLine.map(name),
         series: shifts.flatMap((sh, i) => pa(model.byLine.map(g => by.get(g.lineId + '|' + sh) || null), ' · ' + sh, i ? SLATE : NAVY, i ? SKY : BLUE)) };
-    } else right = { title: 'Production Trend by Production Date (pcs) — gaps = no saved plan / no entry', kind: model.byDate.length > 10 ? 'line' : 'bar', labels: model.byDate.map(g => g.date.slice(5)), series: pa(model.byDate, '', NAVY, BLUE) };
-    left.horizontal = left.labels.length > LINES_ON_PAGE_1; right.horizontal = daily && right.labels.length > LINES_ON_PAGE_1;
-    const need = c => c.horizontal ? 90 + c.labels.length * (c.series.length > 2 ? 30 : 24) : CHART_MIN;
-    const height = Math.min(CHART_MAX, Math.max(need(left), need(right)));
-    const leftW = EXEC_COLS.slice(0, 6).reduce((t, w) => t + colPx(w), 0) - 12, rightW = EXEC_COLS.slice(6).reduce((t, w) => t + colPx(w), 0) - 10;
-    return { left: { ...left, width: leftW, height }, right: { ...right, width: rightW, height }, bandRows: Math.ceil(height / ROW_PX) };
+    } else right = { title: `Production Trend by Production Date (pcs) — ${model.period.start} – ${model.period.end}; gaps = no saved plan / no entry`, kind: model.byDate.length > 10 ? 'line' : 'bar', trend: true, labels: model.byDate.map(g => g.date.slice(5)), series: pa(model.byDate, '', NAVY, BLUE) };
+    const stacked = model.byLine.length > LINES_ON_PAGE_1, all = pxOf(EXEC_COLS) - 14;
+    if (stacked) {
+      const h = STACK_H, rows = Math.ceil(h / ROW_PX) + 1;
+      return { layout: 'stacked', left: { ...left, width: all, height: h, col: 0, row: 0 }, right: { ...right, width: all, height: h, col: 0, row: rows }, bandRows: rows * 2 };
+    }
+    const split = !daily && model.byDate.length > 10 ? 4 : 6;      // long trend → wider right chart
+    return { layout: 'side', left: { ...left, width: pxOf(EXEC_COLS.slice(0, split)) - 12, height: SIDE_H, col: 0, row: 0 },
+      right: { ...right, width: pxOf(EXEC_COLS.slice(split)) - 10, height: SIDE_H, col: split, row: 0 }, bandRows: Math.ceil(SIDE_H / ROW_PX) };
   }
   function statusStrip(model) {
     const c = model.completeness, q = model.quality;
@@ -322,21 +332,22 @@
       v.fill = fill(label === 'ACHIEVEMENT' && value != null ? (value >= 1 ? C.good : value >= 0.95 ? C.warn : C.bad) : C.white);
       for (let c = c0; c <= c0 + 2; c++) { ws.getCell(5, c).border = border; ws.getCell(6, c).border = border; }
     });
-    ws.getRow(5).height = 14; ws.getRow(6).height = 30;
+    ws.getRow(5).height = 14; ws.getRow(6).height = 30;   // KPI label / value
     const units = model.units.length, planned = model.units.filter(u => u.hasPlan).length, entered = model.units.filter(u => u.hasActual).length;
     ws.mergeCells(7, 1, 7, 12);
     const fn = ws.getCell(7, 1);
-    fn.value = safeText(`Original Plan ${T.originalPlan.toLocaleString('en-US')} pcs · Line×Shift×Date units with a plan ${planned}/${units} · with a production entry ${entered}/${units} · Unplanned / stale actual ${T.unplannedActual.toLocaleString('en-US')} pcs (not counted)${cmp.complete ? '' : ' · totals cover saved records only'}`);
-    fn.font = { size: 9, italic: true, color: { argb: C.grey } }; fn.alignment = { indent: 1, vertical: 'middle' }; ws.getRow(7).height = 14;
+    fn.value = [`Original Plan ${T.originalPlan.toLocaleString('en-US')} pcs   ·   Line × Shift × Date units with a Daily Plan: ${planned} of ${units}   ·   with a Production Entry: ${entered} of ${units}`,
+      `Unplanned / stale actual: ${T.unplannedActual.toLocaleString('en-US')} pcs (not counted in Actual)${cmp.complete ? '' : '   ·   Totals cover saved records only — see Data Quality on page 2'}`].map(safeText).join('\n');
+    fn.font = { size: 10, color: { argb: 'FF334155' } }; fn.alignment = { indent: 1, vertical: 'middle', wrapText: true }; ws.getRow(7).height = 28;
     ws.getRow(8).height = 4;
     // chart band
     const band0 = 9, bandEnd = band0 + spec.bandRows - 1;
     for (let r = band0; r <= bandEnd; r++) ws.getRow(r).height = ROW_PT;
-    const place = (b64, col, sz) => { if (!b64) return false; const id = wb.addImage({ base64: b64, extension: 'png' }); ws.addImage(id, { tl: { col, row: band0 - 1 }, ext: { width: sz.width, height: sz.height }, editAs: 'oneCell' }); return true; };
-    if (!place(images && images.left, 0, spec.left)) { ws.getCell(band0, 1).value = 'Chart not available (chart library not loaded)'; ws.getCell(band0, 1).font = { size: 9, italic: true, color: { argb: C.grey } }; }
-    if (!place(images && images.right, 6, spec.right)) { ws.getCell(band0, 7).value = 'Chart not available (chart library not loaded)'; ws.getCell(band0, 7).font = { size: 9, italic: true, color: { argb: C.grey } }; }
+    const place = (b64, c) => { if (!b64) { const x = ws.getCell(band0 + c.row, c.col + 1); x.value = 'Chart not available (chart library not loaded)'; x.font = { size: 9, italic: true, color: { argb: C.grey } }; return; }
+      const id = wb.addImage({ base64: b64, extension: 'png' }); ws.addImage(id, { tl: { col: c.col, row: band0 - 1 + c.row }, ext: { width: c.width, height: c.height }, editAs: 'oneCell' }); };
+    place(images && images.left, spec.left); place(images && images.right, spec.right);
     ws.mergeCells(bandEnd + 1, 1, bandEnd + 1, 12);
-    const cap = ws.getCell(bandEnd + 1, 1); cap.value = 'Charts are images drawn from this report\'s data (not editable Excel charts). A missing bar or a break in a line = no saved plan / no production entry, not zero.';
+    const cap = ws.getCell(bandEnd + 1, 1); cap.value = 'Charts are images drawn from this report\'s data (not editable Excel charts). A missing bar, a break in a line or "(no data)" = no saved plan / no production entry — it is not zero.';
     cap.font = { size: 8, italic: true, color: { argb: C.grey } }; cap.alignment = { indent: 1 }; ws.getRow(bandEnd + 1).height = 12;
     const rows = lineRows(model), many = rows.length > LINES_ON_PAGE_1;
     if (many) ws.getRow(bandEnd + 1).addPageBreak();   // many lines: Loss + Line table on their own page
@@ -362,11 +373,17 @@
     // Line Performance (A–E): all lines; on page 1 unless there are many lines
     const lineTop = lossTop;
     title(lineTop, 1, `Line Performance — ${rows.length} line(s), most negative Gap first`);
-    const lineEnd = table(ws, lineTop + 1, ['Line', 'Adjusted Plan', 'Actual', 'Gap', 'Achievement'], rows.map(x => [x.name, x.plan, x.actual, x.gap, x.ach]),
-      { fmt: [null, NUM, NUM, NUM, PCT], total: ['label', 'sum', 'sum', { gap: [3, 2] }, { ach: [3, 2] }], ach: [5], gap: [4], filter: false });
-    ws.getRow(lineTop).height = 16; ws.getRow(lineTop + 1).height = 24;
+    const lineEnd = table(ws, lineTop + 1, ['Line', 'Adjusted Plan', 'Actual', 'Gap', 'Achievement', 'Data'], rows.map(x => [x.name, x.plan, x.actual, x.gap, x.ach, x.data]),
+      { fmt: [null, NUM, NUM, NUM, PCT, null], total: ['label', 'sum', 'sum', { gap: [3, 2] }, { ach: [3, 2] }, null], ach: [5], gap: [4], filter: false });
+    ws.getRow(lineTop).height = 16; ws.getRow(lineTop + 1).height = 22;
     for (let x = lineTop + 2; x <= lineEnd; x++) ws.getRow(x).height = Math.max(15, x === lossEnd ? 28 : 0);
-    r = Math.max(lineEnd, lossEnd);
+    rows.forEach((x, i) => { const row = lineTop + 2 + i, d = ws.getCell(row, 6); d.alignment = { horizontal: 'center' };
+      if (x.data === 'Complete') d.font = { size: 10, color: { argb: C.goodT } };
+      else { d.font = { size: 10, bold: true, color: { argb: x.data === 'Partial' ? C.warnT : C.badT } }; if (x.data === 'No data') for (let c = 1; c <= 6; c++) { const k = ws.getCell(row, c); k.fill = fill('FFF1F5F9'); if (c === 1) k.font = { size: 10, italic: true, color: { argb: C.grey } }; } } });
+    const legendRow = lineEnd + 1; ws.mergeCells(legendRow, 1, legendRow, 6);
+    const lg = ws.getCell(legendRow, 1); lg.value = 'Blank cell = no record (not zero). Data: No data = no Daily Plan and no Production Entry · No plan / No entry = one is missing · Partial = some Line × Shift × Date units missing (sheet 02).';
+    lg.font = { size: 9, color: { argb: 'FF334155' } }; lg.alignment = { wrapText: true, vertical: 'top', indent: 1 }; ws.getRow(legendRow).height = 26;
+    r = Math.max(legendRow, lossEnd);
     // following page: trend + data quality
     ws.getRow(r).addPageBreak();
     r += 2;
@@ -465,6 +482,6 @@
     return wb;
   }
 
-  const api = { SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
+  const api = { SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, dataStatus, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PV2ExportCore = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -60,17 +60,21 @@
   async function chartImage(c) {
     if (typeof Chart === 'undefined') return null;
     const px = n => n * SCALE, navy = '#0B1F3A';
-    const font = { family: 'Calibri, Arial, sans-serif', size: px(11) };
+    const font = { family: 'Calibri, Arial, sans-serif', size: px(12) };
     const host = $('expChartHost'), canvas = document.createElement('canvas'); canvas.width = px(c.width); canvas.height = px(c.height); host.appendChild(canvas);
     const white = { id: 'white', beforeDraw: ch => { const x = ch.ctx; x.save(); x.fillStyle = '#ffffff'; x.fillRect(0, 0, ch.width, ch.height); x.restore(); } };
     const line = c.kind === 'line';
-    const ds = sr => ({ label: sr.label, data: sr.data, backgroundColor: sr.color, borderColor: sr.color, spanGaps: false, pointRadius: line ? px(2) : 0, borderWidth: line ? px(1.5) : 0, maxBarThickness: px(26) });
+    // grouped (Line × Shift): narrower groups leave a clear gap between lines
+    const ds = sr => ({ label: sr.label, data: sr.data, backgroundColor: sr.color, borderColor: sr.color, spanGaps: false, pointRadius: line ? px(2.5) : 0, pointHoverRadius: 0,
+      borderWidth: line ? px(1.8) : 0, maxBarThickness: px(c.grouped ? 16 : 30), categoryPercentage: c.grouped ? 0.7 : 0.75, barPercentage: c.grouped ? 0.92 : 0.85 });
+    // "Line X (no data)" → two-line label so the indicator is readable; every date / line label is kept (no auto-skip)
+    const labels = c.labels.map(l => / \(no data\)$/.test(l) ? [l.replace(/ \(no data\)$/, ''), '(no data)'] : l);
     const value = { ticks: { font, callback: v => Number(v).toLocaleString('en-US') }, beginAtZero: true, grid: { color: '#E2E8F0' } };
-    const cat = { ticks: { font, autoSkip: !c.horizontal, maxRotation: 50 }, grid: { display: false } };
-    const chart = new Chart(canvas, { type: line ? 'line' : 'bar', data: { labels: c.labels, datasets: c.series.map(ds) },
-      options: { responsive: false, animation: false, devicePixelRatio: 1, indexAxis: c.horizontal ? 'y' : 'x', layout: { padding: px(6) },
-        plugins: { title: { display: true, text: c.title, color: navy, font: { ...font, size: px(12), weight: 'bold' } }, legend: { labels: { font, boxWidth: px(12) } } },
-        scales: c.horizontal ? { x: value, y: cat } : { x: cat, y: value } }, plugins: [white] });
+    const cat = { ticks: { font: { ...font, size: px(c.trend && c.labels.length > 16 ? 11 : 12) }, autoSkip: false, maxRotation: c.trend ? 60 : 35, minRotation: 0, color: ctx => /no data/.test(String(ctx.tick && ctx.tick.label)) ? '#991B1B' : '#334155' }, grid: { display: false } };
+    const chart = new Chart(canvas, { type: line ? 'line' : 'bar', data: { labels, datasets: c.series.map(ds) },
+      options: { responsive: false, animation: false, devicePixelRatio: 1, layout: { padding: { left: px(6), right: px(10), top: px(4), bottom: px(2) } },
+        plugins: { title: { display: true, text: c.title, color: navy, font: { ...font, size: px(13), weight: 'bold' }, padding: { bottom: px(4) } }, legend: { labels: { font, boxWidth: px(12), padding: px(10) } } },
+        scales: { x: cat, y: value } }, plugins: [white] });
     const url = canvas.toDataURL('image/png'); chart.destroy(); host.removeChild(canvas);
     return url.replace(/^data:image\/png;base64,/, '');
   }
