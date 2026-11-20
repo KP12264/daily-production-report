@@ -54,21 +54,29 @@
   }
 
   // Chart images (Excel has no native charts in ExcelJS): drawn with Chart.js from the aggregated tables.
-  async function chartImage(config) {
+  // Chart images for the Executive Summary (ExcelJS cannot write native Excel charts). What to draw
+  // and the size come from PV2ExportCore.chartSpec(); rendered at 2× for a sharp print.
+  const SCALE = 2;
+  async function chartImage(c) {
     if (typeof Chart === 'undefined') return null;
-    const host = $('expChartHost'), canvas = document.createElement('canvas'); canvas.width = 1120; canvas.height = 560; host.appendChild(canvas);
-    const white = { id: 'white', beforeDraw: c => { const x = c.ctx; x.save(); x.fillStyle = '#ffffff'; x.fillRect(0, 0, c.width, c.height); x.restore(); } };
-    const chart = new Chart(canvas, { ...config, options: { ...config.options, responsive: false, animation: false, devicePixelRatio: 1 }, plugins: [white] });
+    const px = n => n * SCALE, navy = '#0B1F3A';
+    const font = { family: 'Calibri, Arial, sans-serif', size: px(11) };
+    const host = $('expChartHost'), canvas = document.createElement('canvas'); canvas.width = px(c.width); canvas.height = px(c.height); host.appendChild(canvas);
+    const white = { id: 'white', beforeDraw: ch => { const x = ch.ctx; x.save(); x.fillStyle = '#ffffff'; x.fillRect(0, 0, ch.width, ch.height); x.restore(); } };
+    const line = c.kind === 'line';
+    const ds = sr => ({ label: sr.label, data: sr.data, backgroundColor: sr.color, borderColor: sr.color, spanGaps: false, pointRadius: line ? px(2) : 0, borderWidth: line ? px(1.5) : 0, maxBarThickness: px(26) });
+    const value = { ticks: { font, callback: v => Number(v).toLocaleString('en-US') }, beginAtZero: true, grid: { color: '#E2E8F0' } };
+    const cat = { ticks: { font, autoSkip: !c.horizontal, maxRotation: 50 }, grid: { display: false } };
+    const chart = new Chart(canvas, { type: line ? 'line' : 'bar', data: { labels: c.labels, datasets: c.series.map(ds) },
+      options: { responsive: false, animation: false, devicePixelRatio: 1, indexAxis: c.horizontal ? 'y' : 'x', layout: { padding: px(6) },
+        plugins: { title: { display: true, text: c.title, color: navy, font: { ...font, size: px(12), weight: 'bold' } }, legend: { labels: { font, boxWidth: px(12) } } },
+        scales: c.horizontal ? { x: value, y: cat } : { x: cat, y: value } }, plugins: [white] });
     const url = canvas.toDataURL('image/png'); chart.destroy(); host.removeChild(canvas);
     return url.replace(/^data:image\/png;base64,/, '');
   }
   async function charts(model) {
-    const navy = '#0B1F3A', blue = '#3B82F6';
-    const font = { family: 'Calibri, Arial, sans-serif', size: 14 };
-    const opts = title => ({ plugins: { title: { display: true, text: title, color: navy, font: { ...font, size: 18, weight: 'bold' } }, legend: { labels: { font } } }, scales: { x: { ticks: { font } }, y: { beginAtZero: true, ticks: { font } } } });
-    const byLine = model.byLine.length ? await chartImage({ type: 'bar', data: { labels: model.byLine.map(g => g.lineName), datasets: [{ label: 'Adjusted Plan', data: model.byLine.map(g => g.plan), backgroundColor: navy }, { label: 'Actual', data: model.byLine.map(g => g.actual), backgroundColor: blue }] }, options: opts('Plan vs Actual by Line (pcs)') }) : null;
-    const trend = model.byDate.length > 1 ? await chartImage({ type: 'line', data: { labels: model.byDate.map(g => g.date.slice(5)), datasets: [{ label: 'Adjusted Plan', data: model.byDate.map(g => g.planned ? g.plan : null), borderColor: navy, backgroundColor: navy, spanGaps: false }, { label: 'Actual', data: model.byDate.map(g => g.entered ? g.actual : null), borderColor: blue, backgroundColor: blue, spanGaps: false }] }, options: opts('Production Trend by Production Date (pcs)') }) : null;
-    return { byLine, trend };
+    const spec = Core.chartSpec(model);
+    return { left: spec.left.labels.length ? await chartImage(spec.left) : null, right: spec.right.labels.length && spec.right.series.length ? await chartImage(spec.right) : null };
   }
 
   function preview(model) {

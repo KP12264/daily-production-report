@@ -261,47 +261,131 @@
     ws.getRow(row).height = Math.max(22, 15 * lines.length + 6);
   }
 
-  function buildWorkbook(ExcelJS, model, images) {
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'Production V2'; wb.created = new Date(model.meta.generatedAtIso || Date.now());
-    wb.calcProperties.fullCalcOnLoad = true;
-    const T = model.totals, Q = model.quality;
-
-    // 01 Executive Summary
-    let ws = wb.addWorksheet('01 Executive Summary', { properties: { tabColor: { argb: C.navy } }, views: [{ showGridLines: false }] });
-    setupSheet(ws, 'Production Report — Executive Summary', model, [22, 16, 16, 16, 16, 16, 16, 16]);
-    completenessBanner(ws, 3, 8, model);
+  // ---------- 01 Executive Summary: executive dashboard ----------
+  // Grid A–L: A = 16, E–F = 12, others 10 (about 132 characters). Page 1: header, status strip, 4 KPI cards,
+  // two chart images, Line Performance (all lines) and compact Loss. Following page: full
+  // Production Trend table, Data Quality and calculation notes. Many lines → extra pages, never hidden.
+  const EXEC_COLS = [16, 10, 10, 10, 12, 12, 10, 10, 10, 10, 10, 10];   // E/F hold "Achievement"
+  const colPx = w => Math.floor(w * 7 + 5);                      // Excel column width → pixels (Calibri 11)
+  const ROW_PT = 17, ROW_PX = ROW_PT * 96 / 72;                  // chart band row height
+  const LINES_ON_PAGE_1 = 8;                                     // more lines → Line table moves to its own page
+  const dateText = p => p.period === 'daily' ? `Production Date ${p.start}` : p.period === 'monthly' ? `${p.start.slice(0, 7)} · Production Dates ${p.start} – ${p.end}` : `Production Dates ${p.start} – ${p.end} (${p.dates.length} days)`;
+  const periodWord = p => p.period === 'daily' ? 'Daily' : p.period === 'monthly' ? 'Monthly' : 'Weekly / Range';
+  // Rows of the Line Performance table: every line, most negative Gap first, lines without a Gap last.
+  function lineRows(model) {
+    return model.byLine.map(g => ({ name: g.lineName, plan: g.planned ? g.plan : null, actual: g.entered ? g.actual : null, gap: g.planned && g.entered ? g.gap : null, ach: g.planned && g.entered ? blank(g.achievement) : null }))
+      .sort((a, b) => (a.gap == null) - (b.gap == null) || (a.gap ?? 0) - (b.gap ?? 0) || a.name.localeCompare(b.name));
+  }
+  // What to draw (data, kind, size). Missing plan / entry stays null → a gap in the chart, never 0.
+  // Chart height is capped so a chart always fits on the first A4 landscape page (never split / clipped).
+  const NAVY = '#0B1F3A', BLUE = '#3B82F6', SLATE = '#64748B', SKY = '#93C5FD', CHART_MIN = 230, CHART_MAX = 500;
+  function chartSpec(model) {
+    const daily = model.period.period === 'daily';
+    const pa = (rows, tag, c1, c2) => [{ label: 'Adjusted Plan' + tag, data: rows.map(g => g ? (g.planned ? g.plan : null) : null), color: c1 }, { label: 'Actual' + tag, data: rows.map(g => g ? (g.entered ? g.actual : null) : null), color: c2 }];
+    const left = { title: 'Plan vs Actual by Line (pcs)', kind: 'bar', labels: model.byLine.map(g => g.lineName), series: pa(model.byLine, '', NAVY, BLUE) };
+    let right;
+    if (daily) {   // one category per Line; DAY / NIGHT as separate series
+      const shifts = model.filter.shift === 'BOTH' ? ['DAY', 'NIGHT'] : [model.filter.shift];
+      const by = new Map(model.byLineShift.map(g => [g.lineId + '|' + g.shift, g]));
+      right = { title: 'Plan vs Actual by Line and Shift (pcs)', kind: 'bar', labels: model.byLine.map(g => g.lineName),
+        series: shifts.flatMap((sh, i) => pa(model.byLine.map(g => by.get(g.lineId + '|' + sh) || null), ' · ' + sh, i ? SLATE : NAVY, i ? SKY : BLUE)) };
+    } else right = { title: 'Production Trend by Production Date (pcs) — gaps = no saved plan / no entry', kind: model.byDate.length > 10 ? 'line' : 'bar', labels: model.byDate.map(g => g.date.slice(5)), series: pa(model.byDate, '', NAVY, BLUE) };
+    left.horizontal = left.labels.length > LINES_ON_PAGE_1; right.horizontal = daily && right.labels.length > LINES_ON_PAGE_1;
+    const need = c => c.horizontal ? 90 + c.labels.length * (c.series.length > 2 ? 30 : 24) : CHART_MIN;
+    const height = Math.min(CHART_MAX, Math.max(need(left), need(right)));
+    const leftW = EXEC_COLS.slice(0, 6).reduce((t, w) => t + colPx(w), 0) - 12, rightW = EXEC_COLS.slice(6).reduce((t, w) => t + colPx(w), 0) - 10;
+    return { left: { ...left, width: leftW, height }, right: { ...right, width: rightW, height }, bandRows: Math.ceil(height / ROW_PX) };
+  }
+  function statusStrip(model) {
+    const c = model.completeness, q = model.quality;
+    return c.complete ? '✓ DATA COMPLETE — required plan and entry records found (not an independent audit of physical production) · details on page 2'
+      : `⚠ DATA INCOMPLETE — totals NOT fully verified · NO PLAN ${q.noPlan} · NO ENTRY ${q.noEntry} · ACTUAL WITHOUT PLAN ${q.actualWithoutPlan} · details on page 2`;
+  }
+  function buildExecutiveSummary(wb, ws, model, images) {
+    const T = model.totals, Q = model.quality, P = model.period, cmp = model.completeness, spec = chartSpec(model);
+    setupSheet(ws, 'Production Report — Executive Summary', model, EXEC_COLS);
+    ws.getCell(1, 1).font = { name: 'Calibri', size: 14, bold: true, color: { argb: C.white } }; ws.getRow(1).height = 22;
+    const meta = ws.getCell(2, 1);
+    meta.value = safeText(`${periodWord(P)} · ${dateText(P)}   |   Line: ${model.filter.line === 'ALL' ? 'All Lines' : model.filter.line}   |   Shift: ${model.filter.shift === 'BOTH' ? 'DAY + NIGHT' : model.filter.shift}   |   Generated: ${model.meta.generatedAt}   |   Data as of: ${model.meta.dataAsOf}`);
+    meta.font = { size: 9, color: { argb: C.white } }; ws.getRow(2).height = 16;
+    ws.mergeCells(3, 1, 3, 12);
+    const st = ws.getCell(3, 1); st.value = safeText(statusStrip(model)); st.font = { bold: true, size: 10, color: { argb: cmp.complete ? C.goodT : C.badT } };
+    st.fill = fill(cmp.complete ? C.good : C.bad); st.alignment = { vertical: 'middle', indent: 1 }; st.border = border; ws.getRow(3).height = 18;
+    ws.getRow(4).height = 4;
+    // KPI cards (rows 5–6), 3 columns each
     const kpis = [['ADJUSTED PLAN', T.plan, NUM], ['ACTUAL', T.actual, NUM], ['ACHIEVEMENT', T.achievement, PCT], ['GAP', T.gap, NUM]];
-    const kpi2 = [['LOSS excl. MATERIAL · event-min sum', T.lossExclMaterial, MIN], ['MATERIAL · event-min sum', T.material, MIN], ['TOTAL incl. MATERIAL · event-min sum', T.lossInclMaterial, MIN], ['UNPLANNED / STALE ACTUAL', T.unplannedActual, NUM]];
-    const card = (row, col, [label, value, fmt]) => {
-      ws.mergeCells(row, col, row, col + 1); ws.mergeCells(row + 1, col, row + 1, col + 1);
-      const l = ws.getCell(row, col); l.value = label; l.font = { size: 9, bold: true, color: { argb: C.grey } }; l.alignment = { horizontal: 'center' }; l.fill = fill(C.sky);
-      const v = ws.getCell(row + 1, col); v.value = value == null ? 'n/a (no plan)' : value; v.numFmt = fmt; v.font = { size: 18, bold: true, color: { argb: value != null && fmt === NUM && label === 'GAP' && value < 0 ? C.badT : C.navy } }; v.alignment = { horizontal: 'center', vertical: 'middle' }; v.fill = fill(C.white);
-      [l, v, ws.getCell(row, col + 1), ws.getCell(row + 1, col + 1)].forEach(c => { c.border = border; });
-      ws.getRow(row + 1).height = 32;
-    };
-    kpis.forEach((k, i) => card(4, 1 + i * 2, k)); kpi2.forEach((k, i) => card(7, 1 + i * 2, k));
-    if (T.achievement != null) { const c = ws.getCell(5, 5); c.fill = fill(T.achievement >= 1 ? C.good : T.achievement >= 0.95 ? C.warn : C.bad); }
-    let r = 10;
-    ws.getCell(r, 1).value = 'Production by Line'; ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: C.navy } };
-    r = table(ws, r + 1, ['Line', 'Line Name', 'Adjusted Plan', 'Actual', 'Gap', 'Achievement', 'Loss excl. Material', 'Material'],
-      model.byLine.map(g => [g.lineId, g.lineName, g.planned ? g.plan : null, g.entered ? g.actual : null, g.planned && g.entered ? g.gap : null, g.planned && g.entered ? blank(g.achievement) : null, g.lossExclMaterial, g.material]),
-      { fmt: [null, null, NUM, NUM, NUM, PCT, MIN, MIN], total: ['label', null, 'sum', 'sum', { gap: [4, 3] }, { ach: [4, 3] }, 'sum', 'sum'], ach: [6], gap: [5], filter: false });
+    kpis.forEach(([label, value, fmt], i) => {
+      const c0 = 1 + i * 3; ws.mergeCells(5, c0, 5, c0 + 2); ws.mergeCells(6, c0, 6, c0 + 2);
+      const l = ws.getCell(5, c0); l.value = label; l.font = { size: 9, bold: true, color: { argb: C.grey } }; l.alignment = { horizontal: 'center', vertical: 'middle' }; l.fill = fill(C.sky);
+      const v = ws.getCell(6, c0); v.value = value == null ? 'n/a (no plan)' : value; v.numFmt = fmt; v.alignment = { horizontal: 'center', vertical: 'middle' };
+      v.font = { size: 20, bold: true, color: { argb: label === 'GAP' && value < 0 ? C.badT : C.navy } };
+      v.fill = fill(label === 'ACHIEVEMENT' && value != null ? (value >= 1 ? C.good : value >= 0.95 ? C.warn : C.bad) : C.white);
+      for (let c = c0; c <= c0 + 2; c++) { ws.getCell(5, c).border = border; ws.getCell(6, c).border = border; }
+    });
+    ws.getRow(5).height = 14; ws.getRow(6).height = 30;
+    const units = model.units.length, planned = model.units.filter(u => u.hasPlan).length, entered = model.units.filter(u => u.hasActual).length;
+    ws.mergeCells(7, 1, 7, 12);
+    const fn = ws.getCell(7, 1);
+    fn.value = safeText(`Original Plan ${T.originalPlan.toLocaleString('en-US')} pcs · Line×Shift×Date units with a plan ${planned}/${units} · with a production entry ${entered}/${units} · Unplanned / stale actual ${T.unplannedActual.toLocaleString('en-US')} pcs (not counted)${cmp.complete ? '' : ' · totals cover saved records only'}`);
+    fn.font = { size: 9, italic: true, color: { argb: C.grey } }; fn.alignment = { indent: 1, vertical: 'middle' }; ws.getRow(7).height = 14;
+    ws.getRow(8).height = 4;
+    // chart band
+    const band0 = 9, bandEnd = band0 + spec.bandRows - 1;
+    for (let r = band0; r <= bandEnd; r++) ws.getRow(r).height = ROW_PT;
+    const place = (b64, col, sz) => { if (!b64) return false; const id = wb.addImage({ base64: b64, extension: 'png' }); ws.addImage(id, { tl: { col, row: band0 - 1 }, ext: { width: sz.width, height: sz.height }, editAs: 'oneCell' }); return true; };
+    if (!place(images && images.left, 0, spec.left)) { ws.getCell(band0, 1).value = 'Chart not available (chart library not loaded)'; ws.getCell(band0, 1).font = { size: 9, italic: true, color: { argb: C.grey } }; }
+    if (!place(images && images.right, 6, spec.right)) { ws.getCell(band0, 7).value = 'Chart not available (chart library not loaded)'; ws.getCell(band0, 7).font = { size: 9, italic: true, color: { argb: C.grey } }; }
+    ws.mergeCells(bandEnd + 1, 1, bandEnd + 1, 12);
+    const cap = ws.getCell(bandEnd + 1, 1); cap.value = 'Charts are images drawn from this report\'s data (not editable Excel charts). A missing bar or a break in a line = no saved plan / no production entry, not zero.';
+    cap.font = { size: 8, italic: true, color: { argb: C.grey } }; cap.alignment = { indent: 1 }; ws.getRow(bandEnd + 1).height = 12;
+    const rows = lineRows(model), many = rows.length > LINES_ON_PAGE_1;
+    if (many) ws.getRow(bandEnd + 1).addPageBreak();   // many lines: Loss + Line table on their own page
+    ws.getRow(bandEnd + 2).height = 8;
+    let r = bandEnd + 3;
+    // Loss (H–L)
+    const lossTop = r, title = (row, col, text) => { const c = ws.getCell(row, col); c.value = text; c.font = { bold: true, size: 11, color: { argb: C.navy } }; };
+    title(lossTop, 8, 'Loss — event-minute sums');
+    const lossLine = (row, label, value, bold) => { ws.mergeCells(row, 8, row, 11); const l = ws.getCell(row, 8); l.value = safeText(label); l.font = { size: 10, bold: !!bold }; l.alignment = { indent: 1, vertical: 'middle' };
+      const v = ws.getCell(row, 12); v.value = value; v.numFmt = MIN; v.font = { size: 10, bold: !!bold }; v.alignment = { horizontal: 'right', vertical: 'middle' };
+      for (let c = 8; c <= 12; c++) { ws.getCell(row, c).border = border; if (bold) ws.getCell(row, c).fill = fill(C.sky); } ws.getRow(row).height = Math.max(ws.getRow(row).height || 0, 16); };
+    let lr = lossTop + 1;
+    lossLine(lr++, 'Loss excl. Material · event-min sum', T.lossExclMaterial, true);
+    lossLine(lr++, 'Material · event-min sum', T.material);
+    lossLine(lr++, 'Total incl. Material · event-min sum', T.lossInclMaterial);
+    const tot = T.lossInclMaterial || 0;
+    model.lossByCategory.slice(0, 3).forEach(g => lossLine(lr++, `${g.category}${g.material ? ' (Material)' : ''} · ${g.events} event(s) · ${tot ? Math.round(g.minutes / tot * 100) : 0}%`, g.minutes));
+    ws.mergeCells(lr, 8, lr, 12);
+    const ov = ws.getCell(lr, 8);
+    ov.value = Q.overlaps ? `⚠ ${Q.overlaps} manual loss event(s) overlap Pallet Change — up to ${Q.overlapMinutes} min may be counted twice in these sums` : 'No manual loss event overlaps a Pallet Change in this report.';
+    ov.font = { size: 9, bold: !!Q.overlaps, color: { argb: Q.overlaps ? C.badT : C.grey } }; ov.alignment = { wrapText: true, vertical: 'middle', indent: 1 }; ov.border = border; ws.getRow(lr).height = 28;
+    const lossEnd = lr;
+    // Line Performance (A–E): all lines; on page 1 unless there are many lines
+    const lineTop = lossTop;
+    title(lineTop, 1, `Line Performance — ${rows.length} line(s), most negative Gap first`);
+    const lineEnd = table(ws, lineTop + 1, ['Line', 'Adjusted Plan', 'Actual', 'Gap', 'Achievement'], rows.map(x => [x.name, x.plan, x.actual, x.gap, x.ach]),
+      { fmt: [null, NUM, NUM, NUM, PCT], total: ['label', 'sum', 'sum', { gap: [3, 2] }, { ach: [3, 2] }], ach: [5], gap: [4], filter: false });
+    ws.getRow(lineTop).height = 16; ws.getRow(lineTop + 1).height = 24;
+    for (let x = lineTop + 2; x <= lineEnd; x++) ws.getRow(x).height = Math.max(15, x === lossEnd ? 28 : 0);
+    r = Math.max(lineEnd, lossEnd);
+    // following page: trend + data quality
+    ws.getRow(r).addPageBreak();
     r += 2;
-    if (images && (images.byLine || images.trend)) {
-      ws.getRow(r - 1).addPageBreak();   // print: charts start on their own page
-      ws.getCell(r, 1).value = 'Charts (images drawn from the data in this report; not editable Excel charts)'; ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: C.navy } }; r++;
-      if (images.byLine) { const id = wb.addImage({ base64: images.byLine, extension: 'png' }); ws.addImage(id, { tl: { col: 0, row: r }, ext: { width: 560, height: 280 } }); }
-      if (images.trend) { const id = wb.addImage({ base64: images.trend, extension: 'png' }); ws.addImage(id, { tl: { col: 4, row: r }, ext: { width: 560, height: 280 } }); }
-      r += 16;
-      ws.getRow(r - 1).addPageBreak();
-    }
-    ws.getCell(r, 1).value = 'Production Trend (daily totals)'; ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: C.navy } };
+    title(r, 1, 'Production Trend — daily totals by Production Date (blank = no saved plan / no entry)');
+    const trendTop = r + 1;
     r = table(ws, r + 1, ['Production Date', 'Units planned', 'Adjusted Plan', 'Actual', 'Gap', 'Achievement', 'Loss excl. Material', 'Material'],
       model.byDate.map(g => [g.date, `${g.planned}/${g.units}`, g.planned ? g.plan : null, g.entered ? g.actual : null, g.planned && g.entered ? g.gap : null, g.planned && g.entered ? blank(g.achievement) : null, g.lossExclMaterial, g.material]),
       { fmt: [null, null, NUM, NUM, NUM, PCT, MIN, MIN], total: ['label', null, 'sum', 'sum', { gap: [4, 3] }, { ach: [4, 3] }, 'sum', 'sum'], ach: [6], gap: [5], filter: false });
+    ws.getRow(trendTop).height = 24; for (let x = trendTop + 1; x <= r; x++) ws.getRow(x).height = 14.5;
+    if (model.byDate.length > 14) ws.getRow(r).addPageBreak();   // long trend (Monthly): Data Quality on the next page
     r += 2;
-    ws.getCell(r, 1).value = 'Calculation & data quality'; ws.getCell(r, 1).font = { bold: true, size: 12, color: { argb: C.navy } }; r++;
+    title(r, 1, 'Data Quality'); r++;
+    const dq = cmp.complete ? ['✓ DATA COMPLETE — every Line × Shift × Date in this report has a saved Daily Plan and a Production Entry.'] : ['⚠ DATA INCOMPLETE — these totals are NOT fully verified production totals.', ...cmp.issues];
+    dq.push('DATA COMPLETE only means the required records were found. It is not an independent audit of the physical production quantities.');
+    if (cmp.notes.length) dq.push('Note: ' + cmp.notes.join(' · '));
+    dq.forEach((t, i) => { ws.mergeCells(r, 1, r, 12); const c = ws.getCell(r, 1); c.value = safeText(t); c.alignment = { wrapText: true, vertical: 'middle', indent: 1 };
+      c.font = { size: 10, bold: i === 0, color: { argb: i === 0 ? (cmp.complete ? C.goodT : C.badT) : C.navy } }; if (i === 0) c.fill = fill(cmp.complete ? C.good : C.bad); ws.getRow(r).height = t.length > 140 ? 30 : 18; r++; });
+    r++;
+    title(r, 1, 'Calculation notes'); r++;
     const notes = [
       ['Adjusted Plan', 'Saved Daily Plan adjustedPlan (same value Production Entry shows). Original Plan is shown on sheet 02.'],
       ['Actual', 'Only Production Entry cells that exist in that day\'s plan (Entry rule). Other keys are listed as Unplanned / stale and are NOT included.'],
@@ -312,8 +396,21 @@
       ['Data checks', `Stale actual keys: ${Q.staleKeys} (${Q.staleQty} pcs) · Plan total vs cells mismatch: ${Q.planMismatch} · Manual loss overlapping Pallet Change: ${Q.overlaps}`],
       ['Not included', 'Scrap and Quality metrics (no source in Production V2).'],
       ['Data as of', `${model.meta.dataAsOf} · Firestore documents read: ${model.meta.reads ?? 'n/a'}`]];
-    notes.forEach(([a, b]) => { ws.getCell(r, 1).value = a; ws.getCell(r, 1).font = { bold: true, size: 10 }; ws.getCell(r, 1).alignment = { vertical: 'top' }; ws.mergeCells(r, 2, r, 8); ws.getCell(r, 2).value = safeText(b); ws.getCell(r, 2).alignment = { wrapText: true, vertical: 'top' }; ws.getCell(r, 2).font = { size: 10 }; ws.getRow(r).height = 28; r++; });
-    ws.pageSetup.printArea = `A1:H${r}`; ws.pageSetup.printTitlesRow = undefined;
+    notes.forEach(([a, b]) => { const c = ws.getCell(r, 1); c.value = a; c.font = { bold: true, size: 10 }; c.alignment = { vertical: 'top', indent: 1 };
+      ws.mergeCells(r, 2, r, 12); const d = ws.getCell(r, 2); d.value = safeText(b); d.alignment = { wrapText: true, vertical: 'top' }; d.font = { size: 10 }; ws.getRow(r).height = b.length > 150 ? 30 : 18; r++; });
+    ws.pageSetup.printArea = `A1:L${r}`; ws.pageSetup.printTitlesRow = undefined;
+    return { spec, lineTop, lineEnd, lossTop, lossEnd, bandStart: band0, bandEnd, end: r };
+  }
+
+  function buildWorkbook(ExcelJS, model, images) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Production V2'; wb.created = new Date(model.meta.generatedAtIso || Date.now());
+    wb.calcProperties.fullCalcOnLoad = true;
+    const T = model.totals, Q = model.quality;
+
+    // 01 Executive Summary (executive dashboard layout; see buildExecutiveSummary)
+    let ws = wb.addWorksheet('01 Executive Summary', { properties: { tabColor: { argb: C.navy } }, views: [{ showGridLines: false }] });
+    buildExecutiveSummary(wb, ws, model, images);
 
     // 02 Daily Production
     ws = wb.addWorksheet('02 Daily Production', { properties: { tabColor: { argb: C.blue } } });
@@ -368,6 +465,6 @@
     return wb;
   }
 
-  const api = { SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
+  const api = { SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PV2ExportCore = api;
 })(typeof window !== 'undefined' ? window : this);
