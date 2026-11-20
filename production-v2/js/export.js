@@ -64,16 +64,20 @@
     const host = $('expChartHost'), canvas = document.createElement('canvas'); canvas.width = px(c.width); canvas.height = px(c.height); host.appendChild(canvas);
     const white = { id: 'white', beforeDraw: ch => { const x = ch.ctx; x.save(); x.fillStyle = '#ffffff'; x.fillRect(0, 0, ch.width, ch.height); x.restore(); } };
     const line = c.kind === 'line';
-    // grouped (Line × Shift): narrower groups leave a clear gap between lines
+    // grouped (Line × Shift): Plan | Actual bars touch; a transparent spacer separates DAY from NIGHT;
+    // the gap between Lines (1 − categoryPercentage) is wider than the DAY / NIGHT gap.
     const ds = sr => ({ label: sr.label, data: sr.data, backgroundColor: sr.color, borderColor: sr.color, spanGaps: false, pointRadius: line ? px(2.5) : 0, pointHoverRadius: 0,
-      borderWidth: line ? px(1.8) : 0, maxBarThickness: px(c.grouped ? 16 : 30), categoryPercentage: c.grouped ? 0.7 : 0.75, barPercentage: c.grouped ? 0.92 : 0.85 });
+      borderWidth: line ? px(1.8) : 0, maxBarThickness: px(c.grouped ? 16 : 30), categoryPercentage: c.grouped ? 0.74 : 0.75, barPercentage: c.grouped ? 1 : 0.85 });
+    const series = c.shiftGap ? [...c.series.slice(0, 2), { label: '', data: c.labels.map(() => null), color: 'rgba(0,0,0,0)', spacer: true }, ...c.series.slice(2)] : c.series;
     // "Line X (no data)" → two-line label so the indicator is readable; every date / line label is kept (no auto-skip)
     const labels = c.labels.map(l => / \(no data\)$/.test(l) ? [l.replace(/ \(no data\)$/, ''), '(no data)'] : l);
     const value = { ticks: { font, callback: v => Number(v).toLocaleString('en-US') }, beginAtZero: true, grid: { color: '#E2E8F0' } };
     const cat = { ticks: { font: { ...font, size: px(c.trend && c.labels.length > 16 ? 11 : 12) }, autoSkip: false, maxRotation: c.trend ? 60 : 35, minRotation: 0, color: ctx => /no data/.test(String(ctx.tick && ctx.tick.label)) ? '#991B1B' : '#334155' }, grid: { display: false } };
-    const chart = new Chart(canvas, { type: line ? 'line' : 'bar', data: { labels, datasets: c.series.map(ds) },
+    const chart = new Chart(canvas, { type: line ? 'line' : 'bar', data: { labels, datasets: series.map(ds) },
       options: { responsive: false, animation: false, devicePixelRatio: 1, layout: { padding: { left: px(6), right: px(10), top: px(4), bottom: px(2) } },
-        plugins: { title: { display: true, text: c.title, color: navy, font: { ...font, size: px(13), weight: 'bold' }, padding: { bottom: px(4) } }, legend: { labels: { font, boxWidth: px(12), padding: px(10) } } },
+        plugins: { title: { display: true, text: c.title, color: navy, font: { ...font, size: px(13), weight: 'bold' }, padding: { bottom: px(c.subtitle ? 2 : 4) } },
+          subtitle: { display: !!c.subtitle, text: c.subtitle || '', color: '#334155', font: { ...font, size: px(11) }, padding: { bottom: px(4) } },
+          legend: { labels: { font, boxWidth: px(c.grouped ? 16 : 12), boxHeight: px(12), padding: px(c.grouped ? 14 : 10), filter: it => !!it.text } } },
         scales: { x: cat, y: value } }, plugins: [white] });
     const url = canvas.toDataURL('image/png'); chart.destroy(); host.removeChild(canvas);
     return url.replace(/^data:image\/png;base64,/, '');
@@ -108,7 +112,7 @@
       if (!model.units.length) { note('ไม่พบ Line / Shift ที่ตรงกับตัวกรองในช่วงนี้', 'plan-warn'); stat('No data', 'err'); return; }
       progress(82, 'สร้างกราฟ'); const imgs = await charts(model); if (S.cancel) throw new Error('CANCELLED');
       progress(90, 'สร้างไฟล์ Excel');
-      const wb = Core.buildWorkbook(ExcelJS, model, imgs);
+      const wb = Core.buildWorkbook(ExcelJS, model, imgs, { sample: window.PV2_EXPORT_SAMPLE_DATA === true });   // set only by test harnesses
       const buf = await wb.xlsx.writeBuffer(); if (S.cancel) throw new Error('CANCELLED');
       const name = Core.fileNameFor(model), blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();

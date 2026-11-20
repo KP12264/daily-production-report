@@ -282,7 +282,7 @@
   // with no record at all is labelled "(no data)". Layouts (all fit one A4 landscape page, never clipped):
   //   side    — ≤ 8 lines: two charts side by side (Monthly / long ranges: the Trend gets the wider part);
   //   stacked — > 8 lines: both charts full width, one above the other, vertical bars with room per line.
-  const NAVY = '#0B1F3A', BLUE = '#3B82F6', SLATE = '#64748B', SKY = '#93C5FD';
+  const NAVY = '#0B1F3A', BLUE = '#3B82F6', NIGHT_PLAN = '#9A3412', NIGHT_ACT = '#FDBA74';   // DAY = navy / blue, NIGHT = dark / light orange
   const SIDE_H = 210, STACK_H = 230;
   const pxOf = cols => cols.reduce((t, w) => t + colPx(w), 0);
   function chartSpec(model) {
@@ -291,11 +291,15 @@
     const name = g => g.lineName + (!g.planned && !g.entered ? ' (no data)' : '');
     const left = { title: 'Plan vs Actual by Line (pcs)', kind: 'bar', labels: model.byLine.map(name), series: pa(model.byLine, '', NAVY, BLUE) };
     let right;
-    if (daily) {   // one group per Line; DAY / NIGHT as separate series
+    if (daily) {   // one group per Line: [DAY Plan | DAY Actual]  gap  [NIGHT Plan | NIGHT Actual]
       const shifts = model.filter.shift === 'BOTH' ? ['DAY', 'NIGHT'] : [model.filter.shift];
       const by = new Map(model.byLineShift.map(g => [g.lineId + '|' + g.shift, g]));
-      right = { title: `Plan vs Actual by Line and Shift (pcs) — ${shifts.join(' / ')}`, kind: 'bar', grouped: true, labels: model.byLine.map(name),
-        series: shifts.flatMap((sh, i) => pa(model.byLine.map(g => by.get(g.lineId + '|' + sh) || null), ' · ' + sh, i ? SLATE : NAVY, i ? SKY : BLUE)) };
+      const cell = sh => model.byLine.map(g => by.get(g.lineId + '|' + sh) || null);
+      right = { title: `Plan vs Actual by Line and Shift (pcs) — ${shifts.join(' | ')}`, kind: 'bar', grouped: true, shiftGap: shifts.length > 1, labels: model.byLine.map(name),
+        subtitle: shifts.length > 1 ? 'Each Line: DAY Plan · DAY Actual   |   NIGHT Plan · NIGHT Actual   (missing bar = no saved plan / no entry)' : `Each Line: ${shifts[0]} Plan · ${shifts[0]} Actual   (missing bar = no saved plan / no entry)`,
+        series: shifts.flatMap(sh => { const night = sh === 'NIGHT', rows = cell(sh);
+          return [{ label: `${sh} · Adjusted Plan`, data: rows.map(g => g && g.planned ? g.plan : null), color: night ? NIGHT_PLAN : NAVY },
+            { label: `${sh} · Actual`, data: rows.map(g => g && g.entered ? g.actual : null), color: night ? NIGHT_ACT : BLUE }]; }) };
     } else right = { title: `Production Trend by Production Date (pcs) — ${model.period.start} – ${model.period.end}; gaps = no saved plan / no entry`, kind: model.byDate.length > 10 ? 'line' : 'bar', trend: true, labels: model.byDate.map(g => g.date.slice(5)), series: pa(model.byDate, '', NAVY, BLUE) };
     const stacked = model.byLine.length > LINES_ON_PAGE_1, all = pxOf(EXEC_COLS) - 14;
     if (stacked) {
@@ -419,7 +423,19 @@
     return { spec, lineTop, lineEnd, lossTop, lossEnd, bandStart: band0, bandEnd, end: r };
   }
 
-  function buildWorkbook(ExcelJS, model, images) {
+  // Synthetic test / sample workbooks only: the caller passes { sample: true } explicitly (the export page
+  // never does unless a test harness sets window.PV2_EXPORT_SAMPLE_DATA = true). Never inferred from dates.
+  // Adds a label to row 1 and the printed page header of every sheet; cells, totals and layout are unchanged.
+  const SAMPLE_LABEL = 'SAMPLE DATA / TEST REPORT';
+  function markSample(wb) {
+    wb.title = SAMPLE_LABEL; wb.subject = SAMPLE_LABEL + ' — synthetic data, not a production report'; wb.keywords = 'sample test synthetic';
+    wb.worksheets.forEach(ws => {
+      const t = ws.getCell(1, 1), f = t.font || {};
+      t.value = { richText: [{ text: String(t.value), font: { ...f } }, { text: `   ▌${SAMPLE_LABEL} — synthetic data, not production`, font: { ...f, size: Math.min(f.size || 12, 12), color: { argb: 'FFFBBF24' } } }] };
+      ws.headerFooter = { ...ws.headerFooter, oddHeader: `&C&"Calibri,Bold"&12&KC00000${SAMPLE_LABEL} — synthetic data, not a production report` };
+    });
+  }
+  function buildWorkbook(ExcelJS, model, images, opts = {}) {
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Production V2'; wb.created = new Date(model.meta.generatedAtIso || Date.now());
     wb.calcProperties.fullCalcOnLoad = true;
@@ -479,9 +495,10 @@
     ws.getCell(rr - 1, 1).value = 'Actual cells (actualByCell)'; ws.getCell(rr - 1, 1).font = { bold: true, size: 12, color: { argb: C.navy } };
     header(ws, rr, ['Production Date', 'Line', 'Shift', 'Block index', 'Model', 'Door', 'Qty', 'In plan']);
     model.rawCells.forEach((x, i) => { const row = ws.getRow(rr + 1 + i); [x.date, x.lineId, x.shift, x.blockIndex === '' ? null : x.blockIndex, x.model, x.door, x.qty, x.planned].forEach((v, j) => { const c = row.getCell(j + 1); c.value = typeof v === 'string' ? safeText(v) : v; bodyCell(c, j === 6 ? NUM : null); }); });
+    if (opts.sample === true) markSample(wb);
     return wb;
   }
 
-  const api = { SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, dataStatus, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
+  const api = { SAMPLE_LABEL, SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, dataStatus, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PV2ExportCore = api;
 })(typeof window !== 'undefined' ? window : this);
