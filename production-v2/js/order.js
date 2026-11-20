@@ -65,7 +65,7 @@ async function loadTracking(){
    ?(await ProdV2DB.collection("prodV2_orders").where("lineId","==",lineFilter).get()).docs.map(d=>({id:d.id,...d.data()}))
    :await all("prodV2_orders");
   if(lineFilter)orders=orders.filter(o=>o.lineId===lineFilter);
-  if(!orders.length){$("orderTableArea").innerHTML='<div class="empty-state">ยังไม่มี Order ที่อัปโหลด</div>';$("orderBadge").textContent="0 ORDERS";stat("Ready","ok");return}
+  if(!orders.length){$("orderTableArea").innerHTML='<div class="empty-state">ยังไม่มี Order ที่อัปโหลด</div>';$("orderBadge").textContent="0 ORDERS";note("โหลดสำเร็จ · ไม่พบ Order","plan-ok");stat("Loaded","ok");return}
   const today=localDate();
   // เก็บทุก (date|||line|||shift) ที่ต้องใช้ กันซ้ำก่อนค่อยยิง Firestore ทีเดียว
   const neededKeys=new Set();
