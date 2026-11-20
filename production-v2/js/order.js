@@ -59,7 +59,11 @@ async function loadTracking(){
  try{
   stat("Loading...");
   $("orderBadge").textContent="LOADING";
-  let orders=await all("prodV2_orders");
+  // A1-I3: with a Line selected, ask Firestore for that Line's orders only
+  // (single-field equality: automatic index). All Lines still reads every order.
+  let orders=lineFilter
+   ?(await ProdV2DB.collection("prodV2_orders").where("lineId","==",lineFilter).get()).docs.map(d=>({id:d.id,...d.data()}))
+   :await all("prodV2_orders");
   if(lineFilter)orders=orders.filter(o=>o.lineId===lineFilter);
   if(!orders.length){$("orderTableArea").innerHTML='<div class="empty-state">ยังไม่มี Order ที่อัปโหลด</div>';$("orderBadge").textContent="0 ORDERS";stat("Ready","ok");return}
   const today=localDate();
