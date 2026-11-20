@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="css/dashboard-v2.css?v=20261005-02">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 </head><body>
@@ -37,6 +38,7 @@
 </aside>
 <div class="dv2-main">
 <div class="dv2-topbar"><button id="themeToggle" class="theme-toggle-btn">🌙 Dark</button><a class="legacy-link" href="../index.html">ระบบเดิม</a></div>
+<div id="authGateHost"></div>
 <div class="dv2-page-header">
 <div class="dv2-title-block"><h1>Production Dashboard</h1><p>Door Foam Production <span class="dv2-header-sep">|</span> Kabinburi Plant</p></div>
 <div class="dv2-header-right">
@@ -101,5 +103,7 @@
 </div>
 <script src="js/firebase-v2.js?v=20260902-fix2"></script><script src="js/theme.js?v=20260902-fix1"></script><script src="js/nav.js?v=20260902-fix1"></script>
 <script src="js/context-v2.js?v=20260901-step8"></script>
-<script src="js/dashboard.js?v=20261005-01"></script>
+<script src="js/auth-v2.js?v=20261121-sec1"></script>
+<script src="js/dashboard.js?v=20261121-sec1"></script>
+<script>ProdV2Auth.requireAccess({hostId:"authGateHost",hideFollowing:true});</script>
 </body></html>

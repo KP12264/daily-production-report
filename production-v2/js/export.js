@@ -134,7 +134,9 @@
     try {
       const email = String(user.email || '').toLowerCase();
       const doc = await ProdV2DB.collection('prodV2_authorizedUsers').doc(email).get(); S.reads += 1;
-      if (!doc.exists) { $('expLocked').hidden = false; $('expLocked').textContent = 'บัญชีนี้ไม่มีสิทธิ์ Export (ไม่อยู่ในรายชื่อผู้มีสิทธิ์)'; $('expForm').classList.add('is-locked'); stat('Not authorized', 'err'); return; }
+      // role from the user's own allowlist document (same rule as ProdV2Auth.roleOf / Firestore Rules): viewer or editor may export
+      const d = doc.exists ? (doc.data() || {}) : null, role = !d || d.active === false ? 'none' : (d.role == null ? 'editor' : String(d.role));
+      if (role !== 'viewer' && role !== 'editor') { $('expLocked').hidden = false; $('expLocked').textContent = 'บัญชีนี้ไม่มีสิทธิ์ Export (ไม่อยู่ในรายชื่อผู้มีสิทธิ์)'; $('expForm').classList.add('is-locked'); stat('Not authorized', 'err'); return; }
       await loadLines();
       S.allowed = true; $('expLocked').hidden = true; $('expForm').classList.remove('is-locked'); setBusy(false); stat('Ready', 'ok'); note('เลือกช่วงเวลา Line และ Shift แล้วกด Export Excel');
     } catch (e) { console.error(e); note('ตรวจสิทธิ์ไม่สำเร็จ: ' + friendly(e), 'plan-warn'); stat('Error', 'err'); }

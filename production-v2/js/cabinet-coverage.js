@@ -308,4 +308,4 @@ function init(){
   $("ccToggleCabinet").onclick=()=>{S.view="cabinet";$("ccToggleCabinet").classList.add("primary");$("ccToggleDoor").classList.remove("primary");render()};
   load();
 }
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

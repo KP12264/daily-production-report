@@ -223,4 +223,4 @@ async function init(){
    if(c.date&&c.lineId&&c.shift)load();
  }catch(e){note(e.message,"plan-warn")}
 }
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

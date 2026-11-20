@@ -138,4 +138,4 @@ async function init(){
   stat("Ready","ok");
  }catch(e){note(e.message,"plan-warn");stat("Load failed","err")}
 }
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

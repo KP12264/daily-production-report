@@ -169,5 +169,5 @@ function init(){
  }
  load();
 }
-if(document.readyState==="loading")addEventListener("DOMContentLoaded",init);else init();
+ProdV2Auth.whenAccess(init);
 })();

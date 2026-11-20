@@ -266,4 +266,4 @@ function initPresentation(){
  if(mq.addEventListener)mq.addEventListener("change",onMq);else if(mq.addListener)mq.addListener(onMq);
 }
 addEventListener("DOMContentLoaded",initPresentation);
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

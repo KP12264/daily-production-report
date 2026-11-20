@@ -1,0 +1,36 @@
+    // ── Production V2 — CANDIDATE (not published). Every prodV2_* read requires
+    // a signed-in account whose own prodV2_authorizedUsers/{email} document
+    // grants a role:
+    //   role "viewer"                → read only
+    //   role "editor" or no role     → read + write (the existing allowlist
+    //                                  documents have no role: they stay editors)
+    //   active: false / no document  → nothing
+    // The allowlist can only be read one document at a time, by its owner
+    // (no list), and is never writable from the app.
+    function pv2Signed() { return request.auth != null && request.auth.token.email != null; }
+    function pv2Me() { return request.auth.token.email.lower(); }
+    function pv2Doc() { return /databases/$(database)/documents/prodV2_authorizedUsers/$(pv2Me()); }
+    // get() of the same document is cached within one request: one dependent read per request.
+    function pv2Role() {
+      return get(pv2Doc()).data.get('active', true) == false ? 'none' : get(pv2Doc()).data.get('role', 'editor');
+    }
+    function pv2Viewer() { return pv2Signed() && exists(pv2Doc()) && pv2Role() in ['viewer', 'editor']; }
+    function pv2Editor() { return pv2Signed() && exists(pv2Doc()) && pv2Role() == 'editor'; }
+
+    match /prodV2_authorizedUsers/{email} {
+      allow get: if pv2Signed() && pv2Me() == email;
+      allow list, create, update, delete: if false;
+    }
+
+    match /{collection}/{doc}
+      // Matches any collection literally named prodV2_*. Excludes
+      // prodV2_authorizedUsers: rules are OR'd across matching blocks, so this
+      // generic block must never grant anything on the allowlist itself.
+      {
+      allow read: if collection.matches('prodV2_.*')
+        && collection != 'prodV2_authorizedUsers'
+        && pv2Viewer();
+      allow write: if collection.matches('prodV2_.*')
+        && collection != 'prodV2_authorizedUsers'
+        && pv2Editor();
+    }

@@ -156,4 +156,4 @@ async function init(){
   await loadTrend();
  }catch(e){console.error(e);note(e.message,"plan-warn")}
 }
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

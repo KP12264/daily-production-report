@@ -417,4 +417,4 @@ function initPresentation(){
  [["snapshotBadge",badgeStateSnap],["masterBadge",badgeStateMaster]].forEach(([id,fn])=>{let b=$(id);if(!b)return;let set=()=>{b.dataset.state=fn(b.textContent)};set();new MutationObserver(set).observe(b,{childList:true,characterData:true,subtree:true})});
 }
 addEventListener("DOMContentLoaded",initPresentation);
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

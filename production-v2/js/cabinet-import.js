@@ -398,4 +398,4 @@ function init(){
   $("ciImportBtn").onclick=doImport;
   $("ciReplaceBtn").onclick=doImport;
 }
-addEventListener("DOMContentLoaded",init)})();
+ProdV2Auth.whenAccess(init)})();

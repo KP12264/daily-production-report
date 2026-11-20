@@ -202,7 +202,7 @@ modelBody.addEventListener('click',async e=>{
   }catch(err){setStatus((window.ProdV2Auth?ProdV2Auth.friendlyError(err):err.message),'err');btn.disabled=false}
 });
 
-(async()=>{await loadLines();})();
+ProdV2Auth.whenAccess(()=>loadLines());   // reads only after sign-in with a role
 
 
 /* Step 3 — Physical Pallet/Jig Layout */

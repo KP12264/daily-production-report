@@ -1,0 +1,99 @@
+// FIRESTORE RULES CANDIDATE — FOR THE FIREBASE EMULATOR ONLY. DO NOT PUBLISH WITHOUT OWNER APPROVAL.
+// Built by production-v2/security/build-candidate.js from production.firestore.rules.snapshot (sha256 0967944bcf8bbe6f2051004424bd5819fd656018165b1aaca9982f13e3a22e2f)
+// with only the Production V2 block replaced (pv2-block.rules). Every other line is the snapshot, unchanged.
+rules_version = '2';
+// Production V2 — permanent Firestore Security Rules
+// Replaces the temporary test rule that expires 2026-09-14.
+//
+// HOW TO DEPLOY:
+// Firebase Console > (project daily-production-report-46b60) > Firestore Database
+// > Rules tab > paste this entire file, replacing what's there > Publish.
+//
+// BEFORE PUBLISHING, you must also:
+// 1. Authentication > Sign-in method > enable "Email/Password".
+// 2. Authentication > Users > Add user, for each employee who should be able to
+//    save Entry / Plan / Loss / Master data. (There is no self-signup in the app.)
+//    The login screen asks for a short "รหัสพนักงาน" (employee code) instead of a
+//    real email — when creating the user here, set the Email field to
+//    "<code>@prodv2.local" in lowercase (e.g. code "KP001" -> kp001@prodv2.local).
+//    Nothing is ever sent to that address; it's just an identifier.
+// 3. Firestore Database > Data > create a collection named exactly
+//    prodV2_authorizedUsers, and add ONE document per authorized employee,
+//    using that same "<code>@prodv2.local" string as the Document ID (any
+//    field/value inside is fine, e.g. {active: true} — only the document's
+//    existence matters). A user who can sign in but has no matching document
+//    here can read everything but cannot save anything — this is what keeps
+//    write access limited to employees even if someone finds another way to
+//    create a Firebase Auth account.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Legacy system — UNCHANGED. Stays exactly as open as it is today so the
+    // original site keeps working with no login, forever. Production V2 never
+    // writes here (enforced client-side too, in firebase-v2.js).
+    match /productionLogs/{doc} {
+      allow read, write: if true;
+    }
+
+    // ── Production V2 — CANDIDATE (not published). Every prodV2_* read requires
+    // a signed-in account whose own prodV2_authorizedUsers/{email} document
+    // grants a role:
+    //   role "viewer"                → read only
+    //   role "editor" or no role     → read + write (the existing allowlist
+    //                                  documents have no role: they stay editors)
+    //   active: false / no document  → nothing
+    // The allowlist can only be read one document at a time, by its owner
+    // (no list), and is never writable from the app.
+    function pv2Signed() { return request.auth != null && request.auth.token.email != null; }
+    function pv2Me() { return request.auth.token.email.lower(); }
+    function pv2Doc() { return /databases/$(database)/documents/prodV2_authorizedUsers/$(pv2Me()); }
+    // get() of the same document is cached within one request: one dependent read per request.
+    function pv2Role() {
+      return get(pv2Doc()).data.get('active', true) == false ? 'none' : get(pv2Doc()).data.get('role', 'editor');
+    }
+    function pv2Viewer() { return pv2Signed() && exists(pv2Doc()) && pv2Role() in ['viewer', 'editor']; }
+    function pv2Editor() { return pv2Signed() && exists(pv2Doc()) && pv2Role() == 'editor'; }
+
+    match /prodV2_authorizedUsers/{email} {
+      allow get: if pv2Signed() && pv2Me() == email;
+      allow list, create, update, delete: if false;
+    }
+
+    match /{collection}/{doc}
+      // Matches any collection literally named prodV2_*. Excludes
+      // prodV2_authorizedUsers: rules are OR'd across matching blocks, so this
+      // generic block must never grant anything on the allowlist itself.
+      {
+      allow read: if collection.matches('prodV2_.*')
+        && collection != 'prodV2_authorizedUsers'
+        && pv2Viewer();
+      allow write: if collection.matches('prodV2_.*')
+        && collection != 'prodV2_authorizedUsers'
+        && pv2Editor();
+    }
+    // ── Quality Dashboard (separate app: scrap tracking, targets,
+    // improvements) — public read/write, same openness as productionLogs
+    // above, for the same reason: no login system built for this app yet.
+    // PIN/employee-login for this app is a planned later phase.
+    match /scrapLogs/{doc} {
+      allow read, write: if true;
+    }
+    match /targetMaster/{doc} {
+      allow read, write: if true;
+    }
+    match /improvements/{doc} {
+      allow read, write: if true;
+    }
+
+    match /scrapModelMappings/{doc} {
+      allow read, write: if true;
+    }
+
+
+
+    // ── Everything else — default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
