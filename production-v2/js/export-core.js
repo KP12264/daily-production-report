@@ -315,6 +315,8 @@
     return c.complete ? '✓ DATA COMPLETE — required plan and entry records found (not an independent audit of physical production) · details on page 2'
       : `⚠ DATA INCOMPLETE — totals NOT fully verified · NO PLAN ${q.noPlan} · NO ENTRY ${q.noEntry} · ACTUAL WITHOUT PLAN ${q.actualWithoutPlan} · details on page 2`;
   }
+  // Row height for wrapped 10 pt text: 13 pt per line + 3 pt padding (A4 landscape widths: notes ≈ 150, full width ≈ 175 characters per line).
+  const wrapH = (text, perLine) => 13 * Math.max(1, Math.ceil(String(text).length / perLine)) + 3;
   function buildExecutiveSummary(wb, ws, model, images) {
     const T = model.totals, Q = model.quality, P = model.period, cmp = model.completeness, spec = chartSpec(model);
     setupSheet(ws, 'Production Report — Executive Summary', model, EXEC_COLS);
@@ -404,7 +406,7 @@
     dq.push('DATA COMPLETE only means the required records were found. It is not an independent audit of the physical production quantities.');
     if (cmp.notes.length) dq.push('Note: ' + cmp.notes.join(' · '));
     dq.forEach((t, i) => { ws.mergeCells(r, 1, r, 12); const c = ws.getCell(r, 1); c.value = safeText(t); c.alignment = { wrapText: true, vertical: 'middle', indent: 1 };
-      c.font = { size: 10, bold: i === 0, color: { argb: i === 0 ? (cmp.complete ? C.goodT : C.badT) : C.navy } }; if (i === 0) c.fill = fill(cmp.complete ? C.good : C.bad); ws.getRow(r).height = t.length > 140 ? 30 : 18; r++; });
+      c.font = { size: 10, bold: i === 0, color: { argb: i === 0 ? (cmp.complete ? C.goodT : C.badT) : C.navy } }; if (i === 0) c.fill = fill(cmp.complete ? C.good : C.bad); ws.getRow(r).height = wrapH(t, 175); r++; });
     r++;
     title(r, 1, 'Calculation notes'); r++;
     const notes = [
@@ -419,7 +421,7 @@
       ['Not included', 'Scrap and Quality metrics (no source in Production V2).'],
       ['Data as of', `${model.meta.dataAsOf} · Firestore documents read: ${model.meta.reads ?? 'n/a'}`]];
     notes.forEach(([a, b]) => { const c = ws.getCell(r, 1); c.value = a; c.font = { bold: true, size: 10 }; c.alignment = { vertical: 'top', indent: 1 };
-      ws.mergeCells(r, 2, r, 12); const d = ws.getCell(r, 2); d.value = safeText(b); d.alignment = { wrapText: true, vertical: 'top' }; d.font = { size: 10 }; ws.getRow(r).height = b.length > 150 ? 30 : 18; r++; });
+      ws.mergeCells(r, 2, r, 12); const d = ws.getCell(r, 2); d.value = safeText(b); d.alignment = { wrapText: true, vertical: 'top' }; d.font = { size: 10 }; ws.getRow(r).height = wrapH(b, 150); r++; });
     ws.pageSetup.printArea = `A1:L${r}`; ws.pageSetup.printTitlesRow = undefined;
     return { spec, lineTop, lineEnd, lossTop, lossEnd, bandStart: band0, bandEnd, end: r };
   }
@@ -500,6 +502,6 @@
     return wb;
   }
 
-  const api = { SAMPLE_LABEL, SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, dataStatus, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
+  const api = { wrapH, SAMPLE_LABEL, SHIFTS, MAX_DAYS, resolvePeriod, aggregate, buildWorkbook, chartSpec, lineRows, dataStatus, statusStrip, EXEC_COLS, safeText, safeFileName, fileNameFor, intervalsOverlap, overlapMinutes, completenessOf, addDays };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PV2ExportCore = api;
 })(typeof window !== 'undefined' ? window : this);
