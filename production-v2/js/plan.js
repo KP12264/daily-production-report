@@ -266,25 +266,13 @@ function table(){
  h+=`<td class="plv2-sr plv2-sr-orig">${S.matrix.reduce((s,x)=>s+x.originalTotal,0)}</td><td class="plv2-sr plv2-sr-adj"><b>${S.matrix.reduce((s,x)=>s+x.total,0)}</b></td></tr></tbody></table></div>`;
  $("planTableArea").innerHTML=h
 }
-// A1-I3: Shift Master and Jig Layouts are read once per page and reused when only
-// Date / Line / Shift changes. The "Load" button always reads them again, so edits
-// made on the Master page are picked up there. The query results are kept, not the
-// objects: every load maps fresh copies, and a failed read is never kept.
-let masterReads=null;
-function masterData(fresh){
- if(fresh||!masterReads){
-  let p=Promise.all([ProdV2DB.collection("prodV2_shiftMaster").get(),ProdV2DB.collection("prodV2_jigLayouts").get()]);
-  masterReads=p;p.catch(()=>{if(masterReads===p)masterReads=null});
- }
- return masterReads.then(snaps=>snaps.map(s=>s.docs.map(d=>({id:d.id,...d.data()}))));
-}
-async function load(opts){
+async function load(){
  let d=$("planDate").value,l=val($("planLine").value).toUpperCase(),sh=$("planShift").value,id=`plan_${d}_${l}_${sh}`;
  ProdV2Context.set({date:d,lineId:l,shift:sh});
  try{
   stat("Loading...");
-  let [[ss,ls],savedDoc]=await Promise.all([
-   masterData(opts&&opts.fresh===true),
+  let [ss,ls,savedDoc]=await Promise.all([
+   all("prodV2_shiftMaster"),all("prodV2_jigLayouts"),
    ProdV2DB.collection("prodV2_dailyPlans").doc(id).get()
   ]);
   S.shift=ss.find(x=>lineOf(x)===l&&shiftOf(x)===sh)||null;
@@ -339,7 +327,7 @@ async function deleteSavedPlan(){
 }
 
 async function copy(){let d=$("planDate").value,l=$("planLine").value.toUpperCase(),sh=$("planShift").value,p=prevDate(d),id=`plan_${p}_${l}_${sh}`;try{let doc=await ProdV2DB.collection("prodV2_dailyPlans").doc(id).get();if(!doc.exists){note(`ไม่พบ Daily Plan ของวันก่อน (${p})`,"plan-warn");return}await load();let avail=new Set(S.pallets.map(x=>x.id)),ids=doc.data().masterSnapshot?.activePalletIds||[];S.active=new Set(ids.filter(x=>avail.has(x)));S.baseActive=new Set(S.active);let oo=doc.data().masterSnapshot?.palletOrder||[];S.palletOrder=[...oo.filter(x=>avail.has(x)),...S.pallets.map(x=>x.id).filter(x=>!oo.includes(x))];S.events=(doc.data().masterSnapshot?.palletChanges||[]).filter(e=>avail.has(e.palletId));S.losses=(doc.data().masterSnapshot?.palletChangeLosses||[]).filter(l=>!l.palletId||avail.has(l.palletId));build();pallets();table();kpis();events();$("snapshotBadge").textContent="COPIED · NOT SAVED";note(`คัดลอกจาก ${p} แล้ว • ตรวจสอบก่อน Save Plan`,"plan-ok")}catch(e){note(e.message,"plan-warn")}}
-async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=()=>load({fresh:true});$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;let dp=$("deletePlanBtn");if(dp)dp.onclick=deleteSavedPlan;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.lineName||x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("planDate"),$("planLine"),$("planShift"));
+async function init(){$("planDate").value=localDate();$("loadPlanBtn").onclick=load;$("savePlanBtn").onclick=save;$("copyPlanBtn").onclick=copy;let dp=$("deletePlanBtn");if(dp)dp.onclick=deleteSavedPlan;try{S.lines=(await all("prodV2_lines")).filter(x=>x.active!==false).sort((a,b)=>(a.order||99)-(b.order||99));$("planLine").innerHTML=S.lines.map(x=>`<option value="${x.lineId||x.code||x.id}">${x.lineName||x.name||"Line "+(x.lineId||x.code||x.id)}</option>`).join("");ProdV2Context.bind($("planDate"),$("planLine"),$("planShift"));
  // เปลี่ยน Date/Line/Shift แล้วโหลด Master/Saved Plan ของกะนั้นใหม่ทันที — กัน
  // ตารางค้างข้อมูลของกะก่อนหน้าไว้เหมือนที่แก้ใน entry.js
  $("planDate").onchange=load;$("planLine").onchange=load;$("planShift").onchange=load;
